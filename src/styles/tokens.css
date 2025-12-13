@@ -1,0 +1,147 @@
+/**
+ * Quickfront18 Design Tokens
+ * Modern accounting SaaS (PEAK-like) design system
+ * Compatible with Odoo 18 — scoped under .qf-app to avoid conflicts
+ * 
+ * WCAG Compliance Notes:
+ * - Text contrast: --text-strong on --bg-0 meets 4.5:1 (verified)
+ * - Large text (18px+): meets 3:1 minimum
+ * - Interactive elements: 3:1 minimum for focus states
+ */
+
+:root {
+  /* ============================================
+     TYPOGRAPHY SYSTEM (Thai + EN friendly)
+     ============================================ */
+  
+  /* Font Family */
+  --qf-font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text',
+    'Segoe UI', 'Inter', 'Noto Sans Thai', 'Noto Sans Thai UI', Tahoma, sans-serif;
+
+  /* Font Scale (rem-based for accessibility) */
+  --qf-text-xs: 0.75rem;    /* 12px */
+  --qf-text-sm: 0.8125rem;  /* 13px */
+  --qf-text-base: 0.9375rem; /* 15px */
+  --qf-text-lg: 1rem;       /* 16px */
+  --qf-text-xl: 1.125rem;   /* 18px */
+  --qf-text-2xl: 1.625rem;  /* 26px */
+
+  /* Semantic Typography (PEAK-like hierarchy) */
+  --qf-text-page-title: var(--qf-text-2xl);     /* 26px */
+  --qf-text-section-title: var(--qf-text-lg);   /* 16px */
+  --qf-text-body: var(--qf-text-base);          /* 15px */
+  --qf-text-meta: var(--qf-text-xs);            /* 12px */
+  --qf-text-micro: 0.6875rem;                   /* 11px */
+  --qf-text-number: var(--qf-text-base);        /* 15px */
+  --qf-text-number-lg: 1.25rem;                 /* 20px */
+
+  /* Font Weights */
+  --qf-weight-regular: 400;
+  --qf-weight-medium: 500;
+  --qf-weight-semibold: 600;
+  --qf-weight-bold: 700;
+
+  /* Line Heights */
+  --qf-lh-tight: 1.25;
+  --qf-lh-normal: 1.5;
+  --qf-lh-relaxed: 1.7;
+
+  /* Semantic Line Heights */
+  --qf-lh-page-title: var(--qf-lh-tight);
+  --qf-lh-section-title: 1.35;
+  --qf-lh-body: var(--qf-lh-relaxed);
+  --qf-lh-meta: 1.45;
+  --qf-lh-micro: 1.35;
+  --qf-lh-number: 1.4;
+
+  /* ============================================
+     COLOR SYSTEM (Semantic roles, WCAG compliant)
+     ============================================ */
+
+  /* Surfaces (for gradient pages + cards) */
+  --qf-bg-0: #f6f8fc;        /* Lightest background */
+  --qf-bg-1: #ffffff;        /* Card background */
+  --qf-bg-2: #f4f7fb;        /* Subtle surface (table headers, hover) */
+
+  /* Text (contrast verified) */
+  --qf-text-strong: #0b1b3a;  /* Primary text (4.5:1 on --qf-bg-0) */
+  --qf-text: #1e293b;         /* Default text */
+  --qf-text-muted: #64748b;   /* Secondary/meta text */
+
+  /* Borders */
+  --qf-border: #e6eef7;      /* Default border */
+  --qf-border-strong: #cbd5e1; /* Stronger border (focus states) */
+
+  /* Primary Actions */
+  --qf-primary: #2f80ed;     /* Primary blue */
+  --qf-primary-dark: #1d4ed8;
+  --qf-primary-weak: rgba(47, 128, 237, 0.1); /* For backgrounds */
+
+  /* Status Colors (with weak variants for pill backgrounds) */
+  --qf-success: #10b981;
+  --qf-success-weak: #d1fae5;
+  --qf-warning: #f59e0b;
+  --qf-warning-weak: #fef3c7;
+  --qf-danger: #ef4444;
+  --qf-danger-weak: #fee2e2;
+  --qf-info: #3b82f6;
+  --qf-info-weak: #dbeafe;
+
+  /* Legacy colors (mapped to new system for compatibility) */
+  --qf-secondary: #1cc8b7;
+  --qf-accent-gold: #fbbf24;
+  --qf-accent-pink: #c93c8d;
+  --qf-surface-dark: var(--qf-text-strong);
+  --qf-muted: var(--qf-text-muted);
+  --qf-card-border: var(--qf-border);
+
+  /* ============================================
+     SPACING & LAYOUT
+     ============================================ */
+
+  /* Border Radius */
+  --qf-radius-sm: 0.5rem;    /* 8px */
+  --qf-radius-md: 1rem;      /* 16px */
+  --qf-radius-lg: 1rem;      /* 16px */
+  --qf-radius-xl: 1.5rem;    /* 24px */
+  --qf-radius-full: 9999px;
+
+  /* Card Styles */
+  --qf-card-padding: 1rem;           /* 16px */
+  --qf-card-padding-lg: 1.25rem;     /* 20px */
+  --qf-card-border-width: 1px;
+  --qf-card-shadow: 0 14px 28px rgba(15, 23, 42, 0.10);
+  --qf-card-shadow-hover: 0 18px 40px rgba(15, 23, 42, 0.14);
+
+  /* Form Styles */
+  --qf-input-height: 2.75rem;       /* 44px (touch-friendly) */
+  --qf-input-padding-x: 0.75rem;    /* 12px */
+  --qf-input-padding-y: 0.75rem;    /* 12px */
+  --qf-input-border-radius: var(--qf-radius-lg);
+  --qf-input-focus-ring: 2px solid rgba(47, 128, 237, 0.3);
+
+  /* Table Styles */
+  --qf-table-row-h: 2.875rem;      /* 46px */
+  --qf-table-cell-px: 1rem;        /* 16px */
+  --qf-table-cell-py: 0.875rem;     /* 14px */
+  --qf-table-header-bg: rgba(255, 255, 255, 0.35);
+  --qf-table-row-divider: rgba(230, 238, 247, 0.4);
+
+  /* Button Styles */
+  --qf-button-height-sm: 2rem;      /* 32px */
+  --qf-button-height-md: 2.5rem;     /* 40px */
+  --qf-button-height-lg: 3rem;       /* 48px */
+  --qf-button-padding-x-sm: 0.75rem; /* 12px */
+  --qf-button-padding-x-md: 1rem;    /* 16px */
+  --qf-button-padding-x-lg: 1.25rem; /* 20px */
+  --qf-button-radius: var(--qf-radius-lg);
+
+  /* Badge Styles */
+  --qf-badge-padding-x: 0.625rem;    /* 10px */
+  --qf-badge-padding-y: 0.25rem;     /* 4px */
+  --qf-badge-radius: var(--qf-radius-full);
+  --qf-badge-font-size: var(--qf-text-meta);
+  --qf-badge-font-weight: var(--qf-weight-bold);
+}
+
+

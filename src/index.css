@@ -1,0 +1,125 @@
+/* Bootstrap 5 */
+@import 'bootstrap/dist/css/bootstrap.min.css';
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+
+/* Custom Quickfront18 styles */
+@import './styles/tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text',
+    'Segoe UI', 'Inter', 'Noto Sans Thai', 'Noto Sans Thai UI', Tahoma, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Keep the original ocean tone, but diagonal */
+  background:
+    radial-gradient(circle at 0% 0%, rgba(201, 60, 141, 0.16) 0, transparent 45%),
+    radial-gradient(circle at 100% 0%, rgba(251, 191, 36, 0.18) 0, transparent 55%),
+    linear-gradient(135deg, #f0f7ff 0%, #c7ecff 30%, #00a8c5 70%, #0b6ea6 100%);
+  color: #0b1b3a;
+}
+
+/* Scoped styles for Quickfront18 app (avoids Odoo conflicts) */
+.qf-app {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text',
+    'Segoe UI', 'Inter', 'Noto Sans Thai', 'Noto Sans Thai UI', Tahoma, sans-serif;
+}
+
+/* Bootstrap customizations for Quickfront18 theme */
+.qf-app .card {
+  border-radius: 16px;
+  border: 1px solid #e6eef7;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.10);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+}
+
+.qf-app .card:hover {
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
+}
+
+.qf-app .btn {
+  border-radius: 12px;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+}
+
+.qf-app .btn-primary {
+  background: linear-gradient(90deg, #2f80ed 0%, #1cc8b7 100%);
+  border: none;
+}
+
+.qf-app .btn-primary:hover {
+  background: linear-gradient(90deg, #1d4ed8 0%, #15b89a 100%);
+}
+
+.qf-app .table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.qf-app .table thead th {
+  background-color: rgba(255, 255, 255, 0.35);
+  border-bottom: 1px solid #e6eef7;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  color: #64748b;
+  padding: 0.875rem 1rem;
+}
+
+.qf-app .table tbody tr {
+  border-top: 1px solid rgba(230, 238, 247, 0.4);
+}
+
+.qf-app .table tbody tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+.qf-app .table tbody tr:hover {
+  background-color: #f4f7fb;
+}
+
+.qf-app .table td {
+  padding: 0.875rem 1rem;
+  vertical-align: middle;
+}
+
+.qf-app .form-label {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: #0b1b3a;
+  margin-bottom: 0.25rem;
+}
+
+.qf-app .form-control {
+  border-radius: 12px;
+  border: 1px solid #e6eef7;
+  padding: 0.75rem;
+  font-size: 1rem; /* 16px prevents iOS zoom */
+}
+
+.qf-app .form-control:focus {
+  border-color: #2f80ed;
+  box-shadow: 0 0 0 0.2rem rgba(47, 128, 237, 0.25);
+}
+
+.qf-app .badge {
+  padding: 0.25rem 0.625rem;
+  font-weight: 700;
+  font-size: 0.75rem;
+  border-radius: 9999px;
+}
