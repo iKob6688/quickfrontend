@@ -8,7 +8,8 @@ import {
   getImportJobStatus,
   getImportResult,
   type ImportType,
-} from '@/api/endpoints/excel'
+} from '@/api/services/excel.service'
+import { toast } from '@/lib/toastStore'
 
 type UploadPhase = 'idle' | 'preview' | 'uploading' | 'processing' | 'completed'
 
@@ -61,33 +62,44 @@ export function ExcelUploadCard({ importType }: Props) {
     if (!ok) return
 
     setPhase('uploading')
-    const job = await uploadExcelFile({ file: state.file, importType })
-    setJobId(job.jobId)
-    setPhase('processing')
+    try {
+      const job = await uploadExcelFile({ file: state.file, importType })
+      setJobId(job.jobId)
+      setPhase('processing')
 
-    // simple polling – can be extracted to dedicated hook later
-    const poll = async () => {
-      if (!job.jobId) return
-      const latest = await getImportJobStatus(job.jobId)
-      if (latest.status === 'completed' || latest.status === 'failed') {
-        const result = await getImportResult(job.jobId)
-        setSummary(result.summary)
-        setSummary((prev) =>
-          prev
-            ? { ...prev, failedFileUrl: result.failedFileUrl }
-            : {
-                ...result.summary,
-                failedFileUrl: result.failedFileUrl,
-              },
-        )
-        setPhase('completed')
-        return
+      // simple polling – can be extracted to dedicated hook later
+      const poll = async () => {
+        if (!job.jobId) return
+        const latest = await getImportJobStatus(job.jobId)
+        if (latest.status === 'completed' || latest.status === 'failed') {
+          const result = await getImportResult(job.jobId)
+          setSummary(result.summary)
+          setSummary((prev) =>
+            prev
+              ? { ...prev, failedFileUrl: result.failedFileUrl }
+              : {
+                  ...result.summary,
+                  failedFileUrl: result.failedFileUrl,
+                },
+          )
+          setPhase('completed')
+          if (latest.status === 'completed') {
+            toast.success('นำเข้า Excel สำเร็จ')
+          } else {
+            toast.error('นำเข้า Excel ไม่สำเร็จ', 'กรุณาตรวจสอบไฟล์ผลลัพธ์')
+          }
+          return
+        }
+
+        setTimeout(poll, 2000)
       }
 
-      setTimeout(poll, 2000)
+      void poll()
+    } catch (e) {
+      setPhase('preview')
+      toast.error('อัปโหลดไฟล์ไม่สำเร็จ', e instanceof Error ? e.message : undefined)
+      throw e
     }
-
-    void poll()
   }
 
   const hasFile = !!state.file

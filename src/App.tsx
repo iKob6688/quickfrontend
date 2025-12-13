@@ -7,10 +7,15 @@ import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { InvoicesListPage } from '@/features/sales/InvoicesListPage'
 import { InvoiceDetailPage } from '@/features/sales/InvoiceDetailPage'
 import { InvoiceFormPage } from '@/features/sales/InvoiceFormPage'
+import { CustomersListPage } from '@/features/customers/CustomersListPage'
+import { CustomerDetailPage } from '@/features/customers/CustomerDetailPage'
+import { CustomerFormPage } from '@/features/customers/CustomerFormPage'
 import { BackendConnectionPage } from '@/features/backend-connection/BackendConnectionPage'
 import { ExcelImportPage } from '@/features/excel-import/ExcelImportPage'
 import { setUnauthorizedHandler } from '@/api/client'
 import { useAuthStore } from '@/features/auth/store'
+import { ErrorBoundary } from '@/components/system/ErrorBoundary'
+import { ToastHost } from '@/components/system/ToastHost'
 
 function AppRoutes() {
   return (
@@ -22,6 +27,10 @@ function AppRoutes() {
         <Route element={<AppLayout />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/customers" element={<CustomersListPage />} />
+          <Route path="/customers/new" element={<CustomerFormPage />} />
+          <Route path="/customers/:id" element={<CustomerDetailPage />} />
+          <Route path="/customers/:id/edit" element={<CustomerFormPage />} />
           <Route path="/sales/invoices" element={<InvoicesListPage />} />
           <Route path="/sales/invoices/new" element={<InvoiceFormPage />} />
           <Route path="/sales/invoices/:id" element={<InvoiceDetailPage />} />
@@ -50,7 +59,14 @@ function App() {
     })
   }, [logout, navigate])
 
-  return <div className="qf-app"><AppRoutes /></div>
+  return (
+    <ErrorBoundary>
+      <div className="qf-app">
+        <AppRoutes />
+        <ToastHost />
+      </div>
+    </ErrorBoundary>
+  )
 }
 
 export default App

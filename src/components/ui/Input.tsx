@@ -1,11 +1,12 @@
-import type { InputHTMLAttributes } from 'react'
+import type { FormControlProps } from 'react-bootstrap'
 import { Form } from 'react-bootstrap'
 import { twMerge } from 'tailwind-merge'
 
-export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends Omit<FormControlProps, 'size'> {
   leftAdornment?: React.ReactNode
   rightAdornment?: React.ReactNode
   error?: boolean
+  size?: 'sm' | 'lg'
 }
 
 /**

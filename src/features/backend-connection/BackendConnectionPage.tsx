@@ -1,4 +1,5 @@
-import { FormEvent, useState } from 'react'
+import type { FormEvent } from 'react'
+import { useState } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -9,7 +10,7 @@ import { Tooltip } from '@/components/ui/Tooltip'
 import {
   registerCompany,
   type RegisterCompanyResponse,
-} from '@/api/endpoints/auth'
+} from '@/api/services/auth.service'
 import { toApiError } from '@/api/response'
 import { useAuthStore } from '@/features/auth/store'
 

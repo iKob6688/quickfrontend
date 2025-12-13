@@ -5,33 +5,42 @@ import { Input } from '@/components/ui/Input'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/Badge'
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { listInvoices, type InvoiceListItem } from '@/api/endpoints/invoices'
+import { useInfiniteQuery } from '@tanstack/react-query'
+import { listInvoices } from '@/api/services/invoices.service'
 import { useNavigate } from 'react-router-dom'
 import { Spinner } from 'react-bootstrap'
+import { useDebouncedValue } from '@/lib/useDebouncedValue'
 
 export function InvoicesListPage() {
   const navigate = useNavigate()
   type StatusTab = 'all' | 'draft' | 'posted' | 'paid' | 'cancelled'
   const [tab, setTab] = useState<StatusTab>('all')
   const [q, setQ] = useState('')
+  const qDebounced = useDebouncedValue(q, 300)
+  const limit = 30
 
-  // Fetch invoices from API
-  const {
-    data: invoices = [],
-    isLoading,
-    error,
-    refetch,
-  } = useQuery({
-    queryKey: ['invoices', tab, q],
-    queryFn: () =>
-      listInvoices({
+  const query = useInfiniteQuery({
+    queryKey: ['invoices', tab, qDebounced, limit],
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
+      return await listInvoices({
         status: tab === 'all' ? undefined : tab,
-        search: q || undefined,
-        limit: 100,
-      }),
-    staleTime: 30_000, // 30 seconds
+        search: qDebounced || undefined,
+        limit,
+        offset: pageParam,
+      })
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      // backend doesn't return total; we stop when the page returns fewer items than `limit`
+      if (!lastPage || lastPage.length < limit) return undefined
+      return allPages.reduce((acc, p) => acc + (p?.length ?? 0), 0)
+    },
+    staleTime: 30_000,
   })
+
+  const invoices = useMemo(() => {
+    return query.data?.pages.flatMap((p) => p) ?? []
+  }, [query.data?.pages])
 
   // Transform API data to table rows
   const rows = useMemo(() => {
@@ -163,45 +172,67 @@ export function InvoicesListPage() {
         </div>
       </div>
 
-      {isLoading ? (
+      {query.isLoading ? (
         <div className="d-flex justify-content-center align-items-center py-5">
           <Spinner animation="border" role="status">
             <span className="visually-hidden">กำลังโหลด...</span>
           </Spinner>
           <span className="ms-3">กำลังโหลดข้อมูล...</span>
         </div>
-      ) : error ? (
+      ) : query.isError ? (
         <div className="alert alert-danger">
           <p className="fw-semibold mb-2">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
           <p className="small mb-2">
-            {error instanceof Error ? error.message : 'Unknown error'}
+            {query.error instanceof Error ? query.error.message : 'Unknown error'}
           </p>
-          <Button size="sm" onClick={() => refetch()}>
+          <Button size="sm" onClick={() => query.refetch()}>
             ลองอีกครั้ง
           </Button>
         </div>
       ) : (
-        <DataTable
-          title="รายการเอกสาร"
-          right={
-            <Button size="sm" variant="ghost" onClick={() => refetch()}>
-              <i className="bi bi-arrow-clockwise me-1"></i>
-              รีเฟรช
-            </Button>
-          }
-          columns={columns}
-          rows={rows}
-          empty={
-            <div>
-              <p className="h6 fw-semibold mb-2">ยังไม่มีข้อมูล</p>
-              <p className="small text-muted mb-0">
-                {q
-                  ? 'ไม่พบข้อมูลที่ค้นหา ลองค้นหาด้วยคำอื่น'
-                  : 'ยังไม่มีใบแจ้งหนี้ในระบบ'}
-              </p>
+        <div className="d-flex flex-column gap-3">
+          <DataTable
+            title="รายการเอกสาร"
+            right={
+              <div className="d-flex align-items-center gap-2">
+                <Button size="sm" variant="ghost" onClick={() => query.refetch()}>
+                  <i className="bi bi-arrow-clockwise me-1"></i>
+                  รีเฟรช
+                </Button>
+              </div>
+            }
+            columns={columns}
+            rows={rows}
+            empty={
+              <div>
+                <p className="h6 fw-semibold mb-2">ยังไม่มีข้อมูล</p>
+                <p className="small text-muted mb-0">
+                  {qDebounced
+                    ? 'ไม่พบข้อมูลที่ค้นหา ลองค้นหาด้วยคำอื่น'
+                    : 'ยังไม่มีใบแจ้งหนี้ในระบบ'}
+                </p>
+              </div>
+            }
+          />
+
+          <div className="d-flex justify-content-between align-items-center">
+            <div className="small text-muted">
+              แสดงแล้ว {rows.length} รายการ
             </div>
-          }
-        />
+            {query.hasNextPage ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => query.fetchNextPage()}
+                isLoading={query.isFetchingNextPage}
+              >
+                โหลดเพิ่ม
+              </Button>
+            ) : (
+              <div className="small text-muted">ครบแล้ว</div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )

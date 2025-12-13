@@ -1,17 +1,21 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getInvoice, postInvoice, registerPayment, type RegisterPaymentPayload } from '@/api/endpoints/invoices'
+import { getInvoice, postInvoice, registerPayment, openInvoicePdf, type RegisterPaymentPayload } from '@/api/services/invoices.service'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner, Alert } from 'react-bootstrap'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { RegisterPaymentModal } from '@/features/sales/RegisterPaymentModal'
+import { useState } from 'react'
+import { toast } from '@/lib/toastStore'
 
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [paymentOpen, setPaymentOpen] = useState(false)
 
   const invoiceId = id ? Number.parseInt(id, 10) : null
 
@@ -30,6 +34,10 @@ export function InvoiceDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
       queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      toast.success('โพสต์ใบแจ้งหนี้สำเร็จ')
+    },
+    onError: (err) => {
+      toast.error('โพสต์ใบแจ้งหนี้ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
     },
   })
 
@@ -39,6 +47,10 @@ export function InvoiceDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
       queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      toast.success('บันทึกรับชำระเงินสำเร็จ')
+    },
+    onError: (err) => {
+      toast.error('รับชำระเงินไม่สำเร็จ', err instanceof Error ? err.message : undefined)
     },
   })
 
@@ -102,7 +114,7 @@ export function InvoiceDetailPage() {
       header: 'จำนวน',
       className: 'text-end',
       cell: (line) => (
-        <span className="font-monospace">{line.quantity.toLocaleString('th-TH')}</span>
+        <span className="font-monospace">{(line.quantity ?? 0).toLocaleString('th-TH')}</span>
       ),
     },
     {
@@ -111,7 +123,7 @@ export function InvoiceDetailPage() {
       className: 'text-end',
       cell: (line) => (
         <span className="font-monospace">
-          {line.unitPrice.toLocaleString('th-TH', {
+          {(line.unitPrice ?? 0).toLocaleString('th-TH', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           })}
@@ -124,7 +136,7 @@ export function InvoiceDetailPage() {
       className: 'text-end',
       cell: (line) => (
         <span className="fw-semibold font-monospace">
-          {line.subtotal.toLocaleString('th-TH', {
+          {(line.subtotal ?? (line.quantity ?? 0) * (line.unitPrice ?? 0)).toLocaleString('th-TH', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           })}
@@ -166,6 +178,28 @@ export function InvoiceDetailPage() {
                 ยืนยันใบแจ้งหนี้
               </Button>
             )}
+            {invoice.status === 'posted' && (
+              <Button
+                size="sm"
+                onClick={() => setPaymentOpen(true)}
+                isLoading={paymentMutation.isPending}
+              >
+                รับชำระเงิน
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={async () => {
+                try {
+                  await openInvoicePdf(invoice.id)
+                } catch (err) {
+                  toast.error('เปิด PDF ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+                }
+              }}
+            >
+              พิมพ์ / PDF
+            </Button>
           </div>
         }
       />
@@ -219,7 +253,7 @@ export function InvoiceDetailPage() {
               <div className="d-flex justify-content-between mb-2">
                 <span className="text-muted small">ยอดรวมก่อนภาษี:</span>
                 <span className="font-monospace">
-                  {invoice.amountUntaxed.toLocaleString('th-TH', {
+                  {(invoice.amountUntaxed ?? invoice.total - (invoice.totalTax ?? 0)).toLocaleString('th-TH', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}
@@ -228,7 +262,7 @@ export function InvoiceDetailPage() {
               <div className="d-flex justify-content-between mb-2">
                 <span className="text-muted small">ภาษี:</span>
                 <span className="font-monospace">
-                  {invoice.totalTax.toLocaleString('th-TH', {
+                  {(invoice.totalTax ?? 0).toLocaleString('th-TH', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}
@@ -237,11 +271,11 @@ export function InvoiceDetailPage() {
               <div className="d-flex justify-content-between mb-3">
                 <span className="fw-semibold">ยอดรวมทั้งสิ้น:</span>
                 <span className="fw-bold font-monospace h6 mb-0">
-                  {invoice.total.toLocaleString('th-TH', {
+                  {(invoice.total ?? 0).toLocaleString('th-TH', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}{' '}
-                  {invoice.currency}
+                  {invoice.currency || 'THB'}
                 </span>
               </div>
             </div>
@@ -255,6 +289,16 @@ export function InvoiceDetailPage() {
           )}
         </div>
       </div>
+
+      <RegisterPaymentModal
+        open={paymentOpen}
+        onClose={() => setPaymentOpen(false)}
+        currency={invoice.currency}
+        defaultAmount={undefined}
+        onSubmit={async (payload) => {
+          await paymentMutation.mutateAsync(payload)
+        }}
+      />
     </div>
   )
 }

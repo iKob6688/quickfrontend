@@ -3,19 +3,27 @@ import { AppLogo } from '@/components/icons/AppLogo'
 import { Button } from '@/components/ui/Button'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { useAuthStore } from '@/features/auth/store'
+import { hasScope } from '@/lib/scopes'
+import { ConfigBanner } from '@/components/system/ConfigBanner'
 
-const navItems = [
-  { path: '/dashboard', label: 'แดชบอร์ด' },
-  { path: '/sales/invoices', label: 'ใบแจ้งหนี้' },
-  { path: '/excel-import', label: 'Excel' },
-  { path: '/backend-connection', label: 'การเชื่อมต่อ' },
-] as const
+type NavItem = { path: string; label: string; scope?: string }
 
 export function AppLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const logout = useAuthStore((s) => s.logout)
   const user = useAuthStore((s) => s.user)
+
+  // Scope gating (prod-grade): only hide items that would 403 consistently.
+  // Dashboard stays visible even if KPI scope is missing; page will degrade gracefully.
+  const navItems: NavItem[] = [
+    { path: '/dashboard', label: 'แดชบอร์ด' },
+    { path: '/customers', label: 'ลูกค้า', scope: 'contacts' },
+    { path: '/sales/invoices', label: 'ใบแจ้งหนี้', scope: 'invoice' },
+    { path: '/excel-import', label: 'Excel', scope: 'excel' },
+    // Provisioning is an admin/dev feature; keep behind auth scope.
+    { path: '/backend-connection', label: 'การเชื่อมต่อ', scope: 'auth' },
+  ].filter((item) => !item.scope || hasScope(item.scope))
 
   const handleLogout = async () => {
     await logout()
@@ -100,6 +108,7 @@ export function AppLayout() {
       {/* Main content */}
       <PageContainer className="flex-1">
         <main className="min-w-0 flex-1">
+          <ConfigBanner />
           <Outlet />
         </main>
       </PageContainer>

@@ -1,11 +1,11 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
-import type { AuthUser, LoginPayload, MeResponse } from '@/api/endpoints/auth'
+import type { LoginPayload, MeResponse } from '@/api/services/auth.service'
 import {
   getMe,
   login as apiLogin,
   logout as apiLogout,
-} from '@/api/endpoints/auth'
+} from '@/api/services/auth.service'
 import { clearOfflineData } from '@/offline/syncEngine'
 import { clearAuthStorage, setAccessToken, getAccessToken } from '@/lib/authToken'
 import {
@@ -36,7 +36,7 @@ function resolveInstanceId(user: MeResponse | null): string | null {
 
 export const useAuthStore = create<AuthState>()(
   devtools(
-    (set, get) => ({
+    (set) => ({
       user: null,
       accessToken: getAccessToken(),
       isAuthenticated: !!getAccessToken(),

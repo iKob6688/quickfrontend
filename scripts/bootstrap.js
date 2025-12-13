@@ -83,48 +83,37 @@ async function bootstrap() {
   console.log('🚀 Quickfront18 Bootstrap')
   console.log('========================\n')
   
-  // Ask for Odoo host
-  let odooHost = await askQuestion('Odoo host (e.g., http://localhost:8069): ')
-  if (!odooHost) {
-    console.error('❌ Odoo host is required')
-    process.exit(1)
-  }
-  
-  // Normalize URL: remove trailing slash, fix common mistakes
-  odooHost = odooHost.trim().replace(/\/$/, '')
-  
-  // Fix common URL mistakes
-  // http:localhost:8069 -> http://localhost:8069
-  if (odooHost.match(/^https?:[^/]/)) {
-    odooHost = odooHost.replace(/^(https?:)([^/])/, '$1//$2')
+  const defaultBootstrapUrl = 'http://localhost:8069/api/th/v1/frontend/bootstrap'
+  let bootstrapUrl =
+    await askQuestion(`Odoo bootstrap URL [${defaultBootstrapUrl}]: `)
+  bootstrapUrl = (bootstrapUrl || defaultBootstrapUrl).trim()
+
+  // Normalize URL: fix common mistakes (http:localhost -> http://localhost)
+  if (bootstrapUrl.match(/^https?:[^/]/)) {
+    bootstrapUrl = bootstrapUrl.replace(/^(https?:)([^/])/, '$1//$2')
     console.warn('⚠️  Fixed URL format (added missing //)')
   }
-  
+
   // Fix https to http for localhost
-  if (odooHost.startsWith('https://localhost') || odooHost.startsWith('https://127.0.0.1')) {
+  if (
+    bootstrapUrl.startsWith('https://localhost') ||
+    bootstrapUrl.startsWith('https://127.0.0.1')
+  ) {
     console.warn('⚠️  Warning: Using https:// for localhost. Changing to http://')
-    odooHost = odooHost.replace('https://', 'http://')
+    bootstrapUrl = bootstrapUrl.replace('https://', 'http://')
   }
-  
+
   // Validate URL format
   try {
-    const url = new URL(odooHost)
-    // Ensure protocol is http or https
+    const url = new URL(bootstrapUrl)
     if (!['http:', 'https:'].includes(url.protocol)) {
       console.error('❌ Invalid protocol. Use http:// or https://')
       process.exit(1)
     }
-  } catch (e) {
-    console.error('❌ Invalid URL format. Please use format: http://hostname:port')
-    console.error(`   Example: http://localhost:8069`)
+  } catch {
+    console.error('❌ Invalid URL format. Please provide a full URL.')
+    console.error(`   Example: ${defaultBootstrapUrl}`)
     process.exit(1)
-  }
-  
-  // Ask for database name (optional)
-  const dbName = await askQuestion('Database name (optional, press Enter to use default): ')
-  const dbNameTrimmed = dbName.trim()
-  if (dbNameTrimmed) {
-    console.log(`   Using database: ${dbNameTrimmed}\n`)
   }
   
   // Ask for registration token
@@ -134,38 +123,35 @@ async function bootstrap() {
     process.exit(1)
   }
   
+  // Optional db (kept for future multi-db, but optional per contract)
+  const dbName = await askQuestion('Database name (optional, press Enter to omit): ')
+  const dbNameTrimmed = dbName.trim()
+
   console.log('\n📡 Calling Odoo bootstrap endpoint...')
   
   try {
-    // Build params object
-    const params = {
-      registration_token: registrationToken,
-    }
-    
-    // Add db if provided
-    if (dbNameTrimmed) {
-      params.db = dbNameTrimmed
-    }
-    
-    // Odoo JSON-RPC format
-    const response = await axios.post(
-      `${odooHost}/api/th/v1/frontend/bootstrap`,
-      {
-        jsonrpc: '2.0',
-        method: 'call',
-        params,
+    // Per docs/api_contract.md: JSON-RPC request
+    const body = {
+      jsonrpc: '2.0',
+      method: 'call',
+      params: {
+        registration_token: registrationToken.trim(),
+        ...(dbNameTrimmed ? { db: dbNameTrimmed } : {}),
       },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    )
-    
-    // Handle JSON-RPC response format
-    // Odoo returns: { jsonrpc: "2.0", id: null, result: { success, data, error } }
+    }
+
+    const response = await axios.post(bootstrapUrl, body, {
+      headers: {
+        'Content-Type': 'application/json',
+        // Docs say API key required for all endpoints; during bootstrap we don't have cfg.api_key yet.
+        // Best-effort: send registration token as API key header (backend may ignore).
+        'X-ADT-API-Key': registrationToken.trim(),
+      },
+    })
+
+    // Backend may respond as JSON-RPC wrapper or plain envelope; normalize here.
     let envelope = response.data
-    if (envelope.jsonrpc === '2.0' && envelope.result) {
+    if (envelope && envelope.jsonrpc === '2.0' && envelope.result) {
       envelope = envelope.result
     }
     
@@ -220,6 +206,9 @@ async function bootstrap() {
     // Write .env
     writeFileSync(envPath, newEnvContent, 'utf-8')
     console.log(`\n✅ Updated .env file: ${envPath}`)
+    console.log('\n--- .env bootstrap block ---\n')
+    console.log(bootstrapBlock)
+    console.log('\n---------------------------\n')
     console.log('\n⚠️  Please restart your dev server (npm run dev) for changes to take effect.\n')
     
   } catch (error) {
@@ -230,22 +219,22 @@ async function bootstrap() {
       
       if (status === 404) {
         console.error(`❌ Bootstrap endpoint not found (404)`)
-        console.error(`   The endpoint /api/th/v1/frontend/bootstrap does not exist on the backend.`)
-        console.error(`   Please ensure the Odoo module 'adt_th_api' is installed and the endpoint is implemented.`)
+        console.error(`   The endpoint does not exist on the backend.`)
+        console.error(`   Check URL: ${bootstrapUrl}`)
       } else {
         console.error(`❌ Bootstrap failed: ${errorMsg}`)
         console.error(`   Status: ${status}`)
       }
     } else if (error.request) {
-      console.error(`❌ Network error: Could not reach ${odooHost}`)
+      console.error(`❌ Network error: Could not reach ${bootstrapUrl}`)
       console.error('   Please check:')
       console.error('   1. Is Odoo running?')
       console.error('   2. Is the URL correct? (use http:// not https:// for localhost)')
       console.error('   3. Is the port correct? (default is 8069)')
       
       // Try to suggest http if they used https
-      if (odooHost.includes('https://localhost') || odooHost.includes('https://127.0.0.1')) {
-        const httpUrl = odooHost.replace('https://', 'http://')
+      if (bootstrapUrl.includes('https://localhost') || bootstrapUrl.includes('https://127.0.0.1')) {
+        const httpUrl = bootstrapUrl.replace('https://', 'http://')
         console.error(`\n   💡 Try using: ${httpUrl}`)
       }
     } else {

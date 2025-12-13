@@ -5,9 +5,11 @@
  */
 export function hasScope(scope: string): boolean {
   const allowedScopes = import.meta.env.VITE_ALLOWED_SCOPES
-  if (!allowedScopes) return false
+  // If scopes are not configured in .env, don't hard-block the UI.
+  // Backend will still enforce scopes; this prevents "everything disabled" UX.
+  if (!allowedScopes) return true
   
-  const scopes = allowedScopes.split(',').map(s => s.trim())
+  const scopes = allowedScopes.split(',').map((s: string) => s.trim())
   return scopes.includes(scope)
 }
 
@@ -19,7 +21,11 @@ export function getAllowedScopes(): string[] {
   const allowedScopes = import.meta.env.VITE_ALLOWED_SCOPES
   if (!allowedScopes) return []
   
-  return allowedScopes.split(',').map(s => s.trim())
+  return allowedScopes.split(',').map((s: string) => s.trim())
+}
+
+export function isScopesConfigured(): boolean {
+  return Boolean(import.meta.env.VITE_ALLOWED_SCOPES)
 }
 
 /**
@@ -28,7 +34,7 @@ export function getAllowedScopes(): string[] {
  * @returns true if at least one scope is allowed
  */
 export function hasAnyScope(scopes: string[]): boolean {
-  return scopes.some(scope => hasScope(scope))
+  return scopes.some((scope: string) => hasScope(scope))
 }
 
 /**
@@ -37,6 +43,6 @@ export function hasAnyScope(scopes: string[]): boolean {
  * @returns true if all scopes are allowed
  */
 export function hasAllScopes(scopes: string[]): boolean {
-  return scopes.every(scope => hasScope(scope))
+  return scopes.every((scope: string) => hasScope(scope))
 }
 

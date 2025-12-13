@@ -7,7 +7,7 @@ import {
   registerPayment,
   type InvoicePayload,
   type RegisterPaymentPayload,
-} from '@/api/endpoints/invoices'
+} from '@/api/services/invoices.service'
 
 export interface QueueOperationInput {
   type: PendingOpType

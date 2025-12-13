@@ -4,17 +4,27 @@ import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/features/auth/store'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ping } from '@/api/endpoints/system'
+import { ping } from '@/api/services/system.service'
+import { getDashboardKpis } from '@/api/services/dashboard.service'
+import { hasScope } from '@/lib/scopes'
 
 export function DashboardPage() {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const instancePublicId = useAuthStore((s) => s.instancePublicId)
+  const canSeeKpis = hasScope('dashboard')
 
   const pingQuery = useQuery({
     queryKey: ['system', 'ping'],
     queryFn: ping,
     staleTime: 30_000,
+  })
+
+  const kpiQuery = useQuery({
+    queryKey: ['dashboard-kpis', 'month'],
+    enabled: canSeeKpis,
+    queryFn: () => getDashboardKpis(),
+    staleTime: 60_000,
   })
 
   return (
@@ -40,6 +50,71 @@ export function DashboardPage() {
       />
 
       <div className="row g-4">
+        {canSeeKpis && (
+          <>
+            <div className="col-md-6 col-xl-3">
+              <Card>
+                <p className="small fw-medium text-muted mb-2">Sales (Posted)</p>
+                <p className="h6 fw-semibold mb-2">
+                  {kpiQuery.isLoading
+                    ? 'กำลังโหลด...'
+                    : kpiQuery.isError
+                      ? '—'
+                      : kpiQuery.data?.salesInvoices.postedTotal.toLocaleString('th-TH', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                </p>
+                <p className="small text-muted mb-0">
+                  {kpiQuery.data
+                    ? `${kpiQuery.data.salesInvoices.postedCount} ใบ`
+                    : 'ยอดขายที่โพสต์แล้ว'}
+                </p>
+              </Card>
+            </div>
+            <div className="col-md-6 col-xl-3">
+              <Card>
+                <p className="small fw-medium text-muted mb-2">Receivables (Open)</p>
+                <p className="h6 fw-semibold mb-2">
+                  {kpiQuery.isLoading
+                    ? 'กำลังโหลด...'
+                    : kpiQuery.isError
+                      ? '—'
+                      : kpiQuery.data?.receivables.openTotal.toLocaleString('th-TH', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                </p>
+                <p className="small text-muted mb-0">
+                  {kpiQuery.data
+                    ? `${kpiQuery.data.receivables.openCount} ใบ`
+                    : 'ยอดค้างชำระ'}
+                </p>
+              </Card>
+            </div>
+            <div className="col-md-6 col-xl-3">
+              <Card>
+                <p className="small fw-medium text-muted mb-2">Overdue</p>
+                <p className="h6 fw-semibold mb-2">
+                  {kpiQuery.isLoading
+                    ? 'กำลังโหลด...'
+                    : kpiQuery.isError
+                      ? '—'
+                      : kpiQuery.data?.receivables.overdueTotal.toLocaleString('th-TH', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                </p>
+                <p className="small text-muted mb-0">
+                  {kpiQuery.data
+                    ? `${kpiQuery.data.receivables.overdueCount} ใบ`
+                    : 'เกินกำหนด'}
+                </p>
+              </Card>
+            </div>
+          </>
+        )}
+
         <div className="col-md-6 col-xl-3">
           <Card
             onClick={() => navigate('/sales/invoices')}
