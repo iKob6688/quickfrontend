@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { Spinner, Alert } from 'react-bootstrap'
+import { Spinner, Alert, OverlayTrigger, Tooltip } from 'react-bootstrap'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { RegisterPaymentModal } from '@/features/sales/RegisterPaymentModal'
 import { AmendInvoiceModal } from '@/features/sales/AmendInvoiceModal'
@@ -196,7 +196,21 @@ export function InvoiceDetailPage() {
   // Payment information from API (fallback to calculated if not available)
   const amountPaid = invoice.amountPaid ?? (invoice.status === 'paid' ? total : 0)
   const amountDue = invoice.amountDue ?? (invoice.status === 'paid' ? 0 : total - amountPaid)
-  const payments = invoice.payments || []
+  // Map default_account_id to bankAccount if needed
+  const payments = (invoice.payments || []).map((p) => ({
+    ...p,
+    bankAccount: p.bankAccount ?? (p.default_account_id ? String(p.default_account_id) : null),
+  }))
+  
+  // Debug: Log payment data to check bank account info
+  if (payments.length > 0) {
+    console.log('[InvoiceDetailPage] Payments data:', payments.map(p => ({
+      id: p.id,
+      journal: p.journal,
+      bankAccount: p.bankAccount,
+      bankAccountNumber: p.bankAccountNumber,
+    })))
+  }
 
   return (
     <div>
@@ -376,7 +390,34 @@ export function InvoiceDetailPage() {
                               {payments.some((p) => p.journal) && (
                                 <td className="small">
                                   {payment.journal ? (
-                                    <span className="badge bg-secondary">{payment.journal}</span>
+                                    (() => {
+                                      const hasBankInfo = !!(payment.bankAccount || payment.bankAccountNumber)
+                                      const tooltipText = payment.bankAccount && payment.bankAccountNumber
+                                        ? `${payment.bankAccount} ${payment.bankAccountNumber}`
+                                        : payment.bankAccount || payment.bankAccountNumber || ''
+                                      
+                                      console.log(`[Payment ${payment.id}] hasBankInfo: ${hasBankInfo}, tooltipText: "${tooltipText}"`, {
+                                        bankAccount: payment.bankAccount,
+                                        bankAccountNumber: payment.bankAccountNumber,
+                                      })
+                                      
+                                      return hasBankInfo ? (
+                                        <OverlayTrigger
+                                          placement="top"
+                                          overlay={
+                                            <Tooltip id={`tooltip-payment-${payment.id}`}>
+                                              {tooltipText}
+                                            </Tooltip>
+                                          }
+                                        >
+                                          <span className="badge bg-secondary" style={{ cursor: 'help' }}>
+                                            {payment.journal}
+                                          </span>
+                                        </OverlayTrigger>
+                                      ) : (
+                                        <span className="badge bg-secondary">{payment.journal}</span>
+                                      )
+                                    })()
                                   ) : (
                                     '—'
                                   )}

@@ -26,9 +26,12 @@ export interface PaymentRecord {
   id: number
   amount: number
   date: string
-  method?: string  // Combined: "Manual Payment (Cash)" or "Check (Bank)"
-  journal?: string  // Payment channel: "Cash", "Bank", etc.
+  method?: string
+  journal?: string
   reference?: string
+  default_account_id?: number | null // Backend field name
+  bankAccount?: string | null // Mapped from default_account_id or account name
+  bankAccountNumber?: string
 }
 
 export interface Invoice extends InvoicePayload {
@@ -165,9 +168,9 @@ export async function fetchInvoicePdf(id: number) {
       parsed?.message ||
       'PDF error'
     throw new Error(String(msg))
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Axios error path: attempt to decode JSON envelope from arraybuffer
-    const resp = err?.response
+    const resp = (err as { response?: { data?: ArrayBuffer | ArrayBufferView } })?.response
     if (resp?.data && (resp.data instanceof ArrayBuffer || ArrayBuffer.isView(resp.data))) {
       try {
         const buf = resp.data instanceof ArrayBuffer ? resp.data : resp.data.buffer
