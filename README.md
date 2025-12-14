@@ -3,6 +3,35 @@
 Quickfront18 is a React 18 + Vite + TypeScript frontend for Thai SME accounting on top of Odoo 18 Community.  
 It talks to a middleware backend over JSON APIs, supports offline-first usage, and integrates with LINE LIFF.
 
+## 🚀 Quick Start
+
+### Development
+
+```bash
+# Setup environment
+npm run setup
+
+# Start dev server
+npm run dev
+```
+
+### Production Deployment
+
+```bash
+# One-command setup
+npm run setup:prod
+
+# Validate configuration
+npm run validate-env:prod
+
+# Build
+npm run build
+
+# Deploy dist/ folder to your server
+```
+
+**That's it!** See [Production Deployment Guide](./docs/production-deployment.md) for details.
+
 ### API base URL
 
 - **Env:** `VITE_API_BASE_URL` (e.g. `https://middleware.example.com`)

@@ -5,11 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run validate-env && tsc -b && vite build",
+    "build:dev": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "bootstrap": "node scripts/bootstrap.js",
-    "update-env": "node scripts/update-env.js"
+    "update-env": "node scripts/update-env.js",
+    "setup": "node scripts/setup-production.js",
+    "setup:prod": "NODE_ENV=production node scripts/setup-production.js",
+    "validate-env": "node scripts/validate-env.js",
+    "validate-env:prod": "NODE_ENV=production node scripts/validate-env.js"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.12",
