@@ -6,7 +6,9 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ping } from '@/api/services/system.service'
 import { getDashboardKpis } from '@/api/services/dashboard.service'
+import { listInvoices } from '@/api/services/invoices.service'
 import { hasScope } from '@/lib/scopes'
+import { useMemo } from 'react'
 
 export function DashboardPage() {
   const navigate = useNavigate()
@@ -26,6 +28,36 @@ export function DashboardPage() {
     queryFn: () => getDashboardKpis(),
     staleTime: 60_000,
   })
+
+  // Fetch invoices to calculate payment status (fallback if backend doesn't return payments)
+  const invoicesQuery = useQuery({
+    queryKey: ['invoices', 'all', 'dashboard'],
+    enabled: canSeeKpis,
+    queryFn: () => listInvoices({ limit: 1000 }), // Get all invoices for calculation
+    staleTime: 60_000,
+  })
+
+  // Calculate payment stats from invoices
+  const paymentStats = useMemo(() => {
+    if (!invoicesQuery.data) return null
+    const invoices = invoicesQuery.data
+    let paidCount = 0
+    let paidTotal = 0
+    let partialCount = 0
+    let partialTotal = 0
+
+    invoices.forEach((inv) => {
+      if (inv.status === 'paid') {
+        paidCount++
+        paidTotal += inv.total
+      } else if (inv.status === 'posted') {
+        // For posted invoices, we can't determine partial payment without amountPaid/amountDue
+        // So we'll only count fully paid ones for now
+      }
+    })
+
+    return { paidCount, paidTotal, partialCount, partialTotal }
+  }, [invoicesQuery.data])
 
   return (
     <div>
@@ -112,6 +144,45 @@ export function DashboardPage() {
                 </p>
               </Card>
             </div>
+            {/* Payment status cards - use API data if available, otherwise calculate from invoices */}
+            {(kpiQuery.data?.payments || paymentStats) && (
+              <>
+                <div className="col-md-6 col-xl-3">
+                  <Card>
+                    <p className="small fw-medium text-muted mb-2">ชำระครบแล้ว</p>
+                    <p className="h6 fw-semibold mb-2 text-success">
+                      {kpiQuery.isLoading || invoicesQuery.isLoading
+                        ? 'กำลังโหลด...'
+                        : kpiQuery.isError && invoicesQuery.isError
+                          ? '—'
+                          : (kpiQuery.data?.payments?.paidTotal ?? paymentStats?.paidTotal ?? 0).toLocaleString('th-TH', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                    </p>
+                    <p className="small text-muted mb-0">
+                      {kpiQuery.data?.payments?.paidCount ?? paymentStats?.paidCount ?? 0} ใบ
+                    </p>
+                  </Card>
+                </div>
+                {((kpiQuery.data?.payments?.partialCount ?? paymentStats?.partialCount ?? 0) > 0) && (
+                  <div className="col-md-6 col-xl-3">
+                    <Card>
+                      <p className="small fw-medium text-muted mb-2">ชำระบางส่วน</p>
+                      <p className="h6 fw-semibold mb-2 text-warning">
+                        {(kpiQuery.data?.payments?.partialTotal ?? paymentStats?.partialTotal ?? 0).toLocaleString('th-TH', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </p>
+                      <p className="small text-muted mb-0">
+                        {kpiQuery.data?.payments?.partialCount ?? paymentStats?.partialCount ?? 0} ใบ
+                      </p>
+                    </Card>
+                  </div>
+                )}
+              </>
+            )}
           </>
         )}
 

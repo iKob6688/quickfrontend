@@ -22,12 +22,24 @@ export interface InvoicePayload {
   notes?: string
 }
 
+export interface PaymentRecord {
+  id: number
+  amount: number
+  date: string
+  method?: string  // Combined: "Manual Payment (Cash)" or "Check (Bank)"
+  journal?: string  // Payment channel: "Cash", "Bank", etc.
+  reference?: string
+}
+
 export interface Invoice extends InvoicePayload {
   id: number
   status: 'draft' | 'posted' | 'paid' | 'cancelled'
   amountUntaxed: number // Calculated by Odoo
   total: number // Calculated by Odoo
   totalTax: number // Calculated by Odoo
+  amountPaid?: number // Sum of all payments (if available from backend)
+  amountDue?: number // Remaining amount to pay (if available from backend)
+  payments?: PaymentRecord[] // Payment history (if available from backend)
   createdAt: string
   updatedAt: string
   number?: string
@@ -44,6 +56,9 @@ export interface InvoiceListItem {
   total: number
   status: 'draft' | 'posted' | 'paid' | 'cancelled'
   currency: string
+  paymentState?: 'not_paid' | 'partial' | 'paid' | 'in_payment'  // Payment status from Odoo
+  amountPaid?: number  // Amount already paid
+  amountDue?: number   // Remaining amount to pay
 }
 
 export interface ListInvoicesParams {

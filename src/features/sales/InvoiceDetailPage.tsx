@@ -192,6 +192,11 @@ export function InvoiceDetailPage() {
   const totalTax = invoice.totalTax ?? 0
   const total = invoice.total ?? 0
   const currency = invoice.currency || 'THB'
+  
+  // Payment information from API (fallback to calculated if not available)
+  const amountPaid = invoice.amountPaid ?? (invoice.status === 'paid' ? total : 0)
+  const amountDue = invoice.amountDue ?? (invoice.status === 'paid' ? 0 : total - amountPaid)
+  const payments = invoice.payments || []
 
   return (
     <div>
@@ -314,6 +319,122 @@ export function InvoiceDetailPage() {
               empty={<p className="text-muted mb-0">ไม่มีรายการ</p>}
             />
           </Card>
+
+          {/* Payment details section - only show for posted/paid invoices */}
+          {(invoice.status === 'posted' || invoice.status === 'paid') && (
+            <Card className="mt-4">
+              <div className="qf-section-title mb-3">รายละเอียดการชำระเงิน</div>
+              <div>
+                <div className="d-flex justify-content-between mb-2">
+                  <span className="text-muted small">ยอดรวมทั้งสิ้น:</span>
+                  <span className="fw-semibold font-monospace">
+                    {total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
+                    {currency}
+                  </span>
+                </div>
+                <div className="d-flex justify-content-between mb-2">
+                  <span className="text-muted small">ยอดที่ชำระแล้ว:</span>
+                  <span className={`font-monospace ${amountPaid > 0 ? 'fw-semibold text-success' : 'text-muted'}`}>
+                    {amountPaid.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
+                    {currency}
+                  </span>
+                </div>
+                <hr />
+                <div className="d-flex justify-content-between mb-3">
+                  <span className="fw-semibold">ยอดคงเหลือ:</span>
+                  <span className={`fw-bold font-monospace ${amountDue === 0 ? 'text-success' : amountDue > 0 ? 'text-danger' : 'text-muted'}`}>
+                    {amountDue.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
+                    {currency}
+                  </span>
+                </div>
+                
+                {/* Payment history */}
+                {payments.length > 0 ? (
+                  <div className="mt-3">
+                    <div className="small fw-semibold text-muted mb-2">ประวัติการชำระเงิน ({payments.length} รายการ):</div>
+                    <div className="table-responsive">
+                      <table className="table table-sm mb-0">
+                        <thead>
+                          <tr className="small text-muted">
+                            <th style={{ width: '140px' }}>วันที่ชำระ</th>
+                            {payments.some((p) => p.journal) && <th>ช่องทางชำระ</th>}
+                            <th>วิธีชำระ</th>
+                            <th className="text-end">จำนวนเงิน</th>
+                            {payments.some((p) => p.reference) && <th>อ้างอิง</th>}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {payments.map((payment) => (
+                            <tr key={payment.id}>
+                              <td className="small">
+                                {new Date(payment.date).toLocaleDateString('th-TH', {
+                                  year: 'numeric',
+                                  month: '2-digit',
+                                  day: '2-digit',
+                                })}
+                              </td>
+                              {payments.some((p) => p.journal) && (
+                                <td className="small">
+                                  {payment.journal ? (
+                                    <span className="badge bg-secondary">{payment.journal}</span>
+                                  ) : (
+                                    '—'
+                                  )}
+                                </td>
+                              )}
+                              <td className="small">{payment.method || 'Manual'}</td>
+                              <td className="text-end font-monospace fw-semibold">
+                                {payment.amount.toLocaleString('th-TH', {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}{' '}
+                                {currency}
+                              </td>
+                              {payments.some((p) => p.reference) && (
+                                <td className="small text-muted font-monospace">{payment.reference || '—'}</td>
+                              )}
+                            </tr>
+                          ))}
+                        </tbody>
+                        {payments.length > 1 && (
+                          <tfoot>
+                            <tr className="border-top">
+                              <td colSpan={payments.some((p) => p.journal) ? 3 : 2} className="small fw-semibold text-end">
+                                รวมทั้งหมด:
+                              </td>
+                              <td className="text-end fw-bold font-monospace">
+                                {amountPaid.toLocaleString('th-TH', {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}{' '}
+                                {currency}
+                              </td>
+                              {payments.some((p) => p.reference) && <td></td>}
+                            </tr>
+                          </tfoot>
+                        )}
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-3">
+                    <div className="small text-muted">ยังไม่มีประวัติการชำระเงิน</div>
+                  </div>
+                )}
+                
+                {/* Status badge */}
+                <div className="mt-3">
+                  {amountDue === 0 ? (
+                    <Badge tone="green">ชำระครบแล้ว</Badge>
+                  ) : amountPaid > 0 ? (
+                    <Badge tone="amber">ชำระบางส่วน</Badge>
+                  ) : (
+                    <Badge tone="blue">รอการชำระเงิน</Badge>
+                  )}
+                </div>
+              </div>
+            </Card>
+          )}
         </div>
 
         <div className="col-lg-4">

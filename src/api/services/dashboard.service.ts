@@ -13,6 +13,12 @@ export interface DashboardKpisResponse {
     overdueCount: number
     overdueTotal: number
   }
+  payments?: {
+    paidCount: number
+    paidTotal: number
+    partialCount: number
+    partialTotal: number
+  }
 }
 
 export interface DashboardKpisParams {

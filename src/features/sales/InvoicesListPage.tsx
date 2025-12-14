@@ -57,6 +57,9 @@ export function InvoicesListPage() {
         : '—',
       total: inv.total,
       status: inv.status,
+      paymentState: inv.paymentState,
+      amountPaid: inv.amountPaid,
+      amountDue: inv.amountDue,
     }))
   }, [invoices])
 
@@ -121,6 +124,49 @@ export function InvoicesListPage() {
                 ? 'ร่าง'
                 : 'ยกเลิก'
         return <Badge tone={tone}>{label}</Badge>
+      },
+    },
+    {
+      key: 'paymentStatus',
+      header: 'สถานะการชำระ',
+      className: 'text-nowrap',
+      cell: (r) => {
+        // Only show payment status for posted invoices
+        if (r.status !== 'posted') {
+          return <span className="text-muted small">—</span>
+        }
+        
+        const paymentState = r.paymentState
+        const total = r.total ?? 0
+        const amountDue = r.amountDue ?? 0
+        const amountPaid = r.amountPaid ?? 0
+        
+        // Use paymentState as primary source (most reliable from Odoo)
+        if (paymentState === 'paid') {
+          // Fully paid according to Odoo payment_state
+          return <Badge tone="green">ชำระครบแล้ว</Badge>
+        } else if (paymentState === 'partial' || paymentState === 'in_payment') {
+          // Partially paid
+          return <Badge tone="amber">ชำระบางส่วน</Badge>
+        } else if (paymentState === 'not_paid') {
+          // Not paid
+          return <Badge tone="gray">รอการชำระ</Badge>
+        }
+        
+        // Fallback: use amounts if paymentState is missing
+        // If total is 0, no payment status (treat as unpaid for display)
+        if (total === 0 || (amountDue === total && amountPaid === 0)) {
+          return <Badge tone="gray">รอการชำระ</Badge>
+        }
+        
+        // Check amounts
+        if (amountDue === 0 && amountPaid > 0 && total > 0) {
+          return <Badge tone="green">ชำระครบแล้ว</Badge>
+        } else if (amountPaid > 0 && amountDue > 0) {
+          return <Badge tone="amber">ชำระบางส่วน</Badge>
+        } else {
+          return <Badge tone="gray">รอการชำระ</Badge>
+        }
       },
     },
   ]
