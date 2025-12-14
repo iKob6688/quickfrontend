@@ -1,5 +1,5 @@
 import { apiClient } from '@/api/client'
-import { unwrapResponse } from '@/api/response'
+import { unwrapResponse, ApiError } from '@/api/response'
 import { makeRpc } from '@/api/services/rpc'
 
 export interface LoginPayload {
@@ -53,8 +53,29 @@ export async function login(payload: LoginPayload) {
     login: payload.login,
     password: payload.password,
   })
-  const response = await apiClient.post(`${basePath}/login`, body)
-  return unwrapResponse<LoginResponse>(response)
+  try {
+    const response = await apiClient.post(`${basePath}/login`, body)
+    return unwrapResponse<LoginResponse>(response)
+  } catch (err) {
+    // Handle 405 Method Not Allowed - usually means VITE_API_BASE_URL is incorrect
+    const status = (err as { response?: { status?: number } })?.response?.status
+    if (status === 405) {
+      const baseURL = import.meta.env.VITE_API_BASE_URL ?? '/api'
+      const isRelativeUrl = baseURL.startsWith('/')
+      const message =
+        `การเชื่อมต่อล้มเหลว (405 Method Not Allowed). ` +
+        `กรุณาตรวจสอบการตั้งค่า VITE_API_BASE_URL ในไฟล์ .env\n\n` +
+        `ค่าปัจจุบัน: ${baseURL}\n` +
+        (isRelativeUrl
+          ? `⚠️  สำหรับ server deployment ต้องใช้ full URL เช่น:\n` +
+            `   - https://your-server.com/api\n` +
+            `   - https://api.example.com\n\n` +
+            `รันคำสั่ง: npm run update-env เพื่ออัพเดทการตั้งค่า`
+          : `ตรวจสอบว่า URL ถูกต้องและ server รองรับ POST method`)
+      throw new ApiError(message, { status: 405, code: 'METHOD_NOT_ALLOWED' })
+    }
+    throw err
+  }
 }
 
 export async function getMe() {
