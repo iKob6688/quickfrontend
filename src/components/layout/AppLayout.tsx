@@ -23,7 +23,7 @@ export function AppLayout() {
     { path: '/excel-import', label: 'Excel', scope: 'excel' },
     // Provisioning is an admin/dev feature; keep behind auth scope.
     { path: '/backend-connection', label: 'การเชื่อมต่อ', scope: 'auth' },
-  ].filter((item) => !item.scope || hasScope(item.scope))
+  ]
 
   const handleLogout = async () => {
     await logout()
@@ -84,17 +84,24 @@ export function AppLayout() {
           <div className="container-fluid px-4 py-2">
             <nav className="d-flex gap-1">
               {navItems.map((item) => {
+                const allowed = !item.scope || hasScope(item.scope)
                 const active = location.pathname.startsWith(item.path)
                 return (
                   <button
                     key={item.path}
                     type="button"
-                    onClick={() => navigate(item.path)}
+                    onClick={() => allowed && navigate(item.path)}
+                    disabled={!allowed}
                     className={`btn btn-sm rounded ${
                       active
                         ? 'btn-primary'
                         : 'btn-outline-secondary'
                     }`}
+                    title={
+                      !allowed && item.scope
+                        ? `ต้องเปิด scope: ${item.scope}`
+                        : undefined
+                    }
                   >
                     {item.label}
                   </button>
@@ -121,18 +128,25 @@ export function AppLayout() {
         <div className="container-fluid px-2 py-2">
           <div className="d-flex align-items-center justify-content-around">
             {navItems.map((item) => {
+              const allowed = !item.scope || hasScope(item.scope)
               const active = location.pathname.startsWith(item.path)
               return (
                 <button
                   key={item.path}
                   type="button"
-                  onClick={() => navigate(item.path)}
+                  onClick={() => allowed && navigate(item.path)}
+                  disabled={!allowed}
                   className={`btn btn-sm flex-fill d-flex flex-column align-items-center rounded ${
                     active
                       ? 'btn-primary'
                       : 'btn-outline-secondary'
                   }`}
                   style={{ fontSize: '0.6875rem' }}
+                  title={
+                    !allowed && item.scope
+                      ? `ต้องเปิด scope: ${item.scope}`
+                      : undefined
+                  }
                 >
                   <span>{item.label}</span>
                 </button>

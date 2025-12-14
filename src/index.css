@@ -35,6 +35,8 @@ body {
 .qf-app {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text',
     'Segoe UI', 'Inter', 'Noto Sans Thai', 'Noto Sans Thai UI', Tahoma, sans-serif;
+  font-size: var(--qf-text-body);
+  line-height: var(--qf-lh-body);
 }
 
 /* Bootstrap customizations for Quickfront18 theme */
@@ -71,14 +73,14 @@ body {
 }
 
 .qf-app .table thead th {
-  background-color: rgba(255, 255, 255, 0.35);
-  border-bottom: 1px solid #e6eef7;
-  font-weight: 600;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.14em;
-  color: #64748b;
-  padding: 0.875rem 1rem;
+  background-color: var(--qf-table-header-bg);
+  border-bottom: 1px solid var(--qf-border);
+  font-weight: var(--qf-weight-semibold);
+  text-transform: none;
+  font-size: var(--qf-text-meta);
+  letter-spacing: 0.02em;
+  color: var(--qf-text-muted);
+  padding: var(--qf-table-cell-py) var(--qf-table-cell-px);
 }
 
 .qf-app .table tbody tr {
@@ -94,7 +96,7 @@ body {
 }
 
 .qf-app .table td {
-  padding: 0.875rem 1rem;
+  padding: var(--qf-table-cell-py) var(--qf-table-cell-px);
   vertical-align: middle;
 }
 
@@ -118,8 +120,86 @@ body {
 }
 
 .qf-app .badge {
-  padding: 0.25rem 0.625rem;
-  font-weight: 700;
-  font-size: 0.75rem;
-  border-radius: 9999px;
+  padding: var(--qf-badge-padding-y) var(--qf-badge-padding-x);
+  font-weight: var(--qf-badge-font-weight);
+  font-size: var(--qf-badge-font-size);
+  border-radius: var(--qf-badge-radius);
 }
+
+/* ============================================
+   Component helpers (PEAK-like hierarchy)
+   ============================================ */
+.qf-app .qf-breadcrumb {
+  font-size: var(--qf-text-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.qf-app .qf-page-title {
+  font-size: var(--qf-text-page-title);
+  line-height: var(--qf-lh-page-title);
+  font-weight: var(--qf-weight-bold);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.qf-app .qf-subtitle {
+  font-size: var(--qf-text-body);
+  line-height: var(--qf-lh-body);
+}
+
+.qf-app .qf-section-title {
+  font-size: var(--qf-text-section-title);
+  line-height: var(--qf-lh-section-title);
+  font-weight: var(--qf-weight-semibold);
+  color: var(--qf-text-strong);
+}
+
+.qf-app .qf-kpi-label {
+  font-size: var(--qf-text-meta);
+  line-height: var(--qf-lh-meta);
+}
+
+.qf-app .qf-kpi-value {
+  font-size: var(--qf-text-number-lg);
+  line-height: 1.2;
+  font-weight: var(--qf-weight-bold);
+  color: var(--qf-text-strong);
+  letter-spacing: -0.01em;
+}
+
+.qf-app .qf-kpi-currency {
+  font-size: var(--qf-text-sm);
+  font-weight: var(--qf-weight-semibold);
+  color: var(--qf-text-muted);
+}
+
+.qf-app .qf-kpi-hint {
+  font-size: var(--qf-text-sm);
+  line-height: var(--qf-lh-meta);
+}
+
+.qf-app .qf-th {
+  white-space: nowrap;
+}
+
+.qf-app .qf-td {
+  white-space: normal;
+}
+
+/* Badge tones (soft background, readable text) */
+.qf-app .qf-badge {
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+.qf-app .qf-badge--gray { background: rgba(100, 116, 139, 0.14) !important; color: #334155 !important; }
+.qf-app .qf-badge--blue { background: var(--qf-info-weak) !important; color: #1d4ed8 !important; }
+.qf-app .qf-badge--green { background: var(--qf-success-weak) !important; color: #065f46 !important; }
+.qf-app .qf-badge--red { background: var(--qf-danger-weak) !important; color: #991b1b !important; }
+.qf-app .qf-badge--amber { background: var(--qf-warning-weak) !important; color: #92400e !important; }
+
+/* Selection bar (Customers) */
+.qf-app .qf-selection-bar {
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid var(--qf-border);
+}
+

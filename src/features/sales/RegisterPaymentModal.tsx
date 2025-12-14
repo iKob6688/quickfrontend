@@ -36,7 +36,12 @@ export function RegisterPaymentModal({
     setDate(todayIso())
     setMethod('manual')
     setReference('')
-    setAmount(defaultAmount != null ? String(defaultAmount) : '')
+    // Format amount to 2 decimal places if provided
+    setAmount(
+      defaultAmount != null
+        ? defaultAmount.toFixed(2)
+        : ''
+    )
   }, [open, defaultAmount])
 
   const parsedAmount = useMemo(() => {

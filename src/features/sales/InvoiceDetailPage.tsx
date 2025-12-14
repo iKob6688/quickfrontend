@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getInvoice, postInvoice, registerPayment, openInvoicePdf, type RegisterPaymentPayload } from '@/api/services/invoices.service'
+import { getInvoice, postInvoice, registerPayment, openInvoicePdf, amendInvoice, type RegisterPaymentPayload } from '@/api/services/invoices.service'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Spinner, Alert } from 'react-bootstrap'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { RegisterPaymentModal } from '@/features/sales/RegisterPaymentModal'
+import { AmendInvoiceModal } from '@/features/sales/AmendInvoiceModal'
 import { useState } from 'react'
 import { toast } from '@/lib/toastStore'
 
@@ -16,6 +17,7 @@ export function InvoiceDetailPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [paymentOpen, setPaymentOpen] = useState(false)
+  const [amendOpen, setAmendOpen] = useState(false)
 
   const invoiceId = id ? Number.parseInt(id, 10) : null
 
@@ -51,6 +53,40 @@ export function InvoiceDetailPage() {
     },
     onError: (err) => {
       toast.error('รับชำระเงินไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+    },
+  })
+
+  const amendMutation = useMutation({
+    mutationFn: async (reason: string) => {
+      if (!invoiceId) throw new Error('Missing invoice id')
+      if (!invoice) throw new Error('Missing invoice data')
+      const today = new Date().toISOString().slice(0, 10)
+      const newInvoice = {
+        customerId: invoice.customerId,
+        invoiceDate: invoice.invoiceDate || today,
+        dueDate: invoice.dueDate || today,
+        currency: invoice.currency || 'THB',
+        notes: invoice.notes || '',
+        lines: (invoice.lines || []).map((l) => ({
+          productId: l.productId ?? null,
+          description: l.description,
+          quantity: l.quantity ?? 0,
+          unitPrice: l.unitPrice ?? 0,
+          taxRate: l.taxRate ?? 0,
+          subtotal: l.subtotal ?? 0,
+        })),
+      }
+      return await amendInvoice(invoiceId, { reason, mode: 'replace', newInvoice })
+    },
+    onSuccess: async (res) => {
+      await queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      toast.success('สร้างฉบับแก้ไขสำเร็จ')
+      if (res.newInvoiceId) {
+        navigate(`/sales/invoices/${res.newInvoiceId}/edit`)
+      }
+    },
+    onError: (err) => {
+      toast.error('สร้างฉบับแก้ไขไม่สำเร็จ', err instanceof Error ? err.message : undefined)
     },
   })
 
@@ -145,6 +181,18 @@ export function InvoiceDetailPage() {
     },
   ]
 
+  const invoiceDateText = invoice.invoiceDate
+    ? new Date(invoice.invoiceDate).toLocaleDateString('th-TH')
+    : '—'
+  const dueDateText = invoice.dueDate
+    ? new Date(invoice.dueDate).toLocaleDateString('th-TH')
+    : '—'
+
+  const amountUntaxed = invoice.amountUntaxed ?? invoice.total - (invoice.totalTax ?? 0)
+  const totalTax = invoice.totalTax ?? 0
+  const total = invoice.total ?? 0
+  const currency = invoice.currency || 'THB'
+
   return (
     <div>
       <PageHeader
@@ -153,13 +201,52 @@ export function InvoiceDetailPage() {
         breadcrumb="รายรับ · ใบแจ้งหนี้"
         actions={
           <div className="d-flex align-items-center gap-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => navigate('/sales/invoices')}
-            >
+            <Button size="sm" variant="secondary" onClick={() => navigate('/sales/invoices')}>
               กลับ
             </Button>
+          </div>
+        }
+      />
+
+      {/* Summary header (desktop-first) */}
+      <Card className="p-4 mb-4">
+        <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+          <div className="min-w-0">
+            <div className="d-flex align-items-center gap-2 mb-2 flex-wrap">
+              <Badge tone={statusTone}>{statusLabel}</Badge>
+              <span className="text-muted small">เลขที่:</span>
+              <span className="fw-semibold font-monospace">
+                {invoice.number || `#${invoice.id}`}
+              </span>
+            </div>
+
+            <div className="d-flex align-items-baseline gap-2 flex-wrap">
+              <div className="qf-kpi-value font-monospace">
+                {total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
+                <span className="qf-kpi-currency">{currency}</span>
+              </div>
+              <div className="qf-kpi-hint text-muted">
+                ก่อนภาษี {amountUntaxed.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} • ภาษี {totalTax.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+            </div>
+
+            <div className="d-flex gap-4 mt-3 flex-wrap">
+              <div>
+                <div className="qf-kpi-label text-muted">ลูกค้า</div>
+                <div className="fw-semibold">{invoice.customerName || '—'}</div>
+              </div>
+              <div>
+                <div className="qf-kpi-label text-muted">วันที่เอกสาร</div>
+                <div className="fw-semibold">{invoiceDateText}</div>
+              </div>
+              <div>
+                <div className="qf-kpi-label text-muted">ครบกำหนด</div>
+                <div className="fw-semibold">{dueDateText}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="d-flex align-items-center gap-2 flex-wrap justify-content-lg-end">
             {invoice.status === 'draft' && (
               <Button
                 size="sm"
@@ -167,6 +254,16 @@ export function InvoiceDetailPage() {
                 onClick={() => navigate(`/sales/invoices/${invoice.id}/edit`)}
               >
                 แก้ไข
+              </Button>
+            )}
+            {invoice.status === 'posted' && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setAmendOpen(true)}
+                isLoading={amendMutation.isPending}
+              >
+                แก้ไข (Amend)
               </Button>
             )}
             {invoice.status === 'draft' && (
@@ -201,17 +298,17 @@ export function InvoiceDetailPage() {
               พิมพ์ / PDF
             </Button>
           </div>
-        }
-      />
+        </div>
+      </Card>
 
       <div className="row g-4">
         <div className="col-lg-8">
           <Card>
             <div className="d-flex justify-content-between align-items-center mb-3">
               <h5 className="h6 fw-semibold mb-0">รายละเอียดสินค้า/บริการ</h5>
-              <Badge tone={statusTone}>{statusLabel}</Badge>
             </div>
             <DataTable
+              plain
               columns={lineColumns}
               rows={invoice.lines || []}
               empty={<p className="text-muted mb-0">ไม่มีรายการ</p>}
@@ -221,7 +318,7 @@ export function InvoiceDetailPage() {
 
         <div className="col-lg-4">
           <Card>
-            <h5 className="h6 fw-semibold mb-3">ข้อมูลเอกสาร</h5>
+            <div className="qf-section-title mb-3">ข้อมูลเอกสาร</div>
             <div>
               <div className="d-flex justify-content-between mb-2">
                 <span className="text-muted small">เลขที่:</span>
@@ -231,19 +328,11 @@ export function InvoiceDetailPage() {
               </div>
               <div className="d-flex justify-content-between mb-2">
                 <span className="text-muted small">วันที่เอกสาร:</span>
-                <span>
-                  {invoice.invoiceDate
-                    ? new Date(invoice.invoiceDate).toLocaleDateString('th-TH')
-                    : '—'}
-                </span>
+                <span>{invoiceDateText}</span>
               </div>
               <div className="d-flex justify-content-between mb-2">
                 <span className="text-muted small">วันครบกำหนด:</span>
-                <span>
-                  {invoice.dueDate
-                    ? new Date(invoice.dueDate).toLocaleDateString('th-TH')
-                    : '—'}
-                </span>
+                <span>{dueDateText}</span>
               </div>
               <div className="d-flex justify-content-between mb-2">
                 <span className="text-muted small">ลูกค้า:</span>
@@ -253,29 +342,20 @@ export function InvoiceDetailPage() {
               <div className="d-flex justify-content-between mb-2">
                 <span className="text-muted small">ยอดรวมก่อนภาษี:</span>
                 <span className="font-monospace">
-                  {(invoice.amountUntaxed ?? invoice.total - (invoice.totalTax ?? 0)).toLocaleString('th-TH', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  {amountUntaxed.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               <div className="d-flex justify-content-between mb-2">
                 <span className="text-muted small">ภาษี:</span>
                 <span className="font-monospace">
-                  {(invoice.totalTax ?? 0).toLocaleString('th-TH', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  {totalTax.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               <div className="d-flex justify-content-between mb-3">
                 <span className="fw-semibold">ยอดรวมทั้งสิ้น:</span>
                 <span className="fw-bold font-monospace h6 mb-0">
-                  {(invoice.total ?? 0).toLocaleString('th-TH', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}{' '}
-                  {invoice.currency || 'THB'}
+                  {total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
+                  {currency}
                 </span>
               </div>
             </div>
@@ -283,7 +363,7 @@ export function InvoiceDetailPage() {
 
           {invoice.notes && (
             <Card className="mt-3">
-              <h5 className="h6 fw-semibold mb-2">หมายเหตุ</h5>
+              <div className="qf-section-title mb-2">หมายเหตุ</div>
               <p className="small text-muted mb-0">{invoice.notes}</p>
             </Card>
           )}
@@ -294,9 +374,19 @@ export function InvoiceDetailPage() {
         open={paymentOpen}
         onClose={() => setPaymentOpen(false)}
         currency={invoice.currency}
-        defaultAmount={undefined}
+        defaultAmount={total}
         onSubmit={async (payload) => {
           await paymentMutation.mutateAsync(payload)
+        }}
+      />
+
+      <AmendInvoiceModal
+        open={amendOpen}
+        onClose={() => setAmendOpen(false)}
+        isSubmitting={amendMutation.isPending}
+        onSubmit={async (reason) => {
+          await amendMutation.mutateAsync(reason)
+          setAmendOpen(false)
         }}
       />
     </div>

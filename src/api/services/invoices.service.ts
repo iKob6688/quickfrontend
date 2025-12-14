@@ -108,11 +108,69 @@ export async function registerPayment(id: number, payload: RegisterPaymentPayloa
   return unwrapResponse<Invoice>(response)
 }
 
-export async function fetchInvoicePdf(id: number) {
-  const response = await apiClient.get(`${basePath}/${id}/pdf`, {
-    responseType: 'blob',
+export interface InvoiceAmendResponse {
+  originalInvoiceId: number
+  creditNoteId: number | null
+  newInvoiceId?: number | null
+}
+
+export async function amendInvoice(
+  id: number,
+  input: { reason: string; newInvoice?: InvoicePayload; mode?: 'replace' | 'delta' },
+) {
+  const body = makeRpc({
+    mode: input.mode ?? 'replace',
+    reason: input.reason,
+    ...(input.newInvoice ? { newInvoice: input.newInvoice } : {}),
   })
-  return response.data as Blob
+  const response = await apiClient.post(`${basePath}/${id}/amend`, body)
+  return unwrapResponse<InvoiceAmendResponse>(response)
+}
+
+export async function fetchInvoicePdf(id: number) {
+  try {
+    // Use arraybuffer to allow decoding JSON error payloads on 4xx/5xx.
+    const response = await apiClient.get(`${basePath}/${id}/pdf`, {
+      responseType: 'arraybuffer',
+      headers: { Accept: 'application/pdf,application/json' },
+    })
+
+    const contentType = String(response.headers?.['content-type'] ?? '')
+    if (contentType.includes('application/pdf')) {
+      return new Blob([response.data], { type: 'application/pdf' })
+    }
+
+    // Sometimes backend returns JSON with 200; decode it as error
+    const text = new TextDecoder('utf-8').decode(new Uint8Array(response.data))
+    const parsed = JSON.parse(text)
+    const msg =
+      parsed?.result?.error?.message ||
+      parsed?.error?.message ||
+      parsed?.error ||
+      parsed?.message ||
+      'PDF error'
+    throw new Error(String(msg))
+  } catch (err: any) {
+    // Axios error path: attempt to decode JSON envelope from arraybuffer
+    const resp = err?.response
+    if (resp?.data && (resp.data instanceof ArrayBuffer || ArrayBuffer.isView(resp.data))) {
+      try {
+        const buf = resp.data instanceof ArrayBuffer ? resp.data : resp.data.buffer
+        const text = new TextDecoder('utf-8').decode(new Uint8Array(buf))
+        const parsed = JSON.parse(text)
+        const msg =
+          parsed?.result?.error?.message ||
+          parsed?.error?.message ||
+          parsed?.error ||
+          parsed?.message ||
+          'PDF error'
+        throw new Error(String(msg))
+      } catch {
+        // fall through
+      }
+    }
+    throw err instanceof Error ? err : new Error('PDF error')
+  }
 }
 
 export async function openInvoicePdf(id: number) {

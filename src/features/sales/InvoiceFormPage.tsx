@@ -1,5 +1,5 @@
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getInvoice, createInvoice, updateInvoice, type InvoicePayload } from '@/api/services/invoices.service'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
@@ -12,7 +12,8 @@ import { extractFieldErrors, type FieldErrors } from '@/lib/formErrors'
 import { toast } from '@/lib/toastStore'
 import { listPartners, getPartner } from '@/api/services/partners.service'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
-import { hasScope, isScopesConfigured } from '@/lib/scopes'
+import { Combobox, type ComboboxOption } from '@/components/ui/Combobox'
+import { ProductCombobox } from '@/features/sales/ProductCombobox'
 
 export function InvoiceFormPage() {
   const { id } = useParams<{ id: string }>()
@@ -49,26 +50,39 @@ export function InvoiceFormPage() {
     setFormData((prev) => (prev.customerId ? prev : { ...prev, customerId: customerIdPrefill }))
   }, [customerIdPrefill, isEdit])
 
-  const canUseContacts = hasScope('contacts')
   const [customerSearch, setCustomerSearch] = useState('')
   const debouncedCustomerSearch = useDebouncedValue(customerSearch, 250)
+  const customerLimit = 20
 
-  const customerOptionsQuery = useQuery({
+  const customerOptionsQuery = useInfiniteQuery({
     queryKey: ['partner-selector', debouncedCustomerSearch],
-    enabled: !isEdit && canUseContacts && debouncedCustomerSearch.trim().length >= 0,
-    queryFn: () =>
+    enabled: !isEdit && debouncedCustomerSearch.trim().length >= 0,
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
       listPartners({
         q: debouncedCustomerSearch || undefined,
         active: true,
-        limit: 10,
-        offset: 0,
+        limit: customerLimit,
+        offset: pageParam,
       }),
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce((acc, p) => acc + (p?.items?.length ?? 0), 0)
+      if (loaded >= (lastPage?.total ?? 0)) return undefined
+      if ((lastPage?.items?.length ?? 0) < customerLimit) return undefined
+      return loaded
+    },
     staleTime: 30_000,
   })
 
+  const customerItems = useMemo(
+    () => customerOptionsQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    [customerOptionsQuery.data?.pages],
+  )
+  const customerTotal = customerOptionsQuery.data?.pages[0]?.total
+
   const selectedCustomerQuery = useQuery({
     queryKey: ['partner', formData.customerId],
-    enabled: !isEdit && canUseContacts && formData.customerId > 0,
+    enabled: !isEdit && formData.customerId > 0,
     queryFn: () => getPartner(formData.customerId),
     staleTime: 30_000,
   })
@@ -173,71 +187,52 @@ export function InvoiceFormPage() {
                   <Label htmlFor="customerId" required>
                     ลูกค้า
                   </Label>
-                  {canUseContacts ? (
-                    <>
-                      <Input
-                        id="customerSearch"
-                        value={customerSearch}
-                        onChange={(e) => setCustomerSearch(e.target.value)}
-                        placeholder="ค้นหาชื่อลูกค้า / VAT / อีเมล"
-                        leftAdornment={<i className="bi bi-search"></i>}
-                      />
-                      <div className="mt-2">
-                        {selectedCustomerQuery.data ? (
-                          <div className="small text-muted">
-                            เลือกแล้ว: <span className="fw-semibold">{selectedCustomerQuery.data.displayName}</span> (ID: {formData.customerId})
-                          </div>
-                        ) : null}
-                      </div>
-                      <div className="mt-2">
-                        <div className="list-group">
-                          {(customerOptionsQuery.data?.items ?? []).map((p) => (
-                            <button
-                              key={p.id}
-                              type="button"
-                              className="list-group-item list-group-item-action d-flex align-items-center justify-content-between"
-                              onClick={() => {
-                                setFormData((prev) => ({ ...prev, customerId: p.id }))
-                                setCustomerSearch(p.name)
-                              }}
-                            >
-                              <span className="fw-semibold">{p.name}</span>
-                              <span className="text-muted small">ID: {p.id}</span>
-                            </button>
-                          ))}
-                        </div>
-                        {customerOptionsQuery.isError ? (
-                          <div className="small text-danger mt-2">
-                            {customerOptionsQuery.error instanceof Error ? customerOptionsQuery.error.message : 'โหลดรายชื่อลูกค้าไม่สำเร็จ'}
-                          </div>
-                        ) : null}
-                      </div>
-                      {!isScopesConfigured() ? (
-                        <div className="small text-muted mt-2">
-                          หมายเหตุ: ยังไม่ได้ตั้งค่า <code>VITE_ALLOWED_SCOPES</code> — ระบบจะลองเรียก backend โดยตรง (backend จะเป็นคน enforce สิทธิ์)
-                        </div>
-                      ) : null}
-                    </>
-                  ) : (
-                    <>
-                      <Input
-                        id="customerId"
-                        type="number"
-                        value={formData.customerId || ''}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            customerId: Number.parseInt(e.target.value, 10),
-                          })
-                        }
-                        placeholder="Customer ID"
-                        required
-                      />
-                      <small className="text-muted">
-                        ฟีเจอร์ค้นหาลูกค้าต้องใช้ scope <code>contacts</code>
-                      </small>
-                    </>
-                  )}
+                  <Combobox
+                    id="customerSearch"
+                    value={customerSearch}
+                    onChange={setCustomerSearch}
+                    placeholder="พิมพ์เพื่อค้นหาลูกค้า (ชื่อ / VAT / อีเมล)"
+                    leftAdornment={<i className="bi bi-search"></i>}
+                    minChars={1}
+                    isLoading={customerOptionsQuery.isFetching || selectedCustomerQuery.isFetching}
+                    isLoadingMore={customerOptionsQuery.isFetchingNextPage}
+                    onLoadMore={() => {
+                      if (customerOptionsQuery.hasNextPage) customerOptionsQuery.fetchNextPage()
+                    }}
+                    options={customerItems.map<ComboboxOption>((p) => ({
+                      id: p.id,
+                      label: p.name,
+                      meta: p.vat ? `VAT: ${p.vat}` : p.email ? p.email : `ID: ${p.id}`,
+                    }))}
+                    total={customerTotal}
+                    emptyText="ไม่พบลูกค้า (ลองพิมพ์คำอื่น)"
+                    onPick={(opt) => {
+                      setFormData((prev) => ({ ...prev, customerId: Number(opt.id) }))
+                      setCustomerSearch(opt.label)
+                    }}
+                  />
+                  <div className="small text-muted mt-2">
+                    Tip: พิมพ์อย่างน้อย 1 ตัวอักษรเพื่อค้นหา • ใช้ ↑/↓ และ Enter เพื่อเลือก • Esc เพื่อปิด
+                  </div>
+
+                  {selectedCustomerQuery.data ? (
+                    <div className="small text-muted mt-2">
+                      เลือกแล้ว:{' '}
+                      <span className="fw-semibold">
+                        {selectedCustomerQuery.data.displayName}
+                      </span>{' '}
+                      (ID: {formData.customerId})
+                    </div>
+                  ) : null}
+
+                  {customerOptionsQuery.isError ? (
+                    <div className="small text-danger mt-2">
+                      {customerOptionsQuery.error instanceof Error
+                        ? customerOptionsQuery.error.message
+                        : 'โหลดรายชื่อลูกค้าไม่สำเร็จ'}
+                    </div>
+                  ) : null}
+
                   {fieldErrors?.customerId ? (
                     <small className="text-danger">{fieldErrors.customerId}</small>
                   ) : null}
@@ -310,14 +305,16 @@ export function InvoiceFormPage() {
             </Card>
 
             <Card className="mt-4">
-              <h5 className="h6 fw-semibold mb-3">รายการสินค้า/บริการ</h5>
-              <div className="d-flex justify-content-between align-items-center mb-2">
-                <p className="small text-muted mb-0">
-                  Odoo จะคำนวณยอด/ภาษี/รวมทั้งหมดหลังบันทึก (Quickfront แสดงผลเท่านั้น)
-                </p>
+              <div className="d-flex align-items-center justify-content-between gap-3 mb-2">
+                <div>
+                  <h5 className="h6 fw-semibold mb-0">รายการสินค้า/บริการ</h5>
+                  <div className="small text-muted">
+                    Odoo จะคำนวณยอด/ภาษี/รวมทั้งหมดหลังบันทึก (Quickfront แสดงผลเท่านั้น)
+                  </div>
+                </div>
                 <Button
                   size="sm"
-                  variant="secondary"
+                  variant="primary"
                   type="button"
                   onClick={() =>
                     setFormData({
@@ -336,8 +333,12 @@ export function InvoiceFormPage() {
                     })
                   }
                 >
-                  + เพิ่มรายการ
+                  <i className="bi bi-plus-lg me-1" />
+                  เพิ่มรายการ
                 </Button>
+              </div>
+              <div className="d-flex justify-content-between align-items-center mb-2">
+                <div />
               </div>
 
               {formData.lines.length === 0 ? (
@@ -346,10 +347,10 @@ export function InvoiceFormPage() {
                 </div>
               ) : (
                 <div className="table-responsive">
-                  <table className="table table-sm align-middle mb-0">
-                    <thead>
-                      <tr className="text-muted small">
-                        <th style={{ width: 140 }}>Product (vNext)</th>
+                  <table className="table table-sm table-hover align-middle mb-0" style={{ tableLayout: 'fixed' }}>
+                    <thead className="table-light">
+                      <tr className="text-muted small fw-semibold">
+                        <th style={{ width: 260 }}>สินค้า/บริการ</th>
                         <th>รายละเอียด</th>
                         <th style={{ width: 110 }} className="text-end">
                           จำนวน
@@ -367,19 +368,19 @@ export function InvoiceFormPage() {
                       {formData.lines.map((line, idx) => (
                         <tr key={idx}>
                           <td>
-                            <input
-                              className="form-control form-control-sm"
-                              type="number"
-                              value={line.productId ?? ''}
-                              onChange={(e) => {
+                            <ProductCombobox
+                              valueId={line.productId ?? null}
+                              onPick={(p) => {
                                 const next = [...formData.lines]
+                                const prev = next[idx]
                                 next[idx] = {
-                                  ...next[idx],
-                                  productId: e.target.value ? Number.parseInt(e.target.value, 10) : null,
+                                  ...prev,
+                                  productId: p.id,
+                                  // If description is empty, auto-fill with product name
+                                  description: (prev.description || '').trim() ? prev.description : p.name,
                                 }
                                 setFormData({ ...formData, lines: next })
                               }}
-                              min={0}
                             />
                           </td>
                           <td>

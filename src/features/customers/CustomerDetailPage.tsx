@@ -141,6 +141,7 @@ export function CustomerDetailPage() {
 
               <hr className="my-4" />
 
+              <div className="qf-section-title mb-3">ข้อมูลติดต่อ</div>
               <div className="row g-3">
                 <div className="col-md-6">
                   <div className="small text-muted mb-1">เลขผู้เสียภาษี</div>
@@ -202,7 +203,7 @@ export function CustomerDetailPage() {
 
           <div className="col-lg-4">
             <Card className="p-4">
-              <p className="h6 fw-semibold mb-3">ที่อยู่</p>
+              <div className="qf-section-title mb-3">ที่อยู่</div>
               <div className="small">
                 <div>{query.data.street || '—'}</div>
                 {query.data.street2 ? <div>{query.data.street2}</div> : null}

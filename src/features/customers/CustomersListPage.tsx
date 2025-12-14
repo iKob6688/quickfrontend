@@ -6,8 +6,7 @@ import { Tabs } from '@/components/ui/Tabs'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { DataTable, type Column } from '@/components/ui/DataTable'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { hasAnyScope } from '@/lib/scopes'
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { listPartners, setPartnersActive, setPartnersActiveByQuery } from '@/api/services/partners.service'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { useNavigate } from 'react-router-dom'
@@ -22,32 +21,36 @@ export function CustomersListPage() {
   const [tab, setTab] = useState<StatusTab>('active')
   const [q, setQ] = useState('')
   const debouncedQ = useDebouncedValue(q, 300)
-  const [page, setPage] = useState(0)
   const limit = 50
   const [companyFilter, setCompanyFilter] = useState<CompanyFilter>('all')
   const [selected, setSelected] = useState<Record<number, true>>({})
   const [allMatchingSelected, setAllMatchingSelected] = useState(false)
   const [excluded, setExcluded] = useState<Record<number, true>>({})
 
-  const partnersEnabled = useMemo(() => hasAnyScope(['contacts', 'partners']), [])
-
-  const queryEnabled = partnersEnabled
-
-  const query = useQuery({
-    queryKey: ['partners', tab, debouncedQ, page, limit, companyFilter],
-    enabled: queryEnabled,
-    queryFn: () =>
+  const query = useInfiniteQuery({
+    queryKey: ['partners', tab, debouncedQ, limit, companyFilter],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
       listPartners({
         q: debouncedQ || undefined,
         active: tab === 'all' ? undefined : tab === 'active',
         company_type: companyFilter === 'all' ? undefined : companyFilter,
         limit,
-        offset: page * limit,
+        offset: pageParam,
       }),
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce((acc, p) => acc + (p?.items?.length ?? 0), 0)
+      if (loaded >= (lastPage?.total ?? 0)) return undefined
+      if ((lastPage?.items?.length ?? 0) < limit) return undefined
+      return loaded
+    },
     staleTime: 30_000,
   })
 
-  const rows = (query.data?.items ?? []).map((p) => ({
+  const items = useMemo(() => query.data?.pages.flatMap((p) => p.items) ?? [], [query.data?.pages])
+  const total = query.data?.pages[0]?.total ?? 0
+
+  const rows = items.map((p) => ({
     id: p.id,
     name: p.name,
     vat: p.vat ?? '—',
@@ -102,7 +105,6 @@ export function CustomersListPage() {
     },
   })
 
-  const total = query.data?.total ?? 0
   const allSelectedCount = allMatchingSelected
     ? Math.max(0, total - excludedIds.length)
     : selectedIds.length
@@ -186,6 +188,7 @@ export function CustomersListPage() {
     {
       key: 'status',
       header: 'สถานะ',
+      className: 'text-nowrap',
       cell: (r: Row) => (
         <Badge tone={r.active ? 'green' : 'gray'}>
           {r.active ? 'ใช้งาน' : 'ปิดใช้งาน'}
@@ -195,6 +198,7 @@ export function CustomersListPage() {
     {
       key: 'companyType',
       header: 'ประเภท',
+      className: 'text-nowrap',
       cell: (r: Row) => (
         <Badge tone={r.companyType === 'company' ? 'blue' : 'gray'}>
           {r.companyType === 'company' ? 'นิติบุคคล' : 'บุคคล'}
@@ -204,6 +208,7 @@ export function CustomersListPage() {
     {
       key: 'name',
       header: 'ชื่อลูกค้า',
+      className: 'text-nowrap',
       cell: (r: Row) => (
         <button
           type="button"
@@ -217,13 +222,12 @@ export function CustomersListPage() {
     {
       key: 'vat',
       header: 'เลขผู้เสียภาษี',
+      className: 'text-nowrap',
       cell: (r: Row) => <span className="font-monospace">{r.vat}</span>,
     },
-    { key: 'phone', header: 'โทร', cell: (r: Row) => <span>{r.phone}</span> },
+    { key: 'phone', header: 'โทร', className: 'text-nowrap', cell: (r: Row) => <span>{r.phone}</span> },
     { key: 'email', header: 'อีเมล', cell: (r: Row) => <span>{r.email}</span> },
   ]
-
-  const maxPage = Math.max(0, Math.ceil(total / limit) - 1)
 
   return (
     <div>
@@ -233,25 +237,16 @@ export function CustomersListPage() {
         breadcrumb="รายรับ · ลูกค้า"
         actions={
           <div className="d-flex gap-2">
-            <Button size="sm" onClick={() => navigate('/customers/new')} disabled={!partnersEnabled}>
+            <Button size="sm" onClick={() => navigate('/customers/new')}>
               + เพิ่มลูกค้า
             </Button>
           </div>
         }
       />
 
-      {!partnersEnabled ? (
-        <Card>
-          <p className="h6 fw-semibold mb-2">ยังไม่พร้อมใช้งานใน backend</p>
-          <p className="small text-muted mb-0">
-            ฟีเจอร์นี้ต้องเปิด scope <code>contacts</code> (หรือ <code>partners</code>) ให้กับ API key ก่อน
-            จากนั้นระบบจะเรียก <code>/api/th/v1/contacts/*</code> เพื่อดึงรายชื่อลูกค้า
-          </p>
-        </Card>
-      ) : (
-        <>
+      <>
           {allSelectedCount > 0 ? (
-            <Card className="p-3 mb-3">
+            <Card className="qf-selection-bar p-3 mb-3">
               <div className="d-flex flex-column flex-sm-row align-items-sm-center justify-content-sm-between gap-2">
                 <div className="small fw-semibold">
                   {allMatchingSelected
@@ -314,7 +309,6 @@ export function CustomersListPage() {
               value={tab}
               onChange={(next) => {
                 setTab(next)
-                setPage(0)
                 resetSelection()
               }}
               items={[
@@ -330,7 +324,6 @@ export function CustomersListPage() {
                   value={companyFilter}
                   onChange={(e) => {
                     setCompanyFilter(e.target.value as CompanyFilter)
-                    setPage(0)
                     resetSelection()
                   }}
                 >
@@ -344,7 +337,6 @@ export function CustomersListPage() {
                   value={q}
                   onChange={(e) => {
                     setQ(e.target.value)
-                    setPage(0)
                     resetSelection()
                   }}
                   placeholder="ค้นหาชื่อ/เลขผู้เสียภาษี/อีเมล"
@@ -356,7 +348,14 @@ export function CustomersListPage() {
 
           {query.isError ? (
             <div className="alert alert-danger small">
-              {query.error instanceof Error ? query.error.message : 'โหลดข้อมูลไม่สำเร็จ'}
+              <div className="fw-semibold mb-1">โหลดรายชื่อลูกค้าไม่สำเร็จ</div>
+              <div>
+                {query.error instanceof Error ? query.error.message : 'Unknown error'}
+              </div>
+              <div className="mt-2">
+                ถ้าเห็นว่าเกี่ยวกับ <code>Unauthorized</code> หรือ <code>scope</code> ให้ตรวจสอบ:
+                <span className="ms-1">API Key (X-ADT-API-Key), Bearer token, และ Odoo API Client scopes</span>
+              </div>
             </div>
           ) : null}
 
@@ -376,39 +375,26 @@ export function CustomersListPage() {
 
           <div className="d-flex align-items-center justify-content-between mt-3">
             <div className="small text-muted">
-              หน้า {page + 1} / {maxPage + 1}
+              แสดงแล้ว {rows.length.toLocaleString('th-TH')} / {total.toLocaleString('th-TH')}
             </div>
-            <div className="d-flex gap-2">
+            {query.hasNextPage ? (
               <Button
                 size="sm"
                 variant="secondary"
-                disabled={page <= 0 || query.isFetching}
-                onClick={() => {
-                  resetSelection()
-                  setPage((p) => Math.max(0, p - 1))
-                }}
+                onClick={() => query.fetchNextPage()}
+                isLoading={query.isFetchingNextPage}
+                disabled={query.isFetchingNextPage}
               >
-                ก่อนหน้า
+                โหลดเพิ่ม
               </Button>
-              <Button
-                size="sm"
-                disabled={page >= maxPage || query.isFetching}
-                onClick={() => {
-                  resetSelection()
-                  setPage((p) => Math.min(maxPage, p + 1))
-                }}
-              >
-                ถัดไป
-              </Button>
-            </div>
+            ) : null}
           </div>
 
           <div className="small text-muted mt-2">
             Tip: คลิกชื่อลูกค้าเพื่อดูรายละเอียด • ใช้ checkbox เพื่อทำ bulk actions • เลือกทั้งหมดได้ทั้งผลการค้นหา
           </div>
 
-        </>
-      )}
+      </>
     </div>
   )
 }

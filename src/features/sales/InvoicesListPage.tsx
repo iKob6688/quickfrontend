@@ -64,13 +64,14 @@ export function InvoicesListPage() {
     {
       key: 'number',
       header: 'เลขที่เอกสาร',
+      className: 'text-nowrap',
       cell: (r) => (
         <button
           type="button"
           className="btn btn-link p-0 fw-semibold text-primary text-decoration-none font-monospace"
           onClick={() => navigate(`/sales/invoices/${r.id}`)}
         >
-          {r.number}
+          {r.number || `ร่าง #${r.id}`}
         </button>
       ),
     },
@@ -81,7 +82,8 @@ export function InvoicesListPage() {
     },
     { 
       key: 'date', 
-      header: 'วันที่เอกสาร', 
+      header: 'วันที่เอกสาร',
+      className: 'text-nowrap',
       cell: (r) => <span>{r.date}</span>
     },
     {
@@ -100,6 +102,7 @@ export function InvoicesListPage() {
     {
       key: 'status',
       header: 'สถานะ',
+      className: 'text-nowrap',
       cell: (r) => {
         const tone =
           r.status === 'paid'

@@ -17,30 +17,26 @@ export function DataTable<T>(props: {
   rows: T[]
   empty?: ReactNode
   className?: string
+  /** When true, renders table without the Card wrapper (useful when you already are inside a Card) */
+  plain?: boolean
 }) {
-  const { title, right, columns, rows, empty, className } = props
+  const { title, right, columns, rows, empty, className, plain } = props
 
-  return (
-    <Card className={twMerge('overflow-hidden', className)}>
+  const content = (
+    <>
       {(title || right) && (
-        <div className="d-flex align-items-center justify-content-between gap-3 border-bottom px-4 py-3">
-          <div className="fw-semibold">{title}</div>
+        <div className="qf-table-head d-flex align-items-center justify-content-between gap-3 border-bottom px-4 py-3">
+          <div className="qf-section-title fw-semibold">{title}</div>
           {right ? <div className="d-flex align-items-center gap-2">{right}</div> : null}
         </div>
       )}
 
       <div className="table-responsive">
-        <Table hover className="mb-0">
+        <Table hover className="qf-table mb-0">
           <thead>
             <tr>
               {columns.map((c) => (
-                <th
-                  key={c.key}
-                  className={twMerge(
-                    'text-nowrap text-start small text-uppercase fw-semibold text-muted',
-                    c.className,
-                  )}
-                >
+                <th key={c.key} className={twMerge('qf-th', c.className)}>
                   {c.header}
                 </th>
               ))}
@@ -49,10 +45,7 @@ export function DataTable<T>(props: {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td
-                  colSpan={columns.length}
-                  className="text-center text-muted py-5"
-                >
+                <td colSpan={columns.length} className="qf-empty text-center text-muted py-5">
                   {empty ?? 'ไม่มีข้อมูล'}
                 </td>
               </tr>
@@ -60,10 +53,7 @@ export function DataTable<T>(props: {
               rows.map((row, idx) => (
                 <tr key={idx}>
                   {columns.map((c) => (
-                    <td
-                      key={c.key}
-                      className={twMerge('text-nowrap', c.className)}
-                    >
+                    <td key={c.key} className={twMerge('qf-td', c.className)}>
                       {c.cell(row)}
                     </td>
                   ))}
@@ -73,8 +63,12 @@ export function DataTable<T>(props: {
           </tbody>
         </Table>
       </div>
-    </Card>
+    </>
   )
+
+  if (plain) return <div className={className}>{content}</div>
+
+  return <Card className={twMerge('overflow-hidden', className)}>{content}</Card>
 }
 
 

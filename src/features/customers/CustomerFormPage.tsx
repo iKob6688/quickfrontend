@@ -138,158 +138,172 @@ export function CustomerFormPage() {
         }
       />
 
-      <Card className="p-4">
-        {globalError ? (
-          <Alert variant="danger" className="small mb-3">
-            {globalError}
-          </Alert>
-        ) : null}
+      {globalError ? (
+        <Alert variant="danger" className="small mb-3">
+          {globalError}
+        </Alert>
+      ) : null}
 
-        {isEdit && existingQuery.isLoading ? (
-          <div className="small text-muted">กำลังโหลดข้อมูลเดิม...</div>
-        ) : null}
+      {isEdit && existingQuery.isLoading ? (
+        <div className="small text-muted">กำลังโหลดข้อมูลเดิม...</div>
+      ) : null}
 
-        {isEdit && existingQuery.isError ? (
-          <Alert variant="danger" className="small">
-            {existingQuery.error instanceof Error ? existingQuery.error.message : 'โหลดข้อมูลไม่สำเร็จ'}
-          </Alert>
-        ) : null}
+      {isEdit && existingQuery.isError ? (
+        <Alert variant="danger" className="small">
+          {existingQuery.error instanceof Error ? existingQuery.error.message : 'โหลดข้อมูลไม่สำเร็จ'}
+        </Alert>
+      ) : null}
 
-        <Form id="customer-form" onSubmit={submit}>
-          <div className="row g-3">
-            <div className="col-md-4">
-              <Label required>ประเภท</Label>
-              <div className="d-flex gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={formData.company_type === 'company' ? 'primary' : 'secondary'}
-                  onClick={() => setCompanyType('company')}
-                >
-                  นิติบุคคล
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={formData.company_type === 'person' ? 'primary' : 'secondary'}
-                  onClick={() => setCompanyType('person')}
-                >
-                  บุคคล
-                </Button>
+      <Form id="customer-form" onSubmit={submit}>
+        <div className="row g-4">
+          <div className="col-lg-8">
+            <Card className="p-4">
+              <div className="qf-section-title mb-3">ข้อมูลลูกค้า</div>
+              <div className="row g-3">
+                <div className="col-md-8">
+                  <Label htmlFor="name" required>
+                    ชื่อลูกค้า
+                  </Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData((s) => ({ ...s, name: e.target.value }))}
+                    error={Boolean(fieldErrors.name)}
+                  />
+                  {fieldErrors.name ? <div className="small text-danger mt-1">{fieldErrors.name}</div> : null}
+                </div>
+
+                <div className="col-md-4">
+                  <Label htmlFor="vat">เลขผู้เสียภาษี</Label>
+                  <Input
+                    id="vat"
+                    value={formData.vat ?? ''}
+                    onChange={(e) => setFormData((s) => ({ ...s, vat: e.target.value }))}
+                  />
+                </div>
+
+                <div className="col-md-4">
+                  <Label htmlFor="email">อีเมล</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email ?? ''}
+                    onChange={(e) => setFormData((s) => ({ ...s, email: e.target.value }))}
+                  />
+                </div>
+                <div className="col-md-4">
+                  <Label htmlFor="phone">โทรศัพท์</Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone ?? ''}
+                    onChange={(e) => setFormData((s) => ({ ...s, phone: e.target.value }))}
+                  />
+                </div>
+                <div className="col-md-4">
+                  <Label htmlFor="mobile">มือถือ</Label>
+                  <Input
+                    id="mobile"
+                    value={formData.mobile ?? ''}
+                    onChange={(e) => setFormData((s) => ({ ...s, mobile: e.target.value }))}
+                  />
+                </div>
               </div>
-            </div>
+            </Card>
 
-            <div className="col-md-4">
-              <Label>สถานะ</Label>
-              <div className="form-check form-switch mt-1">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id="active"
-                  checked={Boolean(formData.active)}
-                  onChange={(e) =>
-                    setFormData((s) => ({ ...s, active: e.target.checked }))
-                  }
-                />
-                <label className="form-check-label" htmlFor="active">
-                  ใช้งาน (Active)
-                </label>
+            <Card className="p-4 mt-4">
+              <div className="qf-section-title mb-3">ที่อยู่</div>
+              <div className="row g-3">
+                <div className="col-md-6">
+                  <Label htmlFor="street">ที่อยู่</Label>
+                  <Input
+                    id="street"
+                    value={formData.street ?? ''}
+                    onChange={(e) => setFormData((s) => ({ ...s, street: e.target.value }))}
+                  />
+                </div>
+                <div className="col-md-6">
+                  <Label htmlFor="street2">ที่อยู่ (บรรทัด 2)</Label>
+                  <Input
+                    id="street2"
+                    value={formData.street2 ?? ''}
+                    onChange={(e) => setFormData((s) => ({ ...s, street2: e.target.value }))}
+                  />
+                </div>
+                <div className="col-md-4">
+                  <Label htmlFor="city">เขต/อำเภอ</Label>
+                  <Input
+                    id="city"
+                    value={formData.city ?? ''}
+                    onChange={(e) => setFormData((s) => ({ ...s, city: e.target.value }))}
+                  />
+                </div>
+                <div className="col-md-4">
+                  <Label htmlFor="zip">รหัสไปรษณีย์</Label>
+                  <Input
+                    id="zip"
+                    value={formData.zip ?? ''}
+                    onChange={(e) => setFormData((s) => ({ ...s, zip: e.target.value }))}
+                  />
+                </div>
+                <div className="col-md-4">
+                  <CountrySelector
+                    value={formData.countryId}
+                    onChange={(value) => setFormData((s) => ({ ...s, countryId: value }))}
+                  />
+                </div>
               </div>
-            </div>
-
-            <div className="col-md-8">
-              <Label htmlFor="name" required>
-                ชื่อลูกค้า
-              </Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData((s) => ({ ...s, name: e.target.value }))}
-                error={Boolean(fieldErrors.name)}
-              />
-              {fieldErrors.name ? <div className="small text-danger mt-1">{fieldErrors.name}</div> : null}
-            </div>
-
-            <div className="col-md-4">
-              <Label htmlFor="vat">เลขผู้เสียภาษี</Label>
-              <Input
-                id="vat"
-                value={formData.vat ?? ''}
-                onChange={(e) => setFormData((s) => ({ ...s, vat: e.target.value }))}
-              />
-            </div>
-            <div className="col-md-4">
-              <Label htmlFor="email">อีเมล</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email ?? ''}
-                onChange={(e) => setFormData((s) => ({ ...s, email: e.target.value }))}
-              />
-            </div>
-            <div className="col-md-4">
-              <Label htmlFor="phone">โทรศัพท์</Label>
-              <Input
-                id="phone"
-                value={formData.phone ?? ''}
-                onChange={(e) => setFormData((s) => ({ ...s, phone: e.target.value }))}
-              />
-            </div>
-            <div className="col-md-4">
-              <Label htmlFor="mobile">มือถือ</Label>
-              <Input
-                id="mobile"
-                value={formData.mobile ?? ''}
-                onChange={(e) => setFormData((s) => ({ ...s, mobile: e.target.value }))}
-              />
-            </div>
-
-            <div className="col-12">
-              <hr className="my-2" />
-              <p className="h6 fw-semibold mb-2">ที่อยู่</p>
-            </div>
-
-            <div className="col-md-6">
-              <Label htmlFor="street">ที่อยู่</Label>
-              <Input
-                id="street"
-                value={formData.street ?? ''}
-                onChange={(e) => setFormData((s) => ({ ...s, street: e.target.value }))}
-              />
-            </div>
-            <div className="col-md-6">
-              <Label htmlFor="street2">ที่อยู่ (บรรทัด 2)</Label>
-              <Input
-                id="street2"
-                value={formData.street2 ?? ''}
-                onChange={(e) => setFormData((s) => ({ ...s, street2: e.target.value }))}
-              />
-            </div>
-            <div className="col-md-4">
-              <Label htmlFor="city">เขต/อำเภอ</Label>
-              <Input
-                id="city"
-                value={formData.city ?? ''}
-                onChange={(e) => setFormData((s) => ({ ...s, city: e.target.value }))}
-              />
-            </div>
-            <div className="col-md-4">
-              <Label htmlFor="zip">รหัสไปรษณีย์</Label>
-              <Input
-                id="zip"
-                value={formData.zip ?? ''}
-                onChange={(e) => setFormData((s) => ({ ...s, zip: e.target.value }))}
-              />
-            </div>
-            <div className="col-md-4">
-              <CountrySelector
-                value={formData.countryId}
-                onChange={(value) => setFormData((s) => ({ ...s, countryId: value }))}
-              />
-            </div>
+            </Card>
           </div>
-        </Form>
-      </Card>
+
+          <div className="col-lg-4">
+            <Card className="p-4">
+              <div className="qf-section-title mb-3">ตั้งค่า</div>
+              <div className="mb-3">
+                <Label required>ประเภท</Label>
+                <div className="d-flex gap-2 flex-wrap">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={formData.company_type === 'company' ? 'primary' : 'secondary'}
+                    onClick={() => setCompanyType('company')}
+                  >
+                    นิติบุคคล
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={formData.company_type === 'person' ? 'primary' : 'secondary'}
+                    onClick={() => setCompanyType('person')}
+                  >
+                    บุคคล
+                  </Button>
+                </div>
+              </div>
+
+              <div>
+                <Label>สถานะ</Label>
+                <div className="form-check form-switch mt-1">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id="active"
+                    checked={Boolean(formData.active)}
+                    onChange={(e) =>
+                      setFormData((s) => ({ ...s, active: e.target.checked }))
+                    }
+                  />
+                  <label className="form-check-label" htmlFor="active">
+                    ใช้งาน (Active)
+                  </label>
+                </div>
+                <div className="small text-muted mt-2">
+                  Tip: ใช้ “ปิดใช้งาน” เพื่อ archive ลูกค้าใน Odoo โดยไม่ลบข้อมูล
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </Form>
     </div>
   )
 }

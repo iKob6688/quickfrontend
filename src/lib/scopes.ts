@@ -7,7 +7,11 @@ export function hasScope(scope: string): boolean {
   const allowedScopes = import.meta.env.VITE_ALLOWED_SCOPES
   // If scopes are not configured in .env, don't hard-block the UI.
   // Backend will still enforce scopes; this prevents "everything disabled" UX.
-  if (!allowedScopes) return true
+  if (!allowedScopes || !allowedScopes.trim()) return true
+
+  const normalized = allowedScopes.trim().toLowerCase()
+  // Support common "all scopes" notations from bootstrap/backends
+  if (normalized === '*' || normalized === 'all' || normalized === 'all_scopes') return true
   
   const scopes = allowedScopes.split(',').map((s: string) => s.trim())
   return scopes.includes(scope)

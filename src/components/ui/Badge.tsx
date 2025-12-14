@@ -4,12 +4,12 @@ import { twMerge } from 'tailwind-merge'
 
 type Tone = 'gray' | 'blue' | 'green' | 'red' | 'amber'
 
-const variantMap: Record<Tone, string> = {
-  gray: 'secondary',
-  blue: 'info',
-  green: 'success',
-  red: 'danger',
-  amber: 'warning',
+const toneClassMap: Record<Tone, string> = {
+  gray: 'qf-badge--gray',
+  blue: 'qf-badge--blue',
+  green: 'qf-badge--green',
+  red: 'qf-badge--red',
+  amber: 'qf-badge--amber',
 }
 
 /**
@@ -27,14 +27,14 @@ export function Badge({
   HTMLAttributes<HTMLSpanElement> & { tone?: Tone }
 >) {
   const tone = (rest as { tone?: Tone }).tone ?? 'gray'
-  const variant = variantMap[tone]
+  const toneClass = toneClassMap[tone]
   // Remove tone prop from DOM
   const { tone: _tone, ...domProps } = rest as { tone?: Tone } & HTMLAttributes<HTMLSpanElement>
   
   return (
     <BootstrapBadge
-      bg={variant as any}
-      className={twMerge('rounded-pill fw-bold', className)}
+      bg="light"
+      className={twMerge('qf-badge', toneClass, className)}
       {...domProps}
     >
       {children}
