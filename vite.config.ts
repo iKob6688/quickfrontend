@@ -6,10 +6,11 @@ import { resolve } from 'path'
 const isProduction = process.env.NODE_ENV === 'production'
 const apiBaseUrl = process.env.VITE_API_BASE_URL || '/api'
 
-if (isProduction && apiBaseUrl.startsWith('/')) {
+// Relative path is OK in production if using nginx proxy
+// Only warn if it's not /api (which is the standard proxy path)
+if (isProduction && apiBaseUrl.startsWith('/') && apiBaseUrl !== '/api') {
   console.warn('⚠️  Warning: VITE_API_BASE_URL is relative in production mode.')
-  console.warn('   This may cause connection issues. Use full URL (e.g., https://api.example.com)')
-  console.warn('   Run: npm run setup:prod to configure properly\n')
+  console.warn('   Make sure nginx proxy is configured to forward requests to backend.\n')
 }
 
 // https://vite.dev/config/

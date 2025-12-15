@@ -47,9 +47,10 @@ function validateEnv(env, isProduction = false) {
     errors.push('VITE_API_BASE_URL is required')
   } else {
     if (isProduction && env.VITE_API_BASE_URL.startsWith('/')) {
-      errors.push('VITE_API_BASE_URL must be a full URL in production (e.g., https://api.example.com)')
+      // Relative path is OK if using nginx proxy
+      warnings.push('VITE_API_BASE_URL is relative (/api). Make sure nginx proxy is configured to forward /api to backend.')
     } else if (isProduction && !env.VITE_API_BASE_URL.startsWith('http')) {
-      errors.push('VITE_API_BASE_URL must start with http:// or https:// in production')
+      errors.push('VITE_API_BASE_URL must start with http:// or https:// in production (or use /api for nginx proxy)')
     }
   }
   
