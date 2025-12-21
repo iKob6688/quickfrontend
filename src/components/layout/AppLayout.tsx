@@ -19,14 +19,19 @@ export function AppLayout() {
 
   // Scope gating (prod-grade): only hide items that would 403 consistently.
   // Dashboard stays visible even if KPI scope is missing; page will degrade gracefully.
-  const navItems: NavItem[] = [
-    { path: '/dashboard', label: 'แดชบอร์ด' },
-    { path: '/customers', label: 'ลูกค้า', scope: 'contacts' },
-    { path: '/sales/invoices', label: 'ใบแจ้งหนี้', scope: 'invoice' },
-    { path: '/excel-import', label: 'Excel', scope: 'excel' },
-    { path: '/reports-studio', label: 'Reports Studio' },
+  const navItems: Array<
+    NavItem & {
+      icon: string
+      mobileLabel?: string
+    }
+  > = [
+    { path: '/dashboard', label: 'แดชบอร์ด', icon: 'bi-speedometer2' },
+    { path: '/customers', label: 'ลูกค้า', scope: 'contacts', icon: 'bi-people' },
+    { path: '/sales/invoices', label: 'ใบแจ้งหนี้', scope: 'invoice', icon: 'bi-receipt' },
+    { path: '/excel-import', label: 'Excel', scope: 'excel', icon: 'bi-file-earmark-spreadsheet' },
+    { path: '/reports-studio', label: 'Reports Studio', mobileLabel: 'Reports\nStudio', icon: 'bi-layout-text-window-reverse' },
     // Provisioning is an admin/dev feature; keep behind auth scope.
-    { path: '/backend-connection', label: 'การเชื่อมต่อ', scope: 'auth' },
+    { path: '/backend-connection', label: 'การเชื่อมต่อ', scope: 'auth', icon: 'bi-plug' },
   ]
 
   const handleLogout = async () => {
@@ -117,7 +122,7 @@ export function AppLayout() {
       </header>
 
       {/* Main content */}
-      <PageContainer className="flex-1" fluid={isWide}>
+      <PageContainer className="flex-1 qf-content" fluid={isWide}>
         <main className="min-w-0 flex-1">
           <ConfigBanner />
           <Outlet />
@@ -125,38 +130,31 @@ export function AppLayout() {
       </PageContainer>
 
       {/* Bottom nav for mobile */}
-      <nav className="fixed-bottom d-sm-none border-top bg-white bg-opacity-92" style={{ 
-        zIndex: 1020,
-        backdropFilter: 'blur(12px)'
-      }}>
-        <div className="container-fluid px-2 py-2">
-          <div className="d-flex align-items-center justify-content-around">
-            {navItems.map((item) => {
-              const allowed = !item.scope || hasScope(item.scope)
-              const active = location.pathname.startsWith(item.path)
-              return (
-                <button
-                  key={item.path}
-                  type="button"
-                  onClick={() => allowed && navigate(item.path)}
-                  disabled={!allowed}
-                  className={`btn btn-sm flex-fill d-flex flex-column align-items-center rounded ${
-                    active
-                      ? 'btn-primary'
-                      : 'btn-outline-secondary'
-                  }`}
-                  style={{ fontSize: '0.6875rem' }}
-                  title={
-                    !allowed && item.scope
-                      ? `ต้องเปิด scope: ${item.scope}`
-                      : undefined
-                  }
-                >
-                  <span>{item.label}</span>
-                </button>
-              )
-            })}
-          </div>
+      <nav
+        className="qf-mobile-nav fixed-bottom d-sm-none border-top"
+        style={{
+          zIndex: 1020,
+          backdropFilter: 'blur(12px)',
+        }}
+      >
+        <div className="qf-mobile-nav__inner container-fluid">
+          {navItems.map((item) => {
+            const allowed = !item.scope || hasScope(item.scope)
+            const active = location.pathname.startsWith(item.path)
+            return (
+              <button
+                key={item.path}
+                type="button"
+                onClick={() => allowed && navigate(item.path)}
+                disabled={!allowed}
+                className={`qf-mobile-nav__item ${active ? 'is-active' : ''}`}
+                title={!allowed && item.scope ? `ต้องเปิด scope: ${item.scope}` : undefined}
+              >
+                <i className={`bi ${item.icon} qf-mobile-nav__icon`} aria-hidden="true" />
+                <span className="qf-mobile-nav__label">{item.mobileLabel ?? item.label}</span>
+              </button>
+            )
+          })}
         </div>
       </nav>
     </div>

@@ -209,3 +209,69 @@ body {
   border: 1px solid var(--qf-border);
 }
 
+/* ============================================
+   Mobile bottom navigation (ERPTH)
+   - Keep it compact, thumb-friendly, and safe-area aware
+   ============================================ */
+.qf-app .qf-mobile-nav {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.qf-app .qf-mobile-nav__inner {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+}
+
+.qf-app .qf-mobile-nav__item {
+  flex: 1 1 0;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: #64748b; /* slate-500 */
+  border-radius: 14px;
+  padding: 10px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.05;
+  font-weight: 700;
+  font-size: 0.68rem;
+  letter-spacing: 0.01em;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.qf-app .qf-mobile-nav__item:active {
+  transform: translateY(0.5px);
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.qf-app .qf-mobile-nav__item.is-active {
+  background: rgba(47, 128, 237, 0.14);
+  color: #1d4ed8;
+}
+
+.qf-app .qf-mobile-nav__item:disabled {
+  opacity: 0.45;
+}
+
+.qf-app .qf-mobile-nav__icon {
+  font-size: 1.15rem;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.qf-app .qf-mobile-nav__label {
+  white-space: pre-line; /* allow "Reports\nStudio" */
+  text-align: center;
+}
+
+/* Ensure content isn't hidden behind fixed bottom nav on phones */
+@media (max-width: 575.98px) {
+  .qf-app .qf-content {
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom)); /* tailwind pb-24 + safe area */
+  }
+}
+
