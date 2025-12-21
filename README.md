@@ -87,12 +87,46 @@ nano .env
 npm ci
 npm run build
 
-# 3) reload nginx
+# 3) deploy build output to nginx root
+# IMPORTANT: on our production, nginx serves SPA from:
+#   root /var/www/qacc;
+# not from /opt/quickfrontend/dist
+sudo rsync -av --delete /opt/quickfrontend/dist/ /var/www/qacc/
+sudo chown -R www-data:www-data /var/www/qacc
+
+# 4) reload nginx
 sudo nginx -t && sudo systemctl reload nginx
+```
+
+#### If `git pull` fails on server (local changes)
+
+If you see:
+
+- `error: Your local changes to the following files would be overwritten by merge: package-lock.json`
+
+Choose one:
+
+```bash
+# Option A: discard local changes (recommended on servers)
+git restore --source=HEAD --worktree --staged package-lock.json
+git pull --ff-only origin main
+```
+
+```bash
+# Option B: stash (if you intentionally edited on server)
+git stash push -u -m "wip"
+git pull --ff-only origin main
 ```
 
 ### Production verification checklist
 
+- **SPA is actually served from nginx root** (bypass Cloudflare cache/origin mismatch):
+  - `curl -s -k --resolve qacc.erpth.net:443:127.0.0.1 https://qacc.erpth.net/ | grep assets/index | head`
+  - Expected: it references the latest hashed assets from your newest build (e.g. `index-XXXX.js`, `index-YYYY.css`).
+- **nginx points to the expected docroot**:
+  - `sudo nginx -T | grep -nE "server_name qacc\.erpth\.net|root /var/www/qacc|try_files|location /api" -n`
+- **Files exist in the docroot**:
+  - `ls -la /var/www/qacc/assets | head`
 - **API upstream works locally**:
   - `curl -i http://127.0.0.1:18069/web/login`
   - `curl -i -X POST http://127.0.0.1:18069/api/th/v1/auth/login?db=q01 -H "X-ADT-API-Key: <key>" ...`
