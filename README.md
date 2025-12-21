@@ -98,6 +98,101 @@ sudo chown -R www-data:www-data /var/www/qacc
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
+### Production deployment (Odoo API instance / adt_th_api)
+
+This frontend depends on Odoo controllers from `adt_th_api`. When you change Python controller files, **you must restart the `odoo18-api` service** to load the new routes. `-u` (upgrade module) alone does **not** hot‑reload HTTP routing in a long-running Odoo process.
+
+#### 0) Confirm the API instance is the one serving `/api/*`
+
+```bash
+# Confirm service is running
+sudo systemctl status odoo18-api --no-pager
+
+# Confirm it's using the pinned config (should be /etc/odoo18-api.conf)
+ps -ef | grep -E "/etc/odoo18-api\\.conf" | grep -v grep
+
+# Show how the service is started (paths for python/odoo-bin)
+systemctl show -p ExecStart odoo18-api
+```
+
+#### 1) Update addon code (git → server)
+
+```bash
+cd /opt/odoo18/odoo/adtv18
+git status
+git pull
+```
+
+#### 2) Upgrade module in the pinned DB
+
+> Replace `q01` if your API instance pins another DB (`db_name` in `/etc/odoo18-api.conf`).
+
+```bash
+sudo -u odoo18 -H /opt/odoo18/odoo-venv/bin/python /opt/odoo18/odoo/odoo-bin \
+  -c /etc/odoo18-api.conf -d q01 -u adt_th_api --stop-after-init
+```
+
+#### 3) Restart API service (required for new/changed routes)
+
+```bash
+sudo systemctl restart odoo18-api
+sudo systemctl status odoo18-api --no-pager
+
+# Ensure PID changed after restart (important when fixing 404 routes)
+ps -ef | grep -E "/etc/odoo18-api\\.conf" | grep -v grep
+```
+
+#### 4) Verification (local, bypass nginx)
+
+```bash
+# Should respond (usually 200 HTML) – confirms service listens on the API port
+curl -i http://127.0.0.1:18069/web/login | head
+```
+
+#### 5) Verification matrix (what 404/401/405 means)
+
+- **404 Not Found** on `/api/th/v1/...`:
+  - **Meaning**: route is not registered in the running Odoo process (common after controller code changes).
+  - **Fix**: `sudo systemctl restart odoo18-api` (and ensure you're hitting the correct instance/port).
+- **401 Unauthorized** with JSON `Missing X-ADT-API-Key header`:
+  - **Meaning**: you didn’t send `X-ADT-API-Key` (curl) or frontend env `VITE_API_KEY` is empty/wrong.
+- **405 Method Not Allowed** with `Allow: POST, OPTIONS`:
+  - **Meaning**: you used the wrong HTTP method (e.g. GET). Use **POST** for JSON-RPC endpoints.
+
+#### 6) Verify Branding endpoints (curl)
+
+Branding endpoints used by Reports Studio:
+- `POST /api/th/v1/erpth/branding/company?db=q01`
+- `POST /api/th/v1/erpth/branding/company/update?db=q01`
+
+```bash
+API_KEY="<adt_api_client.key>"
+TOKEN="<Bearer token>"
+
+# Fetch branding (POST JSON-RPC)
+curl -i -X POST "http://127.0.0.1:18069/api/th/v1/erpth/branding/company?db=q01" \
+  -H "X-ADT-API-Key: $API_KEY" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{"jsonrpc":"2.0","method":"call","params":{"db":"q01"},"id":1}' | head -n 80
+
+# Update branding (POST JSON-RPC)
+curl -i -X POST "http://127.0.0.1:18069/api/th/v1/erpth/branding/company/update?db=q01" \
+  -H "X-ADT-API-Key: $API_KEY" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{"jsonrpc":"2.0","method":"call","params":{"companyName":"ERPTH 123 Co., Ltd.","addressLines":["123 ถนนสุขุมวิท"],"db":"q01"},"id":1}' | head -n 120
+```
+
+#### 7) Odoo shell (debug) – run as `odoo18` (peer auth)
+
+On our production, Postgres uses peer auth for DB user `odoo18`, so opening shell as `root` will fail. Use the service user:
+
+```bash
+sudo -u odoo18 -H /opt/odoo18/odoo-venv/bin/python /opt/odoo18/odoo/odoo-bin \
+  shell -c /etc/odoo18-api.conf -d q01
+```
+
 #### If `git pull` fails on server (local changes)
 
 If you see:
@@ -132,6 +227,9 @@ git pull --ff-only origin main
   - `curl -i -X POST http://127.0.0.1:18069/api/th/v1/auth/login?db=q01 -H "X-ADT-API-Key: <key>" ...`
 - **nginx proxy works**:
   - `curl -i -X POST https://qacc.erpth.net/api/th/v1/auth/login?db=q01 ...` returns `success: true`
+- **Routes changed? Restart the API service**:
+  - If you changed Odoo controllers and still see `404` on new endpoints, restart:
+    - `sudo systemctl restart odoo18-api`
 - **Logs are separated**:
   - API: `/var/log/odoo18/odoo18-api.log`
   - Main: `/var/log/odoo18/odoo18.log`
