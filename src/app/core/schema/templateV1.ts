@@ -183,6 +183,7 @@ export const templateV1Schema = z.object({
     fontFamily: z.string().min(1),
   }),
   page: z.object({
+    mode: z.enum(['A4', 'THERMAL']).optional(),
     size: z.literal('A4'),
     marginMm: z.number().min(0).default(10),
     gridPx: z.number().int().min(4).max(32).default(8),
@@ -190,6 +191,12 @@ export const templateV1Schema = z.object({
       width: z.number().int().min(1).default(794),
       height: z.number().int().min(1).default(1123),
     }),
+    thermalMm: z
+      .object({
+        widthMm: z.number().min(30).max(120).default(80),
+        marginMm: z.number().min(0).max(10).default(3),
+      })
+      .optional(),
   }),
   blocks: z.array(anyBlockSchema).default([]),
   updatedAt: z.string().min(1),

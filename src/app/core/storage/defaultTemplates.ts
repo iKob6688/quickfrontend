@@ -4,6 +4,7 @@ import { templateV1Schema } from '../schema/templateV1'
 import { defaultBranding } from '../schema/brandingSchema'
 
 const basePage: TemplateV1['page'] = {
+  mode: 'A4',
   size: 'A4',
   marginMm: 10,
   gridPx: 8,
@@ -122,7 +123,7 @@ export const DEFAULT_TEMPLATES: TemplateV1[] = [
       fontFamily:
         'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace',
     },
-    page: basePage,
+    page: { ...basePage, mode: 'THERMAL', thermalMm: { widthMm: 80, marginMm: 3 } },
     blocks: [
       { id: nanoid(), type: 'header', props: { showLogo: false, showTaxId: false, showContactLines: true } },
       { id: nanoid(), type: 'title', props: { titleEn: 'TAX INVOICE', titleTh: 'ใบกำกับภาษีอย่างย่อ', showOriginalBadge: false } },

@@ -5,11 +5,14 @@ import { Label } from '@/app/shell/ui/label'
 export function ThemePanel({
   template,
   onPatchTheme,
+  onPatchPage,
 }: {
   template: TemplateV1
   onPatchTheme: (patch: Partial<TemplateV1['theme']>) => void
+  onPatchPage: (patch: Partial<TemplateV1['page']>) => void
 }) {
   const t = template.theme
+  const p = template.page
   return (
     <div className="space-y-4">
       <div>
@@ -112,6 +115,44 @@ export function ThemePanel({
           <Input value={t.fontFamily} onChange={(e) => onPatchTheme({ fontFamily: e.target.value })} />
         </div>
       </div>
+
+      {template.docType === 'receipt_short' ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-3">
+          <div className="mb-2 text-sm font-semibold text-slate-900">Receipt size (print)</div>
+          <div className="text-xs text-slate-500 mb-3">Thermal width/margins in mm (matches real print width).</div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="grid gap-1">
+              <Label>Width (mm)</Label>
+              <Input
+                type="number"
+                value={p.thermalMm?.widthMm ?? 80}
+                onChange={(e) =>
+                  onPatchPage({
+                    mode: 'THERMAL',
+                    thermalMm: { ...(p.thermalMm || { marginMm: 3 }), widthMm: Number(e.target.value) },
+                  })
+                }
+              />
+            </div>
+            <div className="grid gap-1">
+              <Label>Margin (mm)</Label>
+              <Input
+                type="number"
+                value={p.thermalMm?.marginMm ?? 3}
+                onChange={(e) =>
+                  onPatchPage({
+                    mode: 'THERMAL',
+                    thermalMm: { ...(p.thermalMm || { widthMm: 80 }), marginMm: Number(e.target.value) },
+                  })
+                }
+              />
+            </div>
+          </div>
+          <div className="text-xs text-slate-500 mt-2">
+            Common: 58mm, 76mm, 80mm.
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

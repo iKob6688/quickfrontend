@@ -26,26 +26,28 @@ function PreviewDocument({
   showGuides: boolean
 }) {
   const blocks = template.blocks
-  const isThermal = dto.docType === 'receipt_short'
+  const isThermal = dto.docType === 'receipt_short' || template.page.mode === 'THERMAL'
+  const thermalWidthMm = template.page.thermalMm?.widthMm ?? 80
+  const thermalMarginMm = template.page.thermalMm?.marginMm ?? 3
   return (
     <div
       className="rs-page mx-auto bg-white shadow-sm"
       style={{
-        width: template.page.canvasPx.width,
-        minHeight: template.page.canvasPx.height,
+        width: isThermal ? `${thermalWidthMm}mm` : template.page.canvasPx.width,
+        minHeight: isThermal ? undefined : template.page.canvasPx.height,
         fontFamily: template.theme.fontFamily || branding.defaultFont,
       }}
     >
-      <div className="relative p-6">
+      <div className="relative" style={isThermal ? { padding: `${thermalMarginMm}mm` } : { padding: 24 }}>
         {showGuides ? (
           <div className="pointer-events-none absolute inset-0">
             <div
               className="absolute border border-dashed border-slate-200"
               style={{
-                left: 38,
-                top: 38,
-                right: 38,
-                bottom: 38,
+                left: isThermal ? `${thermalMarginMm}mm` : 38,
+                top: isThermal ? `${thermalMarginMm}mm` : 38,
+                right: isThermal ? `${thermalMarginMm}mm` : 38,
+                bottom: isThermal ? `${thermalMarginMm}mm` : 38,
               }}
             />
           </div>
@@ -53,7 +55,7 @@ function PreviewDocument({
 
         <div
           className={isThermal ? 'mx-auto' : undefined}
-          style={isThermal ? { maxWidth: 360 } : undefined}
+          style={isThermal ? { maxWidth: `${thermalWidthMm}mm` } : undefined}
         >
           <div className="space-y-3">
             {blocks.map((b, idx) => {
@@ -191,6 +193,7 @@ export function PrintPage() {
   const tpl = useMemo(() => templates.find((t) => t.id === templateId), [templates, templateId])
 
   const recordId = searchParams.get('recordId') || 'sample'
+  const autoPrint = (searchParams.get('autoprint') || '1') !== '0'
   const [dto, setDto] = useState<AnyDocumentDTO | null>(null)
   const [dtoError, setDtoError] = useState<string | null>(null)
 
@@ -212,16 +215,32 @@ export function PrintPage() {
 
   useEffect(() => {
     if (!dto) return
+    if (!autoPrint) return
     const t = window.setTimeout(() => window.print(), 250)
     return () => window.clearTimeout(t)
-  }, [dto])
+  }, [autoPrint, dto])
 
   if (!tpl) return <div className="p-6 text-sm text-slate-600">Template not found</div>
   if (dtoError) return <div className="p-6 text-sm text-red-600">{dtoError}</div>
   if (!dto) return <div className="p-6 text-sm text-slate-600">Loading…</div>
 
+  const isThermal = tpl.page.mode === 'THERMAL' || tpl.docType === 'receipt_short'
+  const thermalWidthMm = tpl.page.thermalMm?.widthMm ?? 80
+  const thermalMarginMm = tpl.page.thermalMm?.marginMm ?? 3
+
   return (
     <div className="bg-white p-4">
+      {isThermal ? (
+        <style>{`@page { size: ${thermalWidthMm}mm auto; margin: ${thermalMarginMm}mm; }`}</style>
+      ) : null}
+      {!autoPrint ? (
+        <div className="rs-no-print mb-3 d-flex flex-wrap align-items-center gap-2">
+          <div className="small text-muted">Use your browser’s Print dialog to “Save as PDF”.</div>
+          <button className="btn btn-primary btn-sm ms-auto" type="button" onClick={() => window.print()}>
+            Print / Save as PDF
+          </button>
+        </div>
+      ) : null}
       <PreviewDocument template={tpl} dto={dto} branding={branding} showGuides={false} />
     </div>
   )

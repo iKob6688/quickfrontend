@@ -13,10 +13,15 @@ export type TemplateTheme = {
 }
 
 export type TemplatePage = {
+  mode?: 'A4' | 'THERMAL'
   size: 'A4'
   marginMm: number
   gridPx: number
   canvasPx: { width: number; height: number }
+  thermalMm?: {
+    widthMm: number
+    marginMm: number
+  }
 }
 
 export type BlockCommonStyle = {

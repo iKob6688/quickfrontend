@@ -285,6 +285,10 @@ export function EditorPage() {
                     if (isReadOnly) return
                     upsertTemplate({ ...tpl, theme: { ...tpl.theme, ...patch }, updatedAt: new Date().toISOString() })
                   }}
+                  onPatchPage={(patch) => {
+                    if (isReadOnly) return
+                    upsertTemplate({ ...tpl, page: { ...tpl.page, ...patch }, updatedAt: new Date().toISOString() })
+                  }}
                 />
               ) : (
                 <PropertiesPanel
