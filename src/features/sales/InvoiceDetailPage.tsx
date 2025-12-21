@@ -5,12 +5,16 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { Spinner, Alert, OverlayTrigger, Tooltip } from 'react-bootstrap'
+import { Spinner, Alert, OverlayTrigger, Tooltip, Modal, ButtonGroup, Button as BootstrapButton } from 'react-bootstrap'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { RegisterPaymentModal } from '@/features/sales/RegisterPaymentModal'
 import { AmendInvoiceModal } from '@/features/sales/AmendInvoiceModal'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from '@/lib/toastStore'
+import { useSettingsStore as useStudioSettingsStore } from '@/app/core/storage/settingsStore'
+
+const FALLBACK_RS_TPL_TAX_FULL = 'receipt_full_default_v1'
+const FALLBACK_RS_TPL_TAX_SHORT = 'receipt_short_default_v1'
 
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -18,8 +22,36 @@ export function InvoiceDetailPage() {
   const queryClient = useQueryClient()
   const [paymentOpen, setPaymentOpen] = useState(false)
   const [amendOpen, setAmendOpen] = useState(false)
+  const [printMenuOpen, setPrintMenuOpen] = useState(false)
+  const studioSettings = useStudioSettingsStore((s) => s.settings)
 
   const invoiceId = id ? Number.parseInt(id, 10) : null
+  const rsTplFull = studioSettings.defaultTemplateIdByDocType?.receipt_full || FALLBACK_RS_TPL_TAX_FULL
+  const rsTplShort = studioSettings.defaultTemplateIdByDocType?.receipt_short || FALLBACK_RS_TPL_TAX_SHORT
+
+  // When defaults are changed in another tab (e.g., Reports Studio editor),
+  // Zustand in this tab won't update automatically. Rehydrate on focus/open.
+  useEffect(() => {
+    const rehydrate = () => {
+      try {
+        void (useStudioSettingsStore as any).persist?.rehydrate?.()
+      } catch {
+        // ignore
+      }
+    }
+    const onFocus = () => rehydrate()
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [])
+
+  useEffect(() => {
+    if (!printMenuOpen) return
+    try {
+      void (useStudioSettingsStore as any).persist?.rehydrate?.()
+    } catch {
+      // ignore
+    }
+  }, [printMenuOpen])
 
   const {
     data: invoice,
@@ -42,6 +74,26 @@ export function InvoiceDetailPage() {
       toast.error('โพสต์ใบแจ้งหนี้ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
     },
   })
+
+  const openReportsStudioPrint = (templateId: string) => {
+    if (!invoiceId) return
+    toast.info('เปิดหน้าพิมพ์ (Reports Studio)', `Template: ${templateId}`)
+    const url = `/reports-studio/print/${templateId}?recordId=${encodeURIComponent(String(invoiceId))}`
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
+  const openReportsStudioPdf = (templateId: string) => {
+    if (!invoiceId) return
+    toast.info('เปิด PDF (Reports Studio)', `Template: ${templateId}`)
+    // Open preview and auto-trigger PDF generation there (mobile friendly: opens new tab).
+    const url = `/reports-studio/preview/${templateId}?recordId=${encodeURIComponent(String(invoiceId))}&auto=pdf`
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
+  const openReportsStudioEdit = (templateId: string) => {
+    const url = `/reports-studio/editor/${templateId}`
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
 
   const paymentMutation = useMutation({
     mutationFn: (payload: RegisterPaymentPayload) =>
@@ -303,22 +355,118 @@ export function InvoiceDetailPage() {
                 รับชำระเงิน
               </Button>
             )}
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={async () => {
-                try {
-                  await openInvoicePdf(invoice.id)
-                } catch (err) {
-                  toast.error('เปิด PDF ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
-                }
-              }}
-            >
-              พิมพ์ / PDF
-            </Button>
+            {/* Professional + reliable on mobile: split button + action-sheet modal (avoids dropdown stacking issues) */}
+            <ButtonGroup>
+              <BootstrapButton size="sm" variant="outline-secondary" onClick={() => openReportsStudioPrint(rsTplFull)}>
+                พิมพ์
+              </BootstrapButton>
+              <BootstrapButton
+                size="sm"
+                variant="outline-secondary"
+                onClick={() => setPrintMenuOpen(true)}
+                aria-label="Print options"
+                title="ตัวเลือกการพิมพ์"
+              >
+                ▾
+              </BootstrapButton>
+            </ButtonGroup>
           </div>
         </div>
       </Card>
+
+      <Modal
+        show={printMenuOpen}
+        onHide={() => setPrintMenuOpen(false)}
+        centered
+        fullscreen="sm-down"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>พิมพ์ / PDF</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="text-muted small mb-3">
+            เลือกรูปแบบการพิมพ์ (เปิดแท็บใหม่ รองรับมือถือ)
+          </div>
+
+          <div className="mb-2 fw-semibold">ใบกำกับภาษี (เต็ม)</div>
+          <div className="d-grid gap-2 mb-3">
+            <BootstrapButton
+              variant="outline-secondary"
+              onClick={() => {
+                setPrintMenuOpen(false)
+                openReportsStudioPrint(rsTplFull)
+              }}
+            >
+              พิมพ์
+            </BootstrapButton>
+            <BootstrapButton
+              variant="outline-secondary"
+              onClick={() => {
+                setPrintMenuOpen(false)
+                openReportsStudioPdf(rsTplFull)
+              }}
+            >
+              PDF
+            </BootstrapButton>
+            <BootstrapButton
+              variant="outline-secondary"
+              onClick={() => {
+                setPrintMenuOpen(false)
+                openReportsStudioEdit(rsTplFull)
+              }}
+            >
+              แก้ไข Template
+            </BootstrapButton>
+          </div>
+
+          <div className="mb-2 fw-semibold">ใบกำกับภาษี (อย่างย่อ)</div>
+          <div className="d-grid gap-2 mb-3">
+            <BootstrapButton
+              variant="outline-secondary"
+              onClick={() => {
+                setPrintMenuOpen(false)
+                openReportsStudioPrint(rsTplShort)
+              }}
+            >
+              พิมพ์
+            </BootstrapButton>
+            <BootstrapButton
+              variant="outline-secondary"
+              onClick={() => {
+                setPrintMenuOpen(false)
+                openReportsStudioPdf(rsTplShort)
+              }}
+            >
+              PDF
+            </BootstrapButton>
+            <BootstrapButton
+              variant="outline-secondary"
+              onClick={() => {
+                setPrintMenuOpen(false)
+                openReportsStudioEdit(rsTplShort)
+              }}
+            >
+              แก้ไข Template
+            </BootstrapButton>
+          </div>
+
+          <hr />
+          <div className="text-muted small mb-2">Fallback</div>
+          <BootstrapButton
+            variant="outline-secondary"
+            onClick={async () => {
+              try {
+                setPrintMenuOpen(false)
+                await openInvoicePdf(invoice.id)
+              } catch (err) {
+                toast.error('เปิด PDF ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+              }
+            }}
+          >
+            PDF แบบเดิม
+          </BootstrapButton>
+        </Modal.Body>
+      </Modal>
 
       <div className="row g-4">
         <div className="col-lg-8">

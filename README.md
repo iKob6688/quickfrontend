@@ -3,6 +3,107 @@
 Quickfront18 is a React 18 + Vite + TypeScript frontend for Thai SME accounting on top of Odoo 18 Community.  
 It talks to a middleware backend over JSON APIs, supports offline-first usage, and integrates with LINE LIFF.
 
+## Production-grade runbook (final)
+
+This section is a “do this, don’t debug” guide based on issues we hit during server rollout (Cloudflare + nginx + Odoo multi-DB).
+
+### Topics & issues we hit (postmortem)
+
+- **`405 Not Allowed` / `404 Not Found` at `/api/...`**
+  - **Cause**: nginx `/api` was not proxying to the correct upstream (or Cloudflare was fronting a different origin), or Odoo instance didn’t load the API controllers/models in the selected DB.
+  - **Fix**: a dedicated Odoo API instance on its own port + nginx proxy to that port.
+- **`500 Internal Server Error` from Odoo**
+  - **Cause**: broken Odoo config (`addons_path` contained a stray `>` like `/opt/odoo18/>`, or duplicated `[options]` section), or missing addon roots so dependencies were not found.
+  - **Fix**: sanitize config + make `addons_path` include every addon root directory that contains your installed modules.
+- **API route exists but model missing (`KeyError: 'adt.api.client'`)**
+  - **Cause**: `adt_th_api` wasn’t actually loaded in the running registry because dependency modules (e.g. `report_xlsx`, `partner_firstname`, `date_range`, `l10n_th_*`) were not discoverable via `addons_path`.
+  - **Fix**: add the missing addon root (example from our server: `/opt/odoo18/odoo/adtv18/l10nth`) to the API instance `addons_path`, restart, then upgrade modules.
+- **`upstream sent too big header` (nginx)**
+  - **Cause**: upstream returned large headers (cookies, etc.).
+  - **Fix**: increase nginx proxy buffers (and ensure `large_client_header_buffers` is in the `server`/`http` context, not inside `location`).
+- **zsh: `event not found: doctype`**
+  - **Cause**: pasting HTML containing `!` into zsh (history expansion).
+  - **Fix**: run only the curl command, or `set +H` for the session.
+
+### Production architecture (recommended)
+
+- **Odoo UI instance (multi-DB)**: normal Odoo service (e.g. port `8069`), `list_db` as needed.
+- **Odoo API instance (pinned DB)**: separate service (e.g. port `18069`) with:
+  - `db_name = q01` and `dbfilter = ^q01$`
+  - `server_wide_modules` includes your API module (e.g. `adt_th_api`)
+  - `workers = 0` and `max_cron_threads = 0` to keep it deterministic (adjust later)
+  - **separate logfile** (e.g. `/var/log/odoo18/odoo18-api.log`) so you don’t mix logs
+- **nginx**:
+  - `qacc.erpth.net` serves the SPA and proxies `/api/` to the API instance (`127.0.0.1:18069`)
+  - (optional) keep the `db` rewrite via snippet for “multi-db selection by CLI” and future flexibility
+- **Cloudflare**:
+  - Ensure the origin is correct and that `/api` traffic reaches nginx (test from origin IP with `Host:` header when debugging).
+
+### Required frontend env (same server / same domain)
+
+Use relative `/api` so the SPA calls nginx on the same domain:
+
+```env
+VITE_API_BASE_URL=/api
+VITE_API_KEY=<adt_api_client.key>
+VITE_ODOO_DB=q01
+```
+
+### One-command DB switching (CLI)
+
+There are two supported patterns; pick one and stick to it.
+
+#### A) Switch DB at nginx layer (rewrite `db=`) — fastest
+
+If your nginx config uses a snippet like `/etc/nginx/snippets/qacc_api_db.conf`:
+
+```nginx
+set $odoo_api_db q01;
+```
+
+You can switch it by CLI and reload nginx:
+
+```bash
+sudo npm run set-api-db -- --db q02 --snippet /etc/nginx/snippets/qacc_api_db.conf --reload
+```
+
+#### B) Switch DB by pinning the API instance (recommended for production)
+
+This updates `db_name` + `dbfilter` in `/etc/odoo18-api.conf` and restarts the service:
+
+```bash
+sudo npm run set-odoo-api-db -- --db q02 --config /etc/odoo18-api.conf --service odoo18-api
+```
+
+### Production deployment (frontend on same server)
+
+```bash
+cd /opt/quickfrontend
+
+# 1) set env
+nano .env
+
+# 2) build
+npm ci
+npm run build
+
+# 3) reload nginx
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+### Production verification checklist
+
+- **API upstream works locally**:
+  - `curl -i http://127.0.0.1:18069/web/login`
+  - `curl -i -X POST http://127.0.0.1:18069/api/th/v1/auth/login?db=q01 -H "X-ADT-API-Key: <key>" ...`
+- **nginx proxy works**:
+  - `curl -i -X POST https://qacc.erpth.net/api/th/v1/auth/login?db=q01 ...` returns `success: true`
+- **Logs are separated**:
+  - API: `/var/log/odoo18/odoo18-api.log`
+  - Main: `/var/log/odoo18/odoo18.log`
+- **No “Some modules are not loaded ...” in API logfile**:
+  - If present, fix `addons_path` to include the missing addon roots.
+
 ## 🚀 Quick Start
 
 ### Development
@@ -30,7 +131,7 @@ npm run build
 # Deploy dist/ folder to your server
 ```
 
-**That's it!** See [Production Deployment Guide](./docs/production-deployment.md) for details.
+**That's it!** See [Server Deployment Guide](./docs/server-deployment-guide.md) for details.
 
 ### API base URL
 

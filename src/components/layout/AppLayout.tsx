@@ -13,6 +13,9 @@ export function AppLayout() {
   const location = useLocation()
   const logout = useAuthStore((s) => s.logout)
   const user = useAuthStore((s) => s.user)
+  const isWide =
+    location.pathname.startsWith('/reports-studio/editor') ||
+    location.pathname.startsWith('/reports-studio/preview')
 
   // Scope gating (prod-grade): only hide items that would 403 consistently.
   // Dashboard stays visible even if KPI scope is missing; page will degrade gracefully.
@@ -21,6 +24,7 @@ export function AppLayout() {
     { path: '/customers', label: 'ลูกค้า', scope: 'contacts' },
     { path: '/sales/invoices', label: 'ใบแจ้งหนี้', scope: 'invoice' },
     { path: '/excel-import', label: 'Excel', scope: 'excel' },
+    { path: '/reports-studio', label: 'Reports Studio' },
     // Provisioning is an admin/dev feature; keep behind auth scope.
     { path: '/backend-connection', label: 'การเชื่อมต่อ', scope: 'auth' },
   ]
@@ -113,7 +117,7 @@ export function AppLayout() {
       </header>
 
       {/* Main content */}
-      <PageContainer className="flex-1">
+      <PageContainer className="flex-1" fluid={isWide}>
         <main className="min-w-0 flex-1">
           <ConfigBanner />
           <Outlet />

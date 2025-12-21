@@ -1,0 +1,54 @@
+/* erpth Reports Studio — print rules */
+
+@page {
+  size: A4;
+  margin: 10mm;
+}
+
+/* Ensure backgrounds/colors print accurately */
+* {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* Hide app chrome in print */
+@media print {
+  .rs-no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  /* A4 page container */
+  .rs-page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    background: #fff;
+  }
+
+  /* Allow page breaks */
+  .page-break {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  /* Better table splitting; browser repeats THEAD on print automatically */
+  table {
+    page-break-inside: auto;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tfoot {
+    display: table-footer-group;
+  }
+  tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}
+
+

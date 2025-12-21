@@ -1,9 +1,15 @@
+/* Tailwind v4 */
+@import "tailwindcss";
+
 /* Bootstrap 5 */
 @import 'bootstrap/dist/css/bootstrap.min.css';
 @import 'bootstrap-icons/font/bootstrap-icons.css';
 
 /* Custom Quickfront18 styles */
 @import './styles/tokens.css';
+
+/* Reports Studio print rules */
+@import './app/styles/print.css';
 
 *,
 *::before,

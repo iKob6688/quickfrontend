@@ -11,6 +11,8 @@ const apiKey = import.meta.env.VITE_API_KEY
 export const apiClient = axios.create({
   baseURL,
   withCredentials: true,
+  // Prevent UI from being stuck forever if the backend/proxy hangs.
+  timeout: 20000,
 })
 
 export type UnauthorizedHandler = () => void

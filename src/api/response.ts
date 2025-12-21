@@ -79,10 +79,20 @@ function parseEnvelopeError(err: ApiErrorPayload | null | undefined) {
     return { message: err }
   }
 
+  // Odoo JSON-RPC error shape often includes { code, message, data: { message, debug, ... } }
+  // We prefer the most human-friendly message possible.
+  const anyErr: any = err as any
+  const nestedMessage =
+    typeof anyErr?.data?.message === 'string' && anyErr.data.message.trim().length ? anyErr.data.message : undefined
+  const nestedDetails =
+    anyErr?.details ??
+    (typeof anyErr?.data?.debug === 'string' ? anyErr.data.debug : undefined) ??
+    anyErr?.data
+
   return {
-    message: err.message ?? 'Unexpected API response',
-    code: err.code,
-    details: err.details,
+    message: nestedMessage ?? err.message ?? 'Unexpected API response',
+    code: (err as any).code,
+    details: nestedDetails,
   }
 }
 

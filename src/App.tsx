@@ -17,6 +17,15 @@ import { useAuthStore } from '@/features/auth/store'
 import { ErrorBoundary } from '@/components/system/ErrorBoundary'
 import { ToastHost } from '@/components/system/ToastHost'
 
+// Reports Studio (integrated as part of the same ERPTH shell)
+import { StudioBootstrap } from '@/app/StudioBootstrap'
+import { DashboardPage as ReportsDashboardPage } from '@/app/features/dashboard/DashboardPage'
+import { BrandingPage as ReportsBrandingPage } from '@/app/features/branding/BrandingPage'
+import { TemplateLibraryPage as ReportsTemplateLibraryPage } from '@/app/features/templates/TemplateLibraryPage'
+import { EditorPage as ReportsEditorPage } from '@/app/features/editor/EditorPage'
+import { PreviewPage as ReportsPreviewPage, PrintPage as ReportsPrintPage } from '@/app/features/preview/PreviewPage'
+import { SettingsPage as ReportsSettingsPage } from '@/app/features/settings/SettingsPage'
+
 function AppRoutes() {
   return (
     <Routes>
@@ -24,6 +33,16 @@ function AppRoutes() {
       {/* TODO: /line-entry for LIFF auto-login */}
 
       <Route element={<ProtectedRoute />}>
+        {/* Print route must not include AppLayout chrome */}
+        <Route
+          path="/reports-studio/print/:templateId"
+          element={
+            <StudioBootstrap>
+              <ReportsPrintPage />
+            </StudioBootstrap>
+          }
+        />
+
         <Route element={<AppLayout />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
@@ -40,6 +59,16 @@ function AppRoutes() {
             element={<BackendConnectionPage />}
           />
           <Route path="/excel-import" element={<ExcelImportPage />} />
+
+          {/* Reports Studio routes inside the same ERPTH shell */}
+          <Route element={<StudioBootstrap />}>
+            <Route path="/reports-studio" element={<ReportsDashboardPage />} />
+            <Route path="/reports-studio/branding" element={<ReportsBrandingPage />} />
+            <Route path="/reports-studio/templates" element={<ReportsTemplateLibraryPage />} />
+            <Route path="/reports-studio/editor/:templateId" element={<ReportsEditorPage />} />
+            <Route path="/reports-studio/preview/:templateId" element={<ReportsPreviewPage />} />
+            <Route path="/reports-studio/settings" element={<ReportsSettingsPage />} />
+          </Route>
         </Route>
       </Route>
 
