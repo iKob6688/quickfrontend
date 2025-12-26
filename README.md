@@ -398,6 +398,17 @@ Implemented in `src/api/endpoints/invoices.ts` using `/api/th/v1/sales/invoices`
 
 These are orchestrated by the offline sync engine via `PendingOpType` mappings as described above.
 
+### Purchase Orders, Expenses & Taxes/VAT API
+
+See **[Purchase Orders, Expenses & Taxes/VAT API Specification](./docs/api-purchases-expenses-taxes.md)** for complete API documentation including:
+
+- **Purchase Orders**: list, get, create, update, confirm, cancel
+- **Expenses**: list, get, create, update, submit
+- **Taxes & VAT**: list (enhanced), calculate, validate VAT number
+- **TypeScript types**: Request/Response interfaces for all endpoints
+- **Implementation guidelines**: API client structure, authentication, error handling, date format, testing
+- **Key features**: camelCase responses, unified `ApiEnvelope<T>` format, error codes, pagination, company isolation
+
 ### Auth UX and 401 redirect strategy
 
 - `ProtectedRoute` ensures unauthenticated users are redirected to `/login`.
@@ -463,7 +474,20 @@ This section is for the Odoo/middleware team. It lists what the React app alread
 
 - **Bearer-token support for frontend routes**
   - Existing `/web/adt/th/v1/...` routes currently use `auth="user"` and Odoo sessions.
-  - For SPA use without Odoo’s login UI, controllers should:
+  - For SPA use without Odoo's login UI, controllers should:
     - Either accept bearer tokens via a helper like `_auth_bearer_user()` and switch `env.user` accordingly, **or**
     - Expose parallel `/api/th/v1/...` routes that rely solely on bearer token auth.
+
+- **Purchase Orders, Expenses & Taxes/VAT endpoints**
+  - See [Purchase Orders, Expenses & Taxes/VAT API Specification](./docs/api-purchases-expenses-taxes.md) for complete endpoint specifications.
+  - Required endpoints:
+    - Purchase Orders: `/api/th/v1/purchases/orders` (list, get, create, update, confirm, cancel)
+    - Expenses: `/api/th/v1/expenses` (list, get, create, update, submit)
+    - Taxes & VAT: `/api/th/v1/taxes` (list, calculate, validate-vat)
+  - All endpoints must:
+    - Accept JSON-RPC 2.0 format (Odoo `type="json"` routes)
+    - Return `ApiEnvelope<T>` with camelCase field names
+    - Support pagination via `limit`/`offset`
+    - Respect `X-Instance-ID` header for company scoping
+    - Use standard error codes (`AUTH_REQUIRED`, `VALIDATION_ERROR`, `NOT_FOUND`, `CONFLICT`, etc.)
 
