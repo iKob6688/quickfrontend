@@ -28,27 +28,67 @@ interface JsonRpcResponse<T> {
  * Normalizes response data to ApiEnvelope format.
  * Handles both JSON-RPC format ({ jsonrpc, result: { success, data, error } })
  * and plain envelope format ({ success, data, error }).
+ * 
+ * Odoo type="json" routes return:
+ * {
+ *   "jsonrpc": "2.0",
+ *   "id": ...,
+ *   "result": {
+ *     "success": true,
+ *     "data": [...],  // ← Actual data array
+ *     "error": null
+ *   }
+ * }
  */
 function normalizeEnvelope<T>(raw: unknown): ApiEnvelope<T> {
+  // Handle string responses (Axios might not parse JSON in some cases)
+  if (typeof raw === 'string') {
+    try {
+      raw = JSON.parse(raw)
+    } catch {
+      // If not JSON, treat as error
+      return {
+        success: false,
+        error: 'Invalid JSON response',
+      }
+    }
+  }
+
   // Check if it's JSON-RPC format
   if (
     raw &&
     typeof raw === 'object' &&
     'jsonrpc' in raw &&
-    'result' in raw &&
     (raw as JsonRpcResponse<T>).jsonrpc === '2.0'
   ) {
     const rpc = raw as JsonRpcResponse<T>
+    
     // If result exists, use it as the envelope
-    if (rpc.result) {
-      return rpc.result
+    // result should be ApiEnvelope<T> = { success: boolean, data?: T, error?: ... }
+    if ('result' in rpc && rpc.result) {
+      // Ensure result has the expected structure
+      if (typeof rpc.result === 'object' && ('success' in rpc.result || 'data' in rpc.result || 'error' in rpc.result)) {
+        return rpc.result as ApiEnvelope<T>
+      }
+      // If result is not an envelope, wrap it
+      return {
+        success: true,
+        data: rpc.result as T,
+      }
     }
+    
     // If error exists in JSON-RPC, wrap it
-    if (rpc.error) {
+    if ('error' in rpc && rpc.error) {
       return {
         success: false,
         error: rpc.error,
       }
+    }
+    
+    // JSON-RPC with no result/error (unlikely but handle gracefully)
+    return {
+      success: false,
+      error: 'JSON-RPC response missing result and error',
     }
   }
 
@@ -98,16 +138,61 @@ function parseEnvelopeError(err: ApiErrorPayload | null | undefined) {
 
 /**
  * Unwraps API response, supporting both JSON-RPC and plain envelope formats.
+ * 
+ * Odoo type="json" routes return JSON-RPC 2.0:
+ * {
+ *   "jsonrpc": "2.0",
+ *   "id": 1,
+ *   "result": {
+ *     "success": true,
+ *     "data": [...],  // ← This is what we return
+ *     "error": null
+ *   }
+ * }
+ * 
+ * This function extracts: response.data.result.data
+ * 
  * @param response Axios response (response.data may be JSON-RPC or plain envelope)
  * @returns The data payload if successful, throws ApiError otherwise
  */
 export function unwrapResponse<T>(response: AxiosResponse<unknown>): T {
+  // Debug: Log raw response in development
+  if (process.env.NODE_ENV === 'development') {
+    const url = (response.config?.url || 'unknown').toString()
+    if (url.includes('purchases') || url.includes('orders')) {
+      console.debug('[unwrapResponse] Processing response:', {
+        url,
+        status: response.status,
+        hasData: !!response.data,
+        dataType: typeof response.data,
+        rawData: response.data,
+      })
+    }
+  }
+
   const envelope = normalizeEnvelope<T>(response.data)
 
-  if (envelope?.success && envelope.data !== undefined) {
+  // Debug: Log normalized envelope
+  if (process.env.NODE_ENV === 'development') {
+    const url = (response.config?.url || 'unknown').toString()
+    if (url.includes('purchases') || url.includes('orders')) {
+      console.debug('[unwrapResponse] Normalized envelope:', {
+        url,
+        success: envelope?.success,
+        hasData: envelope?.data !== undefined,
+        dataType: Array.isArray(envelope?.data) ? 'array' : typeof envelope?.data,
+        dataLength: Array.isArray(envelope?.data) ? envelope.data.length : 'N/A',
+        firstItem: Array.isArray(envelope?.data) && envelope.data.length > 0 ? envelope.data[0] : null,
+      })
+    }
+  }
+
+  // Success case: envelope has success=true and data is defined
+  if (envelope?.success === true && envelope.data !== undefined && envelope.data !== null) {
     return envelope.data as T
   }
 
+  // Error case: extract and throw error
   const { message, code, details } = parseEnvelopeError(envelope?.error)
   throw new ApiError(message, { code, details })
 }

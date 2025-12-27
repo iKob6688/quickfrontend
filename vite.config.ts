@@ -6,6 +6,14 @@ import { resolve } from 'path'
 const isProduction = process.env.NODE_ENV === 'production'
 const apiBaseUrl = process.env.VITE_API_BASE_URL || '/api'
 
+// Proxy target for dev server (default: localhost:8069)
+// Set VITE_PROXY_TARGET to point to remote backend if needed
+// Examples:
+//   - Local: http://localhost:8069
+//   - Remote: https://qacc.erpth.net
+//   - Remote with port: http://192.168.1.100:18069
+const proxyTarget = process.env.VITE_PROXY_TARGET || 'http://localhost:8069'
+
 // Relative path is OK in production if using nginx proxy
 // Only warn if it's not /api (which is the standard proxy path)
 if (isProduction && apiBaseUrl.startsWith('/') && apiBaseUrl !== '/api') {
@@ -24,8 +32,15 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:8069',
+        target: proxyTarget,
         changeOrigin: true,
+        // Only proxy if target is not localhost (for remote backends)
+        ...(proxyTarget.includes('localhost') || proxyTarget.includes('127.0.0.1')
+          ? {}
+          : {
+              secure: false, // Allow self-signed certs for remote dev
+              ws: true, // WebSocket support
+            }),
       },
     },
   },

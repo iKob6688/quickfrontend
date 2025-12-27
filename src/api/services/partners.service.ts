@@ -83,7 +83,24 @@ export async function listPartners(params: PartnerListParams) {
       ...(params.limit !== undefined && { limit: params.limit }),
     }),
   )
-  return unwrapResponse<PartnerListResponse>(response)
+  
+  // Backend might return array directly or PartnerListResponse
+  const data = unwrapResponse<PartnerListResponse | PartnerSummary[]>(response)
+  
+  // If it's an array, convert to PartnerListResponse format
+  if (Array.isArray(data)) {
+    return {
+      items: data.filter((item): item is PartnerSummary => 
+        item != null && typeof item === 'object' && 'id' in item && 'name' in item
+      ),
+      total: data.length,
+      offset: params.offset || 0,
+      limit: params.limit || data.length,
+    }
+  }
+  
+  // Otherwise, it's already PartnerListResponse
+  return data
 }
 
 export async function getPartner(id: number) {

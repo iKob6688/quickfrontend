@@ -3,6 +3,68 @@
 Quickfront18 is a React 18 + Vite + TypeScript frontend for Thai SME accounting on top of Odoo 18 Community.  
 It talks to a middleware backend over JSON APIs, supports offline-first usage, and integrates with LINE LIFF.
 
+## Local Development Setup
+
+### Quick Start
+
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Configure environment:**
+   
+   Create a `.env` file in the project root:
+   ```env
+   # For local development with local Odoo backend (default):
+   VITE_API_BASE_URL=/api
+   VITE_PROXY_TARGET=http://localhost:8069
+   VITE_API_KEY=your_api_key_here
+   VITE_ODOO_DB=q01
+   ```
+   
+   **OR** for local development with remote backend:
+   ```env
+   VITE_API_BASE_URL=/api
+   VITE_PROXY_TARGET=https://qacc.erpth.net
+   VITE_API_KEY=your_api_key_here
+   VITE_ODOO_DB=q01
+   ```
+
+3. **Start dev server:**
+   ```bash
+   npm run dev
+   ```
+
+### Troubleshooting `ECONNREFUSED` Error
+
+If you see `ECONNREFUSED` when starting the dev server, it means the backend Odoo service isn't running.
+
+**Option A: Use Remote Backend (Recommended for quick testing)**
+- Set `VITE_PROXY_TARGET=https://qacc.erpth.net` in your `.env` file
+- Make sure you have network access to the remote server
+- Restart the dev server: `npm run dev`
+
+**Option B: Run Local Odoo Backend**
+- Start your local Odoo instance on port 8069
+- Or update `VITE_PROXY_TARGET` to match your Odoo port (e.g., `http://localhost:18069`)
+
+**Option C: Disable Proxy (Direct API calls)**
+- Set `VITE_API_BASE_URL=https://qacc.erpth.net/api` (full URL)
+- Remove or comment out the proxy in `vite.config.ts`
+- Note: This may cause CORS issues if the backend doesn't allow cross-origin requests
+
+### Environment Variables
+
+- `VITE_API_BASE_URL`: API base path (default: `/api`)
+  - Use `/api` for proxy mode (development)
+  - Use full URL (e.g., `https://qacc.erpth.net/api`) for direct mode
+- `VITE_PROXY_TARGET`: Backend URL for Vite proxy (development only)
+  - Default: `http://localhost:8069`
+  - Set to remote URL if using remote backend
+- `VITE_API_KEY`: API key from Odoo (ADT API → API Clients)
+- `VITE_ODOO_DB`: Database name (optional, can be set at runtime)
+
 ## Production-grade runbook (final)
 
 This section is a “do this, don’t debug” guide based on issues we hit during server rollout (Cloudflare + nginx + Odoo multi-DB).

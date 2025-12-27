@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ping } from '@/api/services/system.service'
 import { getDashboardKpis } from '@/api/services/dashboard.service'
 import { listInvoices } from '@/api/services/invoices.service'
+import { listPurchaseOrders } from '@/api/services/purchases.service'
 import { hasScope } from '@/lib/scopes'
 import { useMemo } from 'react'
 
@@ -36,6 +37,26 @@ export function DashboardPage() {
     queryFn: () => listInvoices({ limit: 1000 }), // Get all invoices for calculation
     staleTime: 60_000,
   })
+
+  // Fetch purchase orders for dashboard
+  const purchaseOrdersQuery = useQuery({
+    queryKey: ['purchaseOrders', 'dashboard'],
+    enabled: canSeeKpis,
+    queryFn: () => listPurchaseOrders({ limit: 1000 }), // Get all purchase orders for calculation
+    staleTime: 60_000,
+  })
+
+  // Calculate purchase orders stats
+  const purchaseStats = useMemo(() => {
+    if (!purchaseOrdersQuery.data) return null
+    const orders = purchaseOrdersQuery.data
+    const draftCount = orders.filter((o) => o.status === 'draft').length
+    const sentCount = orders.filter((o) => o.status === 'sent').length
+    const purchaseCount = orders.filter((o) => o.status === 'purchase').length
+    const doneCount = orders.filter((o) => o.status === 'done').length
+    const totalValue = orders.reduce((sum, o) => sum + o.total, 0)
+    return { draftCount, sentCount, purchaseCount, doneCount, totalValue }
+  }, [purchaseOrdersQuery.data])
 
   // Calculate payment stats from invoices
   const paymentStats = useMemo(() => {
@@ -198,6 +219,32 @@ export function DashboardPage() {
             </p>
             <p className="small text-muted mb-0">
               สร้าง/แก้ไข/โพสต์ใบแจ้งหนี้
+            </p>
+          </Card>
+        </div>
+        <div className="col-md-6 col-xl-3">
+          <Card
+            onClick={() => navigate('/purchases/orders')}
+            role="button"
+            tabIndex={0}
+          >
+            <p className="small fw-medium text-muted mb-2">Purchase Orders</p>
+            <p className="h6 fw-semibold mb-2">
+              {purchaseOrdersQuery.isLoading
+                ? 'กำลังโหลด...'
+                : purchaseOrdersQuery.isError
+                  ? '—'
+                  : purchaseStats
+                    ? `${purchaseStats.doneCount + purchaseStats.purchaseCount} ใบ`
+                    : '0 ใบ'}
+            </p>
+            <p className="small text-muted mb-0">
+              {purchaseStats
+                ? `มูลค่า ${purchaseStats.totalValue.toLocaleString('th-TH', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}`
+                : 'จัดการใบสั่งซื้อ'}
             </p>
           </Card>
         </div>

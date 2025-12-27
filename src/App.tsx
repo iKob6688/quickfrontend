@@ -7,6 +7,11 @@ import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { InvoicesListPage } from '@/features/sales/InvoicesListPage'
 import { InvoiceDetailPage } from '@/features/sales/InvoiceDetailPage'
 import { InvoiceFormPage } from '@/features/sales/InvoiceFormPage'
+import { PurchaseOrdersListPage } from '@/features/purchases/PurchaseOrdersListPage'
+import { PurchaseOrderDetailPage } from '@/features/purchases/PurchaseOrderDetailPage'
+import { PurchaseOrderFormPage } from '@/features/purchases/PurchaseOrderFormPage'
+import { PurchaseRequestsListPage } from '@/features/purchases/PurchaseRequestsListPage'
+import { ExpensesListPage } from '@/features/expenses/ExpensesListPage'
 import { CustomersListPage } from '@/features/customers/CustomersListPage'
 import { CustomerDetailPage } from '@/features/customers/CustomerDetailPage'
 import { CustomerFormPage } from '@/features/customers/CustomerFormPage'
@@ -54,6 +59,12 @@ function AppRoutes() {
           <Route path="/sales/invoices/new" element={<InvoiceFormPage />} />
           <Route path="/sales/invoices/:id" element={<InvoiceDetailPage />} />
           <Route path="/sales/invoices/:id/edit" element={<InvoiceFormPage />} />
+          <Route path="/purchases/orders" element={<PurchaseOrdersListPage />} />
+          <Route path="/purchases/orders/new" element={<PurchaseOrderFormPage />} />
+          <Route path="/purchases/orders/:id" element={<PurchaseOrderDetailPage />} />
+          <Route path="/purchases/orders/:id/edit" element={<PurchaseOrderFormPage />} />
+          <Route path="/purchases/requests" element={<PurchaseRequestsListPage />} />
+          <Route path="/expenses" element={<ExpensesListPage />} />
           <Route
             path="/backend-connection"
             element={<BackendConnectionPage />}
