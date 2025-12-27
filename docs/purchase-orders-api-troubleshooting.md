@@ -38,11 +38,20 @@ The frontend code is ready, but the backend team needs to implement these endpoi
 Check if a purchase orders controller exists:
 
 ```bash
-find /opt/odoo18/odoo/adtv18 -name "*purchase*.py" | grep -i controller
-# Expected: /opt/odoo18/odoo/adtv18/adt_th_api/controllers/purchases.py (or similar)
+find /opt/odoo18/odoo/adtv18 -name "*purchase*.py" | grep controller
+# Expected output may include:
+# - /opt/odoo18/odoo/adtv18/adt_th_api/controllers/api_purchase_orders.py
+# - /opt/odoo18/odoo/adtv18/adt_th_api/controllers/api_purchase.py
 ```
 
-**If the file doesn't exist**: The backend needs to create `adt_th_api/controllers/purchases.py` with the required routes.
+**⚠️ IMPORTANT**: Even if controller files exist, you must check:
+1. **Controller is imported in `__init__.py`**: Check `/opt/odoo18/odoo/adtv18/adt_th_api/controllers/__init__.py` for imports
+2. **Routes match frontend expectations**: Routes should use `/api/th/v1/purchases/orders/*`
+3. **Service has been restarted**: Routes won't load without service restart
+
+**If the file doesn't exist**: The backend needs to create `adt_th_api/controllers/purchases.py` (or similar) with the required routes.
+
+**If the file exists but still 404**: See section "Controller exists but routes not working" below.
 
 ### 2. Verify Routes are Registered in Odoo
 
@@ -63,7 +72,7 @@ for rule in root.nodb_routing_map.iter_rules():
 
 **If no routes are found**: The controller needs to be created and the service restarted.
 
-### 3. Ensure Odoo Service is Restarted
+### 4. Ensure Odoo Service is Restarted
 
 After any changes to Python controller files, you **must** restart the Odoo API service. An Odoo module upgrade (`-u`) alone does not reload HTTP routing.
 
@@ -74,7 +83,7 @@ sudo systemctl status odoo18-api --no-pager
 ps -ef | grep -E "/etc/odoo18-api\\.conf" | grep -v grep
 ```
 
-### 4. Check API Key and Bearer Token
+### 5. Check API Key and Bearer Token
 
 Ensure your frontend's `VITE_API_KEY` and the user's Bearer token are correctly configured and sent with requests.
 
@@ -87,7 +96,7 @@ curl -i -X POST "http://127.0.0.1:18069/api/th/v1/purchases/orders/list?db=q01" 
   --data '{"jsonrpc":"2.0","method":"call","params":{"limit":10},"id":1}'
 ```
 
-### 5. Check Odoo API Client Scopes
+### 6. Check Odoo API Client Scopes
 
 The API client used for authentication must have the `purchases` scope enabled in Odoo.
 
@@ -95,7 +104,7 @@ The API client used for authentication must have the `purchases` scope enabled i
 - Edit the API client
 - Ensure `purchases` scope is checked/enabled
 
-### 6. Check Odoo Logs for Internal Server Errors (500)
+### 7. Check Odoo Logs for Internal Server Errors (500)
 
 If you get a 500 error, check the Odoo logs for detailed Python tracebacks:
 
@@ -104,7 +113,7 @@ sudo journalctl -u odoo18-api -n 100 --no-pager
 # Look for Python tracebacks related to purchase.order model or permissions.
 ```
 
-### 7. Verify `purchase.order` Model and Permissions
+### 8. Verify `purchase.order` Model and Permissions
 
 Ensure the `purchase.order` model exists and the API user has sufficient read/write permissions on it.
 
@@ -115,7 +124,7 @@ env['purchase.order'].check_access_rights('read') # Should return True
 env['purchase.order'].check_access_rights('write') # Should return True
 ```
 
-### 8. Backend Implementation Requirements
+### 9. Backend Implementation Requirements
 
 The backend team needs to create a controller file `adt_th_api/controllers/purchases.py` with the following structure:
 
@@ -159,7 +168,30 @@ class PurchaseOrdersController(AdtThApiController):
 
 See `docs/api-purchases-expenses-taxes.md` for complete API specification including request/response formats.
 
-### 9. Module Upgrade and Service Restart
+### 10. Module Upgrade and Service Restart
+
+**⚠️ CRITICAL STEPS** (must do in order):
+
+1. **Ensure controller is imported in `__init__.py`** (see step 2 above)
+2. **Upgrade module** to load controller code
+3. **Restart service** to register routes (routes won't load without restart!)
+
+```bash
+# 1. Upgrade the module
+sudo -u odoo18 -H /opt/odoo18/odoo-venv/bin/python /opt/odoo18/odoo/odoo-bin \
+  -c /etc/odoo18-api.conf -d q01 -u adt_th_api --stop-after-init
+
+# 2. Restart the service (CRITICAL - routes won't load without restart)
+sudo systemctl restart odoo18-api
+
+# 3. Verify service is running
+sudo systemctl status odoo18-api --no-pager
+
+# 4. Verify PID changed (confirms restart happened)
+ps -ef | grep -E "/etc/odoo18-api\\.conf" | grep -v grep
+```
+
+**If you skip the restart step, routes will NOT be registered even if the module is upgraded!**
 
 After creating or modifying the controller:
 
