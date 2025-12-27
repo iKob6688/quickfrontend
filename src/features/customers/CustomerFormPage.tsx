@@ -82,7 +82,7 @@ export function CustomerFormPage() {
     onSuccess: async (partner) => {
       await queryClient.invalidateQueries({ queryKey: ['partners'] })
       await queryClient.invalidateQueries({ queryKey: ['partner', partner.id] })
-      toast.success(isEdit ? 'บันทึกลูกค้าเรียบร้อย' : 'สร้างลูกค้าเรียบร้อย')
+      toast.success(isEdit ? 'บันทึกรายชื่อติดต่อเรียบร้อย' : 'สร้างรายชื่อติดต่อเรียบร้อย')
       navigate(`/customers/${partner.id}`, { replace: true })
     },
     onError: (err) => {
@@ -123,9 +123,9 @@ export function CustomerFormPage() {
   return (
     <div>
       <PageHeader
-        title={isEdit ? 'แก้ไขลูกค้า' : 'เพิ่มลูกค้า'}
-        subtitle="ข้อมูลลูกค้า (res.partner)"
-        breadcrumb={`รายรับ · ลูกค้า · ${isEdit ? 'แก้ไข' : 'เพิ่ม'}`}
+        title={isEdit ? 'แก้ไขรายชื่อติดต่อ' : 'เพิ่มรายชื่อติดต่อ'}
+        subtitle="ข้อมูลรายชื่อผู้ติดต่อ (res.partner) ทั้งลูกค้าและผู้ขาย"
+        breadcrumb={`รายรับ · รายชื่อติดต่อ · ${isEdit ? 'แก้ไข' : 'เพิ่ม'}`}
         actions={
           <div className="d-flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => navigate('/customers')}>
@@ -158,11 +158,11 @@ export function CustomerFormPage() {
         <div className="row g-4">
           <div className="col-lg-8">
             <Card className="p-4">
-              <div className="qf-section-title mb-3">ข้อมูลลูกค้า</div>
+              <div className="qf-section-title mb-3">ข้อมูลรายชื่อติดต่อ</div>
               <div className="row g-3">
                 <div className="col-md-8">
                   <Label htmlFor="name" required>
-                    ชื่อลูกค้า
+                    ชื่อรายชื่อติดต่อ
                   </Label>
                   <Input
                     id="name"
@@ -297,7 +297,7 @@ export function CustomerFormPage() {
                   </label>
                 </div>
                 <div className="small text-muted mt-2">
-                  Tip: ใช้ “ปิดใช้งาน” เพื่อ archive ลูกค้าใน Odoo โดยไม่ลบข้อมูล
+                  Tip: ใช้ "ปิดใช้งาน" เพื่อ archive รายชื่อติดต่อใน Odoo โดยไม่ลบข้อมูล
                 </div>
               </div>
             </Card>

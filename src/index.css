@@ -203,6 +203,58 @@ body {
 .qf-app .qf-badge--red { background: var(--qf-danger-weak) !important; color: #991b1b !important; }
 .qf-app .qf-badge--amber { background: var(--qf-warning-weak) !important; color: #92400e !important; }
 
+/* Dashboard Cards - Different colors */
+.qf-dashboard-card {
+  border-top-width: 4px !important;
+  border-top-style: solid !important;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.qf-dashboard-card:hover {
+  transform: translateY(-2px);
+}
+
+.qf-dashboard-card-invoices {
+  border-top-color: #3b82f6 !important;
+}
+
+.qf-dashboard-card-invoices:hover {
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2) !important;
+}
+
+.qf-dashboard-card-purchases {
+  border-top-color: #10b981 !important;
+}
+
+.qf-dashboard-card-purchases:hover {
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2) !important;
+}
+
+.qf-dashboard-card-excel {
+  border-top-color: #f59e0b !important;
+}
+
+.qf-dashboard-card-excel:hover {
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2) !important;
+}
+
+.qf-dashboard-card-backend {
+  border-top-color: #8b5cf6 !important;
+}
+
+.qf-dashboard-card-backend:hover {
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2) !important;
+}
+
+.qf-dashboard-card-requests {
+  border-top-color: #ec4899 !important;
+}
+
+.qf-dashboard-card-requests:hover {
+  box-shadow: 0 4px 12px rgba(236, 72, 153, 0.2) !important;
+}
+
 /* Selection bar (Customers) */
 .qf-app .qf-selection-bar {
   background: rgba(255, 255, 255, 0.75);

@@ -56,7 +56,7 @@ export function CustomerDetailPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['partner', id] })
       await queryClient.invalidateQueries({ queryKey: ['partners'] })
-      toast.success('บันทึกสถานะลูกค้าเรียบร้อย')
+      toast.success('บันทึกสถานะรายชื่อติดต่อเรียบร้อย')
     },
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : 'บันทึกไม่สำเร็จ')
@@ -76,9 +76,9 @@ export function CustomerDetailPage() {
   return (
     <div>
       <PageHeader
-        title="รายละเอียดลูกค้า"
-        subtitle="ข้อมูลลูกค้า (res.partner)"
-        breadcrumb="รายรับ · ลูกค้า · รายละเอียด"
+        title="รายละเอียดรายชื่อติดต่อ"
+        subtitle="ข้อมูลรายชื่อผู้ติดต่อ (res.partner) ทั้งลูกค้าและผู้ขาย"
+        breadcrumb="รายรับ · รายชื่อติดต่อ · รายละเอียด"
         actions={
           <div className="d-flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => navigate('/customers')}>

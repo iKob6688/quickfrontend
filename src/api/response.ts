@@ -157,9 +157,9 @@ function parseEnvelopeError(err: ApiErrorPayload | null | undefined) {
  */
 export function unwrapResponse<T>(response: AxiosResponse<unknown>): T {
   // Debug: Log raw response in development
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env.DEV) {
     const url = (response.config?.url || 'unknown').toString()
-    if (url.includes('purchases') || url.includes('orders')) {
+    if (url.includes('purchases') || url.includes('orders') || url.includes('partners')) {
       console.debug('[unwrapResponse] Processing response:', {
         url,
         status: response.status,
@@ -173,9 +173,9 @@ export function unwrapResponse<T>(response: AxiosResponse<unknown>): T {
   const envelope = normalizeEnvelope<T>(response.data)
 
   // Debug: Log normalized envelope
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env.DEV) {
     const url = (response.config?.url || 'unknown').toString()
-    if (url.includes('purchases') || url.includes('orders')) {
+    if (url.includes('purchases') || url.includes('orders') || url.includes('partners')) {
       console.debug('[unwrapResponse] Normalized envelope:', {
         url,
         success: envelope?.success,

@@ -42,7 +42,7 @@ export function PurchaseOrdersListPage() {
     const allOrders = query.data?.pages.flatMap((p) => p ?? []) ?? []
     
     // Debug: Log orders data structure
-    if (process.env.NODE_ENV === 'development' && allOrders.length > 0) {
+    if (import.meta.env.DEV && allOrders.length > 0) {
       console.debug('[PurchaseOrdersListPage] Orders data:', {
         total: allOrders.length,
         firstOrder: allOrders[0],

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -6,8 +6,9 @@ import { Tabs } from '@/components/ui/Tabs'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { DataTable, type Column } from '@/components/ui/DataTable'
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { listPartners, setPartnersActive, setPartnersActiveByQuery } from '@/api/services/partners.service'
+import { checkPartnersApiAvailable } from '@/api/services/partners-check.service'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { useNavigate } from 'react-router-dom'
 import { toast } from '@/lib/toastStore'
@@ -26,6 +27,14 @@ export function CustomersListPage() {
   const [selected, setSelected] = useState<Record<number, true>>({})
   const [allMatchingSelected, setAllMatchingSelected] = useState(false)
   const [excluded, setExcluded] = useState<Record<number, true>>({})
+
+  // Check if API is available
+  const apiCheckQuery = useQuery({
+    queryKey: ['partners-api-check'],
+    queryFn: checkPartnersApiAvailable,
+    staleTime: 60_000, // Cache for 1 minute
+    retry: false, // Don't retry, just check once
+  })
 
   const query = useInfiniteQuery({
     queryKey: ['partners', tab, debouncedQ, limit, companyFilter],
@@ -161,7 +170,7 @@ export function CustomersListPage() {
         <input
           className="form-check-input"
           type="checkbox"
-          aria-label={`เลือกลูกค้า ${r.name}`}
+          aria-label={`เลือกรายชื่อติดต่อ ${r.name}`}
           checked={allMatchingSelected ? !excluded[r.id] : Boolean(selected[r.id])}
           onChange={(e) => {
             const checked = e.target.checked
@@ -207,7 +216,7 @@ export function CustomersListPage() {
     },
     {
       key: 'name',
-      header: 'ชื่อลูกค้า',
+      header: 'ชื่อ',
       className: 'text-nowrap',
       cell: (r: Row) => (
         <button
@@ -232,13 +241,13 @@ export function CustomersListPage() {
   return (
     <div>
       <PageHeader
-        title="ลูกค้า / Contacts"
-        subtitle="จัดการข้อมูลลูกค้า (res.partner) ผ่าน API"
-        breadcrumb="รายรับ · ลูกค้า"
+        title="รายชื่อติดต่อ / Contacts"
+        subtitle="จัดการข้อมูลรายชื่อผู้ติดต่อ (res.partner) ทั้งลูกค้าและผู้ขาย ผ่าน API"
+        breadcrumb="รายรับ · รายชื่อติดต่อ"
         actions={
           <div className="d-flex gap-2">
             <Button size="sm" onClick={() => navigate('/customers/new')}>
-              + เพิ่มลูกค้า
+              + เพิ่มรายชื่อติดต่อ
             </Button>
           </div>
         }
@@ -346,28 +355,88 @@ export function CustomersListPage() {
             </div>
           </div>
 
-          {query.isError ? (
-            <div className="alert alert-danger small">
-              <div className="fw-semibold mb-1">โหลดรายชื่อลูกค้าไม่สำเร็จ</div>
-              <div>
-                {query.error instanceof Error ? query.error.message : 'Unknown error'}
+          {/* API Availability Check */}
+          {apiCheckQuery.data && !apiCheckQuery.data.available ? (
+            <div className="alert alert-warning small">
+              <div className="fw-semibold mb-1">⚠️ API Endpoint ไม่พร้อมใช้งาน</div>
+              <div className="mb-2">
+                <strong>Status:</strong> {apiCheckQuery.data.statusCode || 'Unknown'}
               </div>
-              <div className="mt-2">
-                ถ้าเห็นว่าเกี่ยวกับ <code>Unauthorized</code> หรือ <code>scope</code> ให้ตรวจสอบ:
-                <span className="ms-1">API Key (X-ADT-API-Key), Bearer token, และ Odoo API Client scopes</span>
+              <div className="mb-2">
+                <strong>Error:</strong> {apiCheckQuery.data.error || 'Unknown error'}
+              </div>
+              <div className="small">
+                <div className="mb-1">
+                  <strong>วิธีแก้ไข:</strong>
+                </div>
+                <ol className="mt-1 mb-0">
+                  {apiCheckQuery.data.statusCode === 404 && (
+                    <>
+                      <li>Backend ต้องสร้าง controller <code>adt_th_api/controllers/partners.py</code></li>
+                      <li>Register routes <code>/api/th/v1/partners/*</code></li>
+                      <li>Upgrade module: <code>sudo -u odoo18 ... -u adt_th_api --stop-after-init</code></li>
+                      <li>Restart service: <code>sudo systemctl restart odoo18-api</code></li>
+                    </>
+                  )}
+                  {apiCheckQuery.data.statusCode === 401 && (
+                    <>
+                      <li>ตรวจสอบ API Key (X-ADT-API-Key) ใน <code>.env</code></li>
+                      <li>ตรวจสอบ Bearer token</li>
+                      <li>ตรวจสอบว่า API client มี scope <code>contacts</code></li>
+                    </>
+                  )}
+                  {apiCheckQuery.data.statusCode === 500 && (
+                    <>
+                      <li>ตรวจสอบ Odoo logs: <code>sudo journalctl -u odoo18-api -n 100</code></li>
+                      <li>ตรวจสอบว่า model <code>res.partner</code> มีอยู่</li>
+                      <li>ตรวจสอบ permissions ของ API user</li>
+                    </>
+                  )}
+                </ol>
               </div>
             </div>
           ) : null}
 
+          {query.isError ? (
+            <div className="alert alert-danger small">
+              <div className="fw-semibold mb-1">โหลดรายชื่อติดต่อไม่สำเร็จ</div>
+              <div className="mb-2">
+                {query.error instanceof Error ? query.error.message : 'Unknown error'}
+              </div>
+              {!apiCheckQuery.data?.available && (
+                <div className="small mt-2">
+                  <div className="mb-1">
+                    <strong>สาเหตุที่เป็นไปได้:</strong>
+                  </div>
+                  <ul className="mb-2">
+                    <li>API endpoint <code>/api/th/v1/partners/list</code> ยังไม่มีใน backend</li>
+                    <li>API Key (X-ADT-API-Key) หรือ Bearer token ไม่ถูกต้อง</li>
+                    <li>Odoo API Client ไม่มี scope <code>contacts</code></li>
+                    <li>Backend service ยังไม่ได้ restart หลังจากเพิ่ม routes</li>
+                  </ul>
+                  <div className="mt-2">
+                    <strong>วิธีแก้ไข:</strong>
+                    <ol className="mt-1 mb-0">
+                      <li>ตรวจสอบว่า backend มี controller <code>adt_th_api/controllers/partners.py</code></li>
+                      <li>ตรวจสอบว่า routes <code>/api/th/v1/partners/*</code> ถูก register แล้ว</li>
+                      <li>Run <code>sudo -u odoo18 ... -u adt_th_api --stop-after-init</code></li>
+                      <li>Restart service: <code>sudo systemctl restart odoo18-api</code></li>
+                    </ol>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
+
           <DataTable<Row>
-            title={`รายชื่อลูกค้า (${total.toLocaleString('th-TH')})`}
+            title={`รายชื่อติดต่อ (${total.toLocaleString('th-TH')})`}
             columns={columns}
             rows={rows}
             empty={
               <div>
                 <p className="h6 fw-semibold mb-2">ยังไม่มีข้อมูล</p>
                 <p className="small text-muted mb-0">
-                  {q ? 'ไม่พบข้อมูลที่ค้นหา' : 'ไม่มีลูกค้าในระบบ'}
+                  {q ? 'ไม่พบข้อมูลที่ค้นหา' : 'ไม่มีรายชื่อติดต่อในระบบ'}
                 </p>
               </div>
             }
@@ -391,7 +460,7 @@ export function CustomersListPage() {
           </div>
 
           <div className="small text-muted mt-2">
-            Tip: คลิกชื่อลูกค้าเพื่อดูรายละเอียด • ใช้ checkbox เพื่อทำ bulk actions • เลือกทั้งหมดได้ทั้งผลการค้นหา
+            Tip: คลิกชื่อรายชื่อติดต่อเพื่อดูรายละเอียด • ใช้ checkbox เพื่อทำ bulk actions • เลือกทั้งหมดได้ทั้งผลการค้นหา
           </div>
 
       </>

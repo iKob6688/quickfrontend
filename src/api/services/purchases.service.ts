@@ -220,7 +220,7 @@ export async function listPurchaseOrders(params?: ListPurchaseOrdersParams) {
     const response = await apiClient.post(`${basePath}/list`, body)
     
     // Debug: Log raw response for troubleshooting
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.debug('[purchases.service] Raw API response:', {
         status: response.status,
         data: response.data,
@@ -234,7 +234,7 @@ export async function listPurchaseOrders(params?: ListPurchaseOrdersParams) {
     const backendData = unwrapResponse<BackendPurchaseOrderListItem[]>(response)
     
     // Debug: Log unwrapped backend data
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.debug('[purchases.service] Unwrapped backend data:', {
         isArray: Array.isArray(backendData),
         length: Array.isArray(backendData) ? backendData.length : 'N/A',
@@ -270,7 +270,7 @@ export async function listPurchaseOrders(params?: ListPurchaseOrdersParams) {
     })
     
     // Debug: Log mapped data
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.debug('[purchases.service] Mapped frontend data:', {
         length: mappedData.length,
         firstItem: mappedData.length > 0 ? mappedData[0] : null,

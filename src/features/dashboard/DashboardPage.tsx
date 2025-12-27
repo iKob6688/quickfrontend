@@ -8,6 +8,7 @@ import { ping } from '@/api/services/system.service'
 import { getDashboardKpis } from '@/api/services/dashboard.service'
 import { listInvoices } from '@/api/services/invoices.service'
 import { listPurchaseOrders } from '@/api/services/purchases.service'
+import { listPurchaseRequests } from '@/api/services/purchase-requests.service'
 import { hasScope } from '@/lib/scopes'
 import { useMemo } from 'react'
 
@@ -46,6 +47,14 @@ export function DashboardPage() {
     staleTime: 60_000,
   })
 
+  // Fetch purchase requests for dashboard
+  const purchaseRequestsQuery = useQuery({
+    queryKey: ['purchaseRequests', 'dashboard'],
+    enabled: canSeeKpis,
+    queryFn: () => listPurchaseRequests({ limit: 1000 }), // Get all purchase requests for calculation
+    staleTime: 60_000,
+  })
+
   // Calculate purchase orders stats
   const purchaseStats = useMemo(() => {
     if (!purchaseOrdersQuery.data) return null
@@ -80,6 +89,18 @@ export function DashboardPage() {
     return { paidCount, paidTotal, partialCount, partialTotal }
   }, [invoicesQuery.data])
 
+  // Calculate purchase requests stats
+  const purchaseRequestStats = useMemo(() => {
+    if (!purchaseRequestsQuery.data) return null
+    const requests = purchaseRequestsQuery.data
+    const draftCount = requests.filter((r) => r.state === 'draft').length
+    const toApproveCount = requests.filter((r) => r.state === 'to_approve').length
+    const approvedCount = requests.filter((r) => r.state === 'approved').length
+    const doneCount = requests.filter((r) => r.state === 'done').length
+    const totalValue = requests.reduce((sum, r) => sum + (r.totalEstimatedCost || 0), 0)
+    return { draftCount, toApproveCount, approvedCount, doneCount, totalValue, totalCount: requests.length }
+  }, [purchaseRequestsQuery.data])
+
   return (
     <div>
       <PageHeader
@@ -88,14 +109,27 @@ export function DashboardPage() {
         breadcrumb="Home · Dashboard"
         actions={
           <div className="d-flex gap-2">
-            <Button size="sm" onClick={() => navigate('/sales/invoices')}>
+            <Button 
+              size="sm" 
+              onClick={() => navigate('/sales/invoices')}
+              style={{
+                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                border: 'none',
+                color: 'white',
+              }}
+            >
+              <i className="bi bi-receipt me-1"></i>
               ไปหน้าใบแจ้งหนี้
             </Button>
             <Button
               size="sm"
               variant="ghost"
               onClick={() => void pingQuery.refetch()}
+              style={{
+                border: '1px solid #e5e7eb',
+              }}
             >
+              <i className="bi bi-arrow-clockwise me-1"></i>
               ตรวจสอบการเชื่อมต่อ
             </Button>
           </div>
@@ -212,8 +246,12 @@ export function DashboardPage() {
             onClick={() => navigate('/sales/invoices')}
             role="button"
             tabIndex={0}
+            className="qf-dashboard-card qf-dashboard-card-invoices"
           >
-            <p className="small fw-medium text-muted mb-2">Invoices</p>
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <p className="small fw-medium text-muted mb-0">Invoices</p>
+              <i className="bi bi-receipt text-primary" style={{ fontSize: '1.5rem' }}></i>
+            </div>
             <p className="h6 fw-semibold mb-2">
               ไปจัดการใบแจ้งหนี้
             </p>
@@ -227,8 +265,12 @@ export function DashboardPage() {
             onClick={() => navigate('/purchases/orders')}
             role="button"
             tabIndex={0}
+            className="qf-dashboard-card qf-dashboard-card-purchases"
           >
-            <p className="small fw-medium text-muted mb-2">Purchase Orders</p>
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <p className="small fw-medium text-muted mb-0">Purchase Orders</p>
+              <i className="bi bi-cart text-success" style={{ fontSize: '1.5rem' }}></i>
+            </div>
             <p className="h6 fw-semibold mb-2">
               {purchaseOrdersQuery.isLoading
                 ? 'กำลังโหลด...'
@@ -250,11 +292,45 @@ export function DashboardPage() {
         </div>
         <div className="col-md-6 col-xl-3">
           <Card
+            onClick={() => navigate('/purchases/requests')}
+            role="button"
+            tabIndex={0}
+            className="qf-dashboard-card qf-dashboard-card-requests"
+          >
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <p className="small fw-medium text-muted mb-0">Purchase Requests</p>
+              <i className="bi bi-clipboard-check" style={{ fontSize: '1.5rem', color: '#ec4899' }}></i>
+            </div>
+            <p className="h6 fw-semibold mb-2">
+              {purchaseRequestsQuery.isLoading
+                ? 'กำลังโหลด...'
+                : purchaseRequestsQuery.isError
+                  ? '—'
+                  : purchaseRequestStats
+                    ? `${purchaseRequestStats.totalCount} รายการ`
+                    : '0 รายการ'}
+            </p>
+            <p className="small text-muted mb-0">
+              {purchaseRequestStats
+                ? `มูลค่า ${purchaseRequestStats.totalValue.toLocaleString('th-TH', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}`
+                : 'จัดการคำขอซื้อ'}
+            </p>
+          </Card>
+        </div>
+        <div className="col-md-6 col-xl-3">
+          <Card
             onClick={() => navigate('/excel-import')}
             role="button"
             tabIndex={0}
+            className="qf-dashboard-card qf-dashboard-card-excel"
           >
-            <p className="small fw-medium text-muted mb-2">Excel Import</p>
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <p className="small fw-medium text-muted mb-0">Excel Import</p>
+              <i className="bi bi-file-earmark-spreadsheet text-warning" style={{ fontSize: '1.5rem' }}></i>
+            </div>
             <p className="h6 fw-semibold mb-2">
               นำเข้าข้อมูลจาก Excel
             </p>
@@ -268,8 +344,12 @@ export function DashboardPage() {
             onClick={() => navigate('/backend-connection')}
             role="button"
             tabIndex={0}
+            className="qf-dashboard-card qf-dashboard-card-backend"
           >
-            <p className="small fw-medium text-muted mb-2">Backend</p>
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <p className="small fw-medium text-muted mb-0">Backend</p>
+              <i className="bi bi-plug text-purple" style={{ fontSize: '1.5rem', color: '#8b5cf6' }}></i>
+            </div>
             <p className="h6 fw-semibold mb-2">
               ตั้งค่า/Provisioning
             </p>
