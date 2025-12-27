@@ -11,7 +11,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
-import { Spinner, Alert, Card as BootstrapCard } from 'react-bootstrap'
+import { Spinner, Card as BootstrapCard } from 'react-bootstrap'
 import { useEffect, useState, useMemo } from 'react'
 import { extractFieldErrors, type FieldErrors } from '@/lib/formErrors'
 import { toast } from '@/lib/toastStore'
@@ -128,7 +128,7 @@ export function PurchaseOrderFormPage() {
     },
     onError: (err: unknown) => {
       const errors = extractFieldErrors(err)
-      setFieldErrors(errors)
+      setFieldErrors(errors || {})
       toast.error('สร้างใบสั่งซื้อไม่สำเร็จ', err instanceof Error ? err.message : undefined)
     },
   })
@@ -143,7 +143,7 @@ export function PurchaseOrderFormPage() {
     },
     onError: (err: unknown) => {
       const errors = extractFieldErrors(err)
-      setFieldErrors(errors)
+      setFieldErrors(errors || {})
       toast.error('อัปเดตใบสั่งซื้อไม่สำเร็จ', err instanceof Error ? err.message : undefined)
     },
   })
@@ -416,7 +416,7 @@ export function PurchaseOrderFormPage() {
                     type="date"
                     value={formData.orderDate}
                     onChange={(e) => setFormData((prev) => ({ ...prev, orderDate: e.target.value }))}
-                    error={fieldErrors.orderDate}
+                    error={!!fieldErrors.orderDate}
                   />
                 </div>
                 <div className="col-md-3">

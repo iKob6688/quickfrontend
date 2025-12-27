@@ -4,11 +4,9 @@ import {
   getPurchaseOrder,
   confirmPurchaseOrder,
   cancelPurchaseOrder,
-  type PurchaseOrder,
 } from '@/api/services/purchases.service'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner, Alert, Modal, Card as BootstrapCard } from 'react-bootstrap'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -230,7 +228,8 @@ export function PurchaseOrderDetailPage() {
             {canCancel && (
               <Button
                 size="sm"
-                variant="danger"
+                variant="primary"
+                className="bg-danger border-danger"
                 onClick={() => setCancelModalOpen(true)}
                 disabled={cancelMutation.isPending}
               >
@@ -375,7 +374,7 @@ export function PurchaseOrderDetailPage() {
           <Button variant="secondary" onClick={() => setCancelModalOpen(false)}>
             ยกเลิก
           </Button>
-          <Button variant="danger" onClick={handleCancel} disabled={cancelMutation.isPending}>
+          <Button variant="primary" className="bg-danger border-danger" onClick={handleCancel} disabled={cancelMutation.isPending}>
             {cancelMutation.isPending ? 'กำลังยกเลิก...' : 'ยืนยันยกเลิก'}
           </Button>
         </Modal.Footer>

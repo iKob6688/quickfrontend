@@ -1,5 +1,5 @@
 import { apiClient } from '@/api/client'
-import { unwrapResponse, ApiError } from '@/api/response'
+import { unwrapResponse } from '@/api/response'
 import { makeRpc } from '@/api/services/rpc'
 
 export type PartnerCompanyType = 'company' | 'person'
@@ -263,11 +263,12 @@ export async function listPartners(params: PartnerListParams) {
   
   // If it's PartnerListResponse, map the items
   if (data && typeof data === 'object' && 'items' in data && Array.isArray(data.items)) {
-    const mappedItems = data.items
-      .filter((item): item is BackendPartnerSummary => 
+    const rawItems = data.items as unknown[]
+    const backendItems = rawItems.filter(
+      (item): item is BackendPartnerSummary => 
         item != null && typeof item === 'object' && 'id' in item
-      )
-      .map(mapBackendPartnerSummaryToFrontend)
+    )
+    const mappedItems = backendItems.map(mapBackendPartnerSummaryToFrontend)
 
     // Debug: Log mapped items
     if (import.meta.env.DEV) {
