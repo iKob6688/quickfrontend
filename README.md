@@ -464,6 +464,8 @@ These are orchestrated by the offline sync engine via `PendingOpType` mappings a
 
 See **[Purchase Orders, Expenses & Taxes/VAT API Specification](./docs/api-purchases-expenses-taxes.md)** for complete API documentation including:
 
+**⚠️ Troubleshooting**: If Purchase Orders API is not working (404 errors), see **[Purchase Orders API Troubleshooting Guide](./docs/purchase-orders-api-troubleshooting.md)** for diagnosis and resolution steps.
+
 - **Purchase Orders**: list, get, create, update, confirm, cancel
 - **Expenses**: list, get, create, update, submit
 - **Taxes & VAT**: list (enhanced), calculate, validate VAT number
