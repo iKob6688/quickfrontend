@@ -45,6 +45,28 @@ export interface ExpenseListItem {
   currency: string
 }
 
+/**
+ * Backend response (adt_th_api) returns hr.expense-like fields under /api/th/v1/expenses/*
+ * and may wrap list results as { items, total, limit, offset }.
+ */
+interface BackendExpenseListItem {
+  id: number
+  name?: string
+  employee?: { id?: number | null; name?: string | null }
+  date?: string | null
+  total_amount?: number | string | null
+  currency?: string | null
+  state?: string | null
+  [key: string]: unknown
+}
+
+interface BackendExpenseListResponse {
+  items?: BackendExpenseListItem[]
+  total?: number
+  limit?: number
+  offset?: number
+}
+
 export interface ListExpensesParams {
   status?: 'draft' | 'reported' | 'approved' | 'posted' | 'done' | 'refused'
   employeeId?: number
@@ -58,9 +80,34 @@ export interface ListExpensesParams {
 // NOTE: backend reality (adt_th_api): expenses are exposed under /api/th/v1/expenses/*
 const basePath = '/th/v1/expenses'
 
+function parseNumber(v: unknown): number {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0
+  if (typeof v === 'string') {
+    const n = Number(v.replace(/,/g, ''))
+    return Number.isFinite(n) ? n : 0
+  }
+  return 0
+}
+
+function mapBackendToFrontend(item: BackendExpenseListItem): ExpenseListItem {
+  // Map backend state → our UI status
+  const status = (item.state as ExpenseListItem['status'] | undefined) ?? 'draft'
+  return {
+    id: item.id,
+    number: item.name ?? '',
+    employeeName: item.employee?.name ?? '',
+    employeeId: typeof item.employee?.id === 'number' ? item.employee.id : 0,
+    expenseDate: item.date ?? '',
+    total: parseNumber(item.total_amount),
+    status,
+    currency: item.currency ?? '',
+  }
+}
+
 export async function listExpenses(params?: ListExpensesParams) {
   const body = makeRpc({
-    ...(params?.status && { status: params.status }),
+    // backend uses "state" while our UI uses "status" - send both for compatibility
+    ...(params?.status && { status: params.status, state: params.status }),
     ...(params?.employeeId && { employee_id: params.employeeId }),
     ...(params?.search && { search: params.search }),
     ...(params?.limit && { limit: params.limit }),
@@ -69,7 +116,30 @@ export async function listExpenses(params?: ListExpensesParams) {
     ...(params?.dateTo && { date_to: params.dateTo }),
   })
   const response = await apiClient.post(`${basePath}/list`, body)
-  return unwrapResponse<ExpenseListItem[]>(response)
+  const data = unwrapResponse<BackendExpenseListResponse | BackendExpenseListItem[] | ExpenseListItem[]>(response)
+
+  // Backend may return array directly (ideal) or { items, total, ... }.
+  const rawItems: unknown =
+    Array.isArray(data) ? data : (data && typeof data === 'object' ? (data as BackendExpenseListResponse).items : [])
+
+  if (Array.isArray(rawItems)) {
+    // If already in frontend shape, keep it.
+    const maybeFrontend = rawItems as any[]
+    const looksFrontend =
+      maybeFrontend.length === 0 ||
+      (maybeFrontend[0] &&
+        typeof maybeFrontend[0] === 'object' &&
+        'employeeName' in (maybeFrontend[0] as any) &&
+        'expenseDate' in (maybeFrontend[0] as any))
+
+    if (looksFrontend) return rawItems as ExpenseListItem[]
+
+    return (rawItems as BackendExpenseListItem[])
+      .filter((it) => it && typeof it === 'object' && typeof (it as any).id === 'number')
+      .map(mapBackendToFrontend)
+  }
+
+  return []
 }
 
 export async function getExpense(id: number) {
