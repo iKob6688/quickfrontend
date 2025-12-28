@@ -286,6 +286,26 @@ body {
   border-top: 3px solid #16A34A;
 }
 
+/* Accounting Reports hub */
+.qf-report-card {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+  transition: transform 140ms ease, box-shadow 140ms ease;
+  cursor: pointer;
+}
+
+.qf-report-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.10);
+}
+
+.qf-report-card--blue { border-top: 3px solid #2563EB; }
+.qf-report-card--green { border-top: 3px solid #16A34A; }
+.qf-report-card--amber { border-top: 3px solid #F59E0B; }
+.qf-report-card--purple { border-top: 3px solid #8B5CF6; }
+.qf-report-card--pink { border-top: 3px solid #EC4899; }
+.qf-report-card--slate { border-top: 3px solid #64748B; }
+
 /* Selection bar (Customers) */
 .qf-app .qf-selection-bar {
   background: rgba(255, 255, 255, 0.75);

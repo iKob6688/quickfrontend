@@ -9,14 +9,40 @@ import { getDashboardKpis } from '@/api/services/dashboard.service'
 import { listInvoices } from '@/api/services/invoices.service'
 import { listPurchaseOrders } from '@/api/services/purchases.service'
 import { listPurchaseRequests } from '@/api/services/purchase-requests.service'
+import { getProfitLoss } from '@/api/services/accounting-reports.service'
 import { hasScope } from '@/lib/scopes'
 import { useMemo } from 'react'
+
+function formatLocalISODate(d: Date) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function firstDayOfCurrentMonthLocal() {
+  const d = new Date()
+  return new Date(d.getFullYear(), d.getMonth(), 1)
+}
+
+function parseNumber(v: unknown): number {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0
+  if (typeof v === 'string') {
+    const n = Number(v.replace(/,/g, ''))
+    return Number.isFinite(n) ? n : 0
+  }
+  return 0
+}
 
 export function DashboardPage() {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const instancePublicId = useAuthStore((s) => s.instancePublicId)
   const canSeeKpis = hasScope('dashboard')
+  const canSeeReports = hasScope('reports')
+
+  const accDateFrom = formatLocalISODate(firstDayOfCurrentMonthLocal())
+  const accDateTo = formatLocalISODate(new Date())
 
   const pingQuery = useQuery({
     queryKey: ['system', 'ping'],
@@ -54,6 +80,30 @@ export function DashboardPage() {
     queryFn: () => listPurchaseRequests({ limit: 1000 }), // Get all purchase requests for calculation
     staleTime: 60_000,
   })
+
+  const profitLossQuery = useQuery({
+    queryKey: ['accounting', 'profitLoss', 'dashboard', accDateFrom, accDateTo],
+    // Even if scope isn't enabled, allow request; backend will enforce scopes.
+    // This keeps UX consistent with the rest of the app.
+    enabled: true,
+    queryFn: () =>
+      getProfitLoss({
+        dateFrom: accDateFrom,
+        dateTo: accDateTo,
+        targetMove: 'posted',
+        comparison: 0,
+      }),
+    staleTime: 60_000,
+    retry: 1,
+  })
+
+  const accountingSnapshot = useMemo(() => {
+    const rd = profitLossQuery.data?.reportData
+    const income = parseNumber(rd?.totalIncome)
+    const expense = parseNumber(rd?.totalExpense)
+    const profit = parseNumber(rd?.totalEarnings) || income - expense
+    return { income, expense, profit }
+  }, [profitLossQuery.data])
 
   // Calculate purchase orders stats
   const purchaseStats = useMemo(() => {
@@ -262,20 +312,20 @@ export function DashboardPage() {
         </div>
         <div className="col-md-6 col-xl-3">
           <Card
-            onClick={() => navigate('/accounting/overview')}
+            onClick={() => navigate('/accounting/reports')}
             role="button"
             tabIndex={0}
             className="qf-dashboard-card qf-dashboard-card-accounting"
           >
             <div className="d-flex align-items-center justify-content-between mb-2">
-              <p className="small fw-medium text-muted mb-0">Accounting</p>
+              <p className="small fw-medium text-muted mb-0">รายงานบัญชี</p>
               <i className="bi bi-graph-up-arrow" style={{ fontSize: '1.5rem', color: '#06b6d4' }}></i>
             </div>
             <p className="h6 fw-semibold mb-2">
-              ภาพรวมบัญชี (เดือนนี้)
+              ศูนย์รวมรายงาน
             </p>
             <p className="small text-muted mb-0">
-              รายได้ · ค่าใช้จ่าย · กำไร (คลิกเพื่อ drilldown)
+              งบการเงิน · เล่มบัญชี · ภาษี (คลิกเพื่อดูรายงาน)
             </p>
           </Card>
         </div>
@@ -397,6 +447,70 @@ export function DashboardPage() {
       </div>
 
       <div className="row g-4 mt-4">
+        <div className="col-12">
+          <Card className="p-3">
+            <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2 mb-3">
+              <div>
+                <div className="h6 fw-semibold mb-1">สรุปบัญชี (เดือนนี้)</div>
+                <div className="small text-muted">
+                  ช่วงวันที่ {accDateFrom} ถึง {accDateTo}
+                  {!canSeeReports && (
+                    <span className="ms-2">
+                      (ถ้าเรียกไม่ได้ ให้เปิด scope: <code>reports</code>)
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="d-flex gap-2 flex-wrap">
+                <Button size="sm" onClick={() => navigate('/sales/invoices')}>
+                  Drilldown รายได้
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => navigate('/expenses')}>
+                  Drilldown รายจ่าย
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => navigate('/accounting/reports')}>
+                  ไปหน้ารายงานบัญชี
+                </Button>
+              </div>
+            </div>
+
+            {profitLossQuery.isError ? (
+              <div className="alert alert-danger mb-0">
+                <div className="fw-semibold">โหลดสรุปบัญชีไม่สำเร็จ</div>
+                <div className="small">
+                  {profitLossQuery.error instanceof Error ? profitLossQuery.error.message : 'Unknown error'}
+                </div>
+              </div>
+            ) : (
+              <div className="row g-2">
+                <div className="col-md-4">
+                  <div className="rounded bg-light p-3">
+                    <div className="small text-muted">รายได้รวม</div>
+                    <div className="h5 fw-semibold mb-0 font-monospace">
+                      {accountingSnapshot.income.toLocaleString('th-TH')}
+                    </div>
+                  </div>
+                </div>
+                <div className="col-md-4">
+                  <div className="rounded bg-light p-3">
+                    <div className="small text-muted">ค่าใช้จ่ายรวม</div>
+                    <div className="h5 fw-semibold mb-0 font-monospace">
+                      {accountingSnapshot.expense.toLocaleString('th-TH')}
+                    </div>
+                  </div>
+                </div>
+                <div className="col-md-4">
+                  <div className="rounded bg-light p-3">
+                    <div className="small text-muted">กำไรสุทธิ</div>
+                    <div className="h5 fw-semibold mb-0 font-monospace">
+                      {accountingSnapshot.profit.toLocaleString('th-TH')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
         <div className="col-lg-8">
           <Card>
             <p className="h6 fw-semibold mb-3">ผู้ใช้งานปัจจุบัน</p>
