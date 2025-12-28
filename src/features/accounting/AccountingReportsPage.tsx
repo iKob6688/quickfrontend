@@ -10,6 +10,7 @@ type ReportCard = {
   icon: string
   tone: 'blue' | 'green' | 'amber' | 'purple' | 'pink' | 'slate'
   path?: string
+  ready?: boolean // true = มี implementation แล้ว, false = ยังไม่เสร็จ
 }
 
 const cards: ReportCard[] = [
@@ -18,66 +19,88 @@ const cards: ReportCard[] = [
     subtitle: 'รายได้ · ค่าใช้จ่าย · กำไร — เลือกช่วงเวลา/เปรียบเทียบได้',
     icon: 'bi-graph-up-arrow',
     tone: 'blue',
+    path: '/accounting/reports/profit-loss',
+    ready: true,
   },
   {
     title: 'งบดุล (Balance Sheet)',
     subtitle: 'สินทรัพย์ · หนี้สิน · ส่วนของผู้ถือหุ้น',
     icon: 'bi-bank',
     tone: 'green',
+    path: '/accounting/reports/balance-sheet',
+    ready: true,
   },
   {
     title: 'สมุดบัญชีแยกประเภท (General Ledger)',
     subtitle: 'ดูรายการเดินบัญชีแยกตามบัญชี พร้อม drilldown',
     icon: 'bi-journal-text',
     tone: 'slate',
+    path: '/accounting/reports/general-ledger',
+    ready: true,
   },
   {
     title: 'งบทดลอง (Trial Balance)',
     subtitle: 'ยอดเดบิต/เครดิตและคงเหลือตามบัญชี',
     icon: 'bi-clipboard-data',
     tone: 'purple',
+    path: '/accounting/reports/trial-balance',
+    ready: true,
   },
   {
     title: 'ลูกหนี้/เจ้าหนี้ (Partner Ledger)',
     subtitle: 'แยกตามคู่ค้า พร้อมยอดรวม/คงค้าง',
     icon: 'bi-people',
     tone: 'amber',
+    path: '/accounting/reports/partner-ledger',
+    ready: true,
   },
   {
     title: 'อายุลูกหนี้ (Aged Receivables)',
     subtitle: 'not due / 0-30 / 31-60 / 61-90 / 91+',
     icon: 'bi-hourglass-split',
     tone: 'pink',
+    path: '/accounting/reports/aged-receivables',
+    ready: true,
   },
   {
     title: 'อายุเจ้าหนี้ (Aged Payables)',
     subtitle: 'วิเคราะห์หนี้คงค้างตามอายุ',
     icon: 'bi-hourglass',
     tone: 'pink',
+    path: '/accounting/reports/aged-payables',
+    ready: true,
   },
   {
     title: 'สมุดเงินสด (Cash Book)',
     subtitle: 'เคลื่อนไหวบัญชีเงินสดตามช่วงเวลา',
     icon: 'bi-cash',
     tone: 'green',
+    path: '/accounting/reports/cash-book',
+    ready: true,
   },
   {
     title: 'สมุดเงินฝากธนาคาร (Bank Book)',
     subtitle: 'เคลื่อนไหวบัญชีธนาคารตามช่วงเวลา',
     icon: 'bi-credit-card-2-front',
     tone: 'green',
+    path: '/accounting/reports/bank-book',
+    ready: true,
   },
   {
     title: 'รายงาน VAT',
     subtitle: 'ภาษีขาย/ภาษีซื้อ พร้อมสรุปยอด',
     icon: 'bi-receipt-cutoff',
     tone: 'blue',
+    path: '/accounting/reports/vat',
+    ready: true,
   },
   {
     title: 'รายงานภาษีหัก ณ ที่จ่าย (WHT)',
     subtitle: 'PND1/1A/2/3/53 พร้อมยอดรวม',
     icon: 'bi-file-earmark-text',
     tone: 'amber',
+    path: '/accounting/reports/wht',
+    ready: true,
   },
 ]
 
@@ -160,7 +183,7 @@ export function AccountingReportsPage() {
                   </div>
                   <div className="small text-muted">{c.subtitle}</div>
                 </div>
-                <span className="badge bg-light text-dark border">เร็วๆนี้</span>
+                {!c.ready && <span className="badge bg-light text-dark border">เร็วๆนี้</span>}
               </div>
             </Card>
           </div>

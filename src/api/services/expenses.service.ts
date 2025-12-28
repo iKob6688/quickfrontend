@@ -142,10 +142,115 @@ export async function listExpenses(params?: ListExpensesParams) {
   return []
 }
 
+interface BackendExpenseDetail {
+  id: number
+  name?: string
+  employee?: { id?: number | null; name?: string | null }
+  product?: { id?: number | null; name?: string | null; code?: string | null }
+  date?: string | null
+  quantity?: number | string | null
+  unit_amount?: number | string | null
+  total_amount?: number | string | null
+  currency?: string | null
+  state?: string | null
+  company?: { id?: number | null; name?: string | null }
+  sheet?: { id?: number | null; name?: string | null; state?: string | null }
+  payment_mode?: string | null
+  description?: string | null
+  attachment_ids?: unknown[]
+  tax_ids?: Array<{ id?: number; name?: string; amount?: number }>
+  [key: string]: unknown
+}
+
+interface BackendExpenseDetailResponse {
+  expense?: BackendExpenseDetail
+}
+
+function mapBackendExpenseDetailToFrontend(backend: BackendExpenseDetail): Expense {
+  const status = (backend.state as Expense['status'] | undefined) ?? 'draft'
+  const total = parseNumber(backend.total_amount)
+  const unitAmount = parseNumber(backend.unit_amount)
+  const quantity = parseNumber(backend.quantity ?? 1)
+  
+  // Calculate tax from tax_ids
+  // Backend provides tax_ids with amount (e.g., 7.0 for 7%)
+  // If unit_amount is valid, calculate tax from it; otherwise estimate from total
+  let totalTax = 0
+  let amountUntaxed = total
+  
+  if (backend.tax_ids && Array.isArray(backend.tax_ids) && backend.tax_ids.length > 0) {
+    const taxRate = backend.tax_ids.reduce((sum, t) => sum + (parseNumber(t.amount) || 0), 0) / 100
+    
+    if (unitAmount > 0) {
+      // If unit_amount is provided, calculate tax from it
+      const subtotal = unitAmount * quantity
+      totalTax = subtotal * taxRate
+      amountUntaxed = subtotal
+    } else {
+      // If unit_amount is 0 or missing, assume total_amount includes tax
+      // Calculate untaxed amount: total = untaxed * (1 + taxRate)
+      amountUntaxed = total / (1 + taxRate)
+      totalTax = total - amountUntaxed
+    }
+  } else {
+    // No tax, so total is untaxed
+    amountUntaxed = total
+  }
+  
+  // Convert single expense item to lines array format
+  // If unitAmount is 0 or invalid, calculate it from amountUntaxed / quantity
+  const effectiveUnitPrice = unitAmount > 0 ? unitAmount : (quantity > 0 ? amountUntaxed / quantity : amountUntaxed)
+  
+  const lines: ExpenseLine[] = [
+    {
+      productId: backend.product?.id ?? null,
+      description: backend.description || backend.name || '',
+      quantity: quantity,
+      unitPrice: effectiveUnitPrice,
+      taxId: backend.tax_ids?.[0]?.id ?? null,
+      subtotal: amountUntaxed,
+      totalTax: totalTax,
+      total: total,
+    },
+  ]
+
+  return {
+    id: backend.id,
+    number: backend.name ?? '',
+    employeeName: backend.employee?.name ?? '',
+    expenseDate: backend.date ?? '',
+    currency: backend.currency ?? 'THB',
+    status,
+    amountUntaxed,
+    totalTax,
+    total,
+    lines,
+    notes: backend.description ?? undefined,
+    createdAt: '', // Backend doesn't provide this in the response
+    updatedAt: '', // Backend doesn't provide this in the response
+  }
+}
+
 export async function getExpense(id: number) {
   const body = makeRpc({ id })
   const response = await apiClient.post(`${basePath}/${id}`, body)
-  return unwrapResponse<Expense>(response)
+  const data = unwrapResponse<BackendExpenseDetailResponse | Expense>(response)
+  
+  // Backend returns { expense: {...} } format
+  if (data && typeof data === 'object' && 'expense' in data) {
+    const backendExpense = (data as BackendExpenseDetailResponse).expense
+    if (!backendExpense) {
+      throw new Error('Expense not found in backend response')
+    }
+    return mapBackendExpenseDetailToFrontend(backendExpense)
+  }
+  
+  // If already in frontend format (unlikely but handle it)
+  if (data && typeof data === 'object' && 'lines' in data) {
+    return data as Expense
+  }
+  
+  throw new Error('Unexpected expense response format')
 }
 
 export async function createExpense(payload: ExpensePayload) {

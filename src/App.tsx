@@ -12,10 +12,22 @@ import { PurchaseOrderDetailPage } from '@/features/purchases/PurchaseOrderDetai
 import { PurchaseOrderFormPage } from '@/features/purchases/PurchaseOrderFormPage'
 import { PurchaseRequestsListPage } from '@/features/purchases/PurchaseRequestsListPage'
 import { ExpensesListPage } from '@/features/expenses/ExpensesListPage'
+import { ExpenseDetailPage } from '@/features/expenses/ExpenseDetailPage'
 import { CustomersListPage } from '@/features/customers/CustomersListPage'
 import { CustomerDetailPage } from '@/features/customers/CustomerDetailPage'
 import { CustomerFormPage } from '@/features/customers/CustomerFormPage'
 import { AccountingReportsPage } from '@/features/accounting/AccountingReportsPage'
+import { ProfitLossReportPage } from '@/features/accounting/ProfitLossReportPage'
+import { BalanceSheetReportPage } from '@/features/accounting/BalanceSheetReportPage'
+import { GeneralLedgerReportPage } from '@/features/accounting/GeneralLedgerReportPage'
+import { TrialBalanceReportPage } from '@/features/accounting/TrialBalanceReportPage'
+import { PartnerLedgerReportPage } from '@/features/accounting/PartnerLedgerReportPage'
+import { PartnerLedgerPartnerDrilldownPage } from '@/features/accounting/PartnerLedgerPartnerDrilldownPage'
+import { AgedReportPage } from '@/features/accounting/AgedReportPage'
+import { BookReportPage } from '@/features/accounting/BookReportPage'
+import { VatReportPage, WhtReportPage } from '@/features/accounting/TaxReportPages'
+import { GeneralLedgerAccountDrilldownPage } from '@/features/accounting/GeneralLedgerAccountDrilldownPage'
+import { MoveLineDetailPage } from '@/features/accounting/MoveLineDetailPage'
 import { BackendConnectionPage } from '@/features/backend-connection/BackendConnectionPage'
 import { ExcelImportPage } from '@/features/excel-import/ExcelImportPage'
 import { setUnauthorizedHandler } from '@/api/client'
@@ -66,7 +78,22 @@ function AppRoutes() {
           <Route path="/purchases/orders/:id/edit" element={<PurchaseOrderFormPage />} />
           <Route path="/purchases/requests" element={<PurchaseRequestsListPage />} />
           <Route path="/expenses" element={<ExpensesListPage />} />
+          <Route path="/expenses/:id" element={<ExpenseDetailPage />} />
           <Route path="/accounting/reports" element={<AccountingReportsPage />} />
+          <Route path="/accounting/reports/profit-loss" element={<ProfitLossReportPage />} />
+          <Route path="/accounting/reports/balance-sheet" element={<BalanceSheetReportPage />} />
+          <Route path="/accounting/reports/general-ledger" element={<GeneralLedgerReportPage />} />
+          <Route path="/accounting/reports/trial-balance" element={<TrialBalanceReportPage />} />
+          <Route path="/accounting/reports/partner-ledger" element={<PartnerLedgerReportPage />} />
+          <Route path="/accounting/reports/partner-ledger/partner/:partnerId" element={<PartnerLedgerPartnerDrilldownPage />} />
+          <Route path="/accounting/reports/aged-receivables" element={<AgedReportPage mode="receivables" />} />
+          <Route path="/accounting/reports/aged-payables" element={<AgedReportPage mode="payables" />} />
+          <Route path="/accounting/reports/cash-book" element={<BookReportPage mode="cash" />} />
+          <Route path="/accounting/reports/bank-book" element={<BookReportPage mode="bank" />} />
+          <Route path="/accounting/reports/vat" element={<VatReportPage />} />
+          <Route path="/accounting/reports/wht" element={<WhtReportPage />} />
+          <Route path="/accounting/reports/general-ledger/account/:accountId" element={<GeneralLedgerAccountDrilldownPage />} />
+          <Route path="/accounting/reports/move-lines/:moveLineId" element={<MoveLineDetailPage />} />
           {/* Backward-compatible alias */}
           <Route path="/accounting/overview" element={<Navigate to="/accounting/reports" replace />} />
           <Route

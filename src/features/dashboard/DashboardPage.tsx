@@ -35,6 +35,14 @@ function parseNumber(v: unknown): number {
   return 0
 }
 
+function plExpenseTotal(rd: any): number {
+  const expenseMain = parseNumber(rd?.expense?.total)
+  const expenseDep = parseNumber(rd?.expenseDepreciation?.total)
+  const expenseDirect = parseNumber(rd?.expenseDirectCost?.total)
+  const expenseFromBuckets = expenseMain + expenseDep + expenseDirect
+  return expenseFromBuckets || parseNumber(rd?.totalExpense)
+}
+
 export function DashboardPage() {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
@@ -101,8 +109,8 @@ export function DashboardPage() {
   const accountingSnapshot = useMemo(() => {
     const rd = profitLossQuery.data?.reportData
     const income = parseNumber(rd?.totalIncome)
-    const expense = parseNumber(rd?.totalExpense)
-    const profit = parseNumber(rd?.totalEarnings) || income - expense
+    const expense = plExpenseTotal(rd as any)
+    const profit = income - expense
     return { income, expense, profit }
   }, [profitLossQuery.data])
 
@@ -471,10 +479,23 @@ export function DashboardPage() {
                 </div>
               </div>
               <div className="d-flex gap-2 flex-wrap">
-                <Button size="sm" onClick={() => navigate('/sales/invoices')}>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const sp = new URLSearchParams({ tab: 'income', dateFrom: accDateFrom, dateTo: accDateTo, targetMove: 'posted' })
+                    navigate(`/accounting/reports/profit-loss?${sp.toString()}`)
+                  }}
+                >
                   Drilldown รายได้
                 </Button>
-                <Button size="sm" variant="secondary" onClick={() => navigate('/expenses')}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    const sp = new URLSearchParams({ tab: 'expense', dateFrom: accDateFrom, dateTo: accDateTo, targetMove: 'posted' })
+                    navigate(`/accounting/reports/profit-loss?${sp.toString()}`)
+                  }}
+                >
                   Drilldown รายจ่าย
                 </Button>
                 <Button size="sm" variant="secondary" onClick={() => navigate('/accounting/reports')}>
