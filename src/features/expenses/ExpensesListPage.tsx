@@ -5,8 +5,9 @@ import { Input } from '@/components/ui/Input'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/Badge'
 import { useMemo, useState } from 'react'
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { listExpenses } from '@/api/services/expenses.service'
+import { checkExpensesApiAvailable } from '@/api/services/expenses-check.service'
 import { useNavigate } from 'react-router-dom'
 import { Spinner } from 'react-bootstrap'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
@@ -18,6 +19,13 @@ export function ExpensesListPage() {
   const [q, setQ] = useState('')
   const qDebounced = useDebouncedValue(q, 300)
   const limit = 30
+
+  const apiCheckQuery = useQuery({
+    queryKey: ['expenses-api-check'],
+    queryFn: checkExpensesApiAvailable,
+    staleTime: 60_000,
+    retry: false,
+  })
 
   const query = useInfiniteQuery({
     queryKey: ['expenses', tab, qDebounced, limit],
@@ -179,6 +187,32 @@ export function ExpensesListPage() {
           />
         </div>
       </div>
+
+      {apiCheckQuery.isLoading ? (
+        <div className="alert alert-secondary">
+          <div className="fw-semibold">กำลังตรวจสอบการเชื่อมต่อรายจ่าย…</div>
+          <div className="small text-muted">กำลังเช็คว่า backend มี endpoint /api/th/v1/expenses/list หรือไม่</div>
+        </div>
+      ) : apiCheckQuery.data && !apiCheckQuery.data.available ? (
+        <div className="alert alert-danger">
+          <div className="fw-semibold mb-1">รายจ่ายยังใช้งานไม่ได้</div>
+          <div className="small mb-2">
+            {apiCheckQuery.data.error ?? 'Unknown error'} (HTTP {apiCheckQuery.data.statusCode ?? 'N/A'})
+          </div>
+          <div className="small text-muted">
+            วิธีตรวจสอบบน server:
+            <div className="mt-2">
+              <code>sudo journalctl -u odoo18-api -n 120 --no-pager</code>
+            </div>
+            <div className="mt-1">
+              <code>
+                curl -i -X POST "http://127.0.0.1:18069/api/th/v1/expenses/list?db=q01" -H "X-ADT-API-Key: &lt;key&gt;" -H
+                "Authorization: Bearer &lt;token&gt;" -H "Content-Type: application/json" --data '{"{"}"jsonrpc":"2.0","method":"call","params":{"{"}"limit":1{"}"},"id":1{"}"}'
+              </code>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {query.isLoading ? (
         <div className="d-flex justify-content-center align-items-center py-5">
