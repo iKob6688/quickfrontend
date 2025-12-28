@@ -12,6 +12,7 @@ import { listPurchaseRequests } from '@/api/services/purchase-requests.service'
 import { getProfitLoss } from '@/api/services/accounting-reports.service'
 import { hasScope } from '@/lib/scopes'
 import { useMemo } from 'react'
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts'
 
 function formatLocalISODate(d: Date) {
   const y = d.getFullYear()
@@ -104,6 +105,14 @@ export function DashboardPage() {
     const profit = parseNumber(rd?.totalEarnings) || income - expense
     return { income, expense, profit }
   }, [profitLossQuery.data])
+
+  const accountingChartData = useMemo(() => {
+    return [
+      { name: 'รายได้', value: accountingSnapshot.income, fill: '#2563eb' },
+      { name: 'รายจ่าย', value: accountingSnapshot.expense, fill: '#dc2626' },
+      { name: 'กำไร', value: accountingSnapshot.profit, fill: '#16a34a' },
+    ]
+  }, [accountingSnapshot.expense, accountingSnapshot.income, accountingSnapshot.profit])
 
   // Calculate purchase orders stats
   const purchaseStats = useMemo(() => {
@@ -482,28 +491,52 @@ export function DashboardPage() {
                 </div>
               </div>
             ) : (
-              <div className="row g-2">
-                <div className="col-md-4">
-                  <div className="rounded bg-light p-3">
-                    <div className="small text-muted">รายได้รวม</div>
-                    <div className="h5 fw-semibold mb-0 font-monospace">
-                      {accountingSnapshot.income.toLocaleString('th-TH')}
+              <div className="row g-3 align-items-stretch">
+                <div className="col-lg-7">
+                  <div className="row g-2">
+                    <div className="col-md-4">
+                      <div className="rounded bg-light p-3 h-100">
+                        <div className="small text-muted">รายได้รวม</div>
+                        <div className="h5 fw-semibold mb-0 font-monospace">
+                          {accountingSnapshot.income.toLocaleString('th-TH')}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="col-md-4">
+                      <div className="rounded bg-light p-3 h-100">
+                        <div className="small text-muted">รายจ่ายรวม</div>
+                        <div className="h5 fw-semibold mb-0 font-monospace">
+                          {accountingSnapshot.expense.toLocaleString('th-TH')}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="col-md-4">
+                      <div className="rounded bg-light p-3 h-100">
+                        <div className="small text-muted">กำไรสุทธิ</div>
+                        <div className="h5 fw-semibold mb-0 font-monospace">
+                          {accountingSnapshot.profit.toLocaleString('th-TH')}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div className="col-md-4">
-                  <div className="rounded bg-light p-3">
-                    <div className="small text-muted">ค่าใช้จ่ายรวม</div>
-                    <div className="h5 fw-semibold mb-0 font-monospace">
-                      {accountingSnapshot.expense.toLocaleString('th-TH')}
-                    </div>
-                  </div>
-                </div>
-                <div className="col-md-4">
-                  <div className="rounded bg-light p-3">
-                    <div className="small text-muted">กำไรสุทธิ</div>
-                    <div className="h5 fw-semibold mb-0 font-monospace">
-                      {accountingSnapshot.profit.toLocaleString('th-TH')}
+                <div className="col-lg-5">
+                  <div className="rounded bg-light p-2 h-100">
+                    <div className="small text-muted px-2 pt-1">กราฟสรุป</div>
+                    <div style={{ height: 120 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={accountingChartData} margin={{ top: 8, right: 12, left: 8, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                          <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                          <YAxis tick={{ fontSize: 12 }} />
+                          <Tooltip />
+                          <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false}>
+                            {accountingChartData.map((d, idx) => (
+                              <Cell key={idx} fill={d.fill} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
                     </div>
                   </div>
                 </div>
