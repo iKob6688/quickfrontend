@@ -26,6 +26,7 @@ export function AppLayout() {
     }
   > = [
     { path: '/dashboard', label: 'แดชบอร์ด', icon: 'bi-speedometer2' },
+    { path: '/accounting/overview', label: 'ภาพรวมบัญชี', scope: 'reports', icon: 'bi-graph-up-arrow' },
     { path: '/customers', label: 'รายชื่อติดต่อ', scope: 'contacts', icon: 'bi-people' },
     { path: '/sales/invoices', label: 'ใบแจ้งหนี้', scope: 'invoice', icon: 'bi-receipt' },
     { path: '/purchases/orders', label: 'ใบสั่งซื้อ', scope: 'purchases', icon: 'bi-cart' },

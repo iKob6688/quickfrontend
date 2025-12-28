@@ -15,6 +15,7 @@ import { ExpensesListPage } from '@/features/expenses/ExpensesListPage'
 import { CustomersListPage } from '@/features/customers/CustomersListPage'
 import { CustomerDetailPage } from '@/features/customers/CustomerDetailPage'
 import { CustomerFormPage } from '@/features/customers/CustomerFormPage'
+import { AccountingOverviewPage } from '@/features/accounting/AccountingOverviewPage'
 import { BackendConnectionPage } from '@/features/backend-connection/BackendConnectionPage'
 import { ExcelImportPage } from '@/features/excel-import/ExcelImportPage'
 import { setUnauthorizedHandler } from '@/api/client'
@@ -65,6 +66,7 @@ function AppRoutes() {
           <Route path="/purchases/orders/:id/edit" element={<PurchaseOrderFormPage />} />
           <Route path="/purchases/requests" element={<PurchaseRequestsListPage />} />
           <Route path="/expenses" element={<ExpensesListPage />} />
+          <Route path="/accounting/overview" element={<AccountingOverviewPage />} />
           <Route
             path="/backend-connection"
             element={<BackendConnectionPage />}

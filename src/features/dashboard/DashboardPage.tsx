@@ -262,6 +262,25 @@ export function DashboardPage() {
         </div>
         <div className="col-md-6 col-xl-3">
           <Card
+            onClick={() => navigate('/accounting/overview')}
+            role="button"
+            tabIndex={0}
+            className="qf-dashboard-card qf-dashboard-card-accounting"
+          >
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <p className="small fw-medium text-muted mb-0">Accounting</p>
+              <i className="bi bi-graph-up-arrow" style={{ fontSize: '1.5rem', color: '#06b6d4' }}></i>
+            </div>
+            <p className="h6 fw-semibold mb-2">
+              ภาพรวมบัญชี (เดือนนี้)
+            </p>
+            <p className="small text-muted mb-0">
+              รายได้ · ค่าใช้จ่าย · กำไร (คลิกเพื่อ drilldown)
+            </p>
+          </Card>
+        </div>
+        <div className="col-md-6 col-xl-3">
+          <Card
             onClick={() => navigate('/purchases/orders')}
             role="button"
             tabIndex={0}
