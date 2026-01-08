@@ -141,7 +141,7 @@ export function AgentDashboardPage() {
             )}
             {apiError.code === 'TOKEN_REQUIRED' && (
               <div className="mt-3">
-                <Button size="sm" variant="outline" onClick={handleClearToken}>
+                <Button size="sm" variant="secondary" onClick={handleClearToken}>
                   ตั้งค่า Token ใหม่
                 </Button>
               </div>

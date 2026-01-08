@@ -256,12 +256,12 @@ export function AgentInvoiceCreatePage() {
 
             <div className="mb-3">
               <Label htmlFor="notes">หมายเหตุ</Label>
-              <Input
+              <textarea
                 id="notes"
+                className="form-control"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="หมายเหตุเพิ่มเติม"
-                as="textarea"
                 rows={3}
               />
             </div>
@@ -318,7 +318,7 @@ export function AgentInvoiceCreatePage() {
             {lines.length === 0 ? (
               <div className="text-center text-muted py-4">
                 <p className="small mb-2">ยังไม่มีรายการ</p>
-                <Button size="sm" variant="outline" onClick={addLine}>
+                <Button size="sm" variant="secondary" onClick={addLine}>
                   เพิ่มรายการแรก
                 </Button>
               </div>

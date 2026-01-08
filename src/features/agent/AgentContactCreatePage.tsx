@@ -22,7 +22,6 @@ export function AgentContactCreatePage() {
   const [website, setWebsite] = useState('')
   const [address, setAddress] = useState('')
   const [result, setResult] = useState<ContactCreateResponse | null>(null)
-  const [isScanning, setIsScanning] = useState(false)
   const [scanResult, setScanResult] = useState<string | null>(null)
 
   const scanMutation = useMutation({
@@ -282,7 +281,7 @@ export function AgentContactCreatePage() {
               {selectedFile && (
                 <div className="mt-2">
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     onClick={() => scanMutation.mutate()}
                     disabled={scanMutation.isPending}
