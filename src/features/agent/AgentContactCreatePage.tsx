@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
-import { agentCreateContact, fileToBase64, type ContactCreateResponse } from '@/api/services/agent.service'
+import { agentCreateContact, agentOcr, fileToBase64, type ContactCreateResponse, type OcrResponse } from '@/api/services/agent.service'
 import { toApiError } from '@/api/response'
 import { toast } from '@/lib/toastStore'
 
@@ -22,6 +22,49 @@ export function AgentContactCreatePage() {
   const [website, setWebsite] = useState('')
   const [address, setAddress] = useState('')
   const [result, setResult] = useState<ContactCreateResponse | null>(null)
+  const [isScanning, setIsScanning] = useState(false)
+  const [scanResult, setScanResult] = useState<string | null>(null)
+
+  const scanMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedFile) {
+        throw new Error('กรุณาเลือกไฟล์นามบัตร')
+      }
+      const base64 = await fileToBase64(selectedFile)
+      return await agentOcr({
+        file: base64,
+        filename: selectedFile.name,
+        use_vision: true,
+        prompt: 'Extract contact information from this business card/image. Return JSON with: {"name": "company or person name", "email": "email address", "phone": "phone number", "mobile": "mobile number", "vat": "tax ID if visible", "website": "website if visible", "address": "address if visible"}',
+      })
+    },
+    onSuccess: (data: OcrResponse) => {
+      setScanResult(data.text)
+      // Try to parse and fill form fields
+      try {
+        const jsonMatch = data.text.match(/\{[\s\S]*\}/)
+        if (jsonMatch) {
+          const extracted = JSON.parse(jsonMatch[0])
+          if (extracted.name) setName(extracted.name)
+          if (extracted.email) setEmail(extracted.email)
+          if (extracted.phone) setPhone(extracted.phone)
+          if (extracted.mobile) setMobile(extracted.mobile)
+          if (extracted.vat) setVat(extracted.vat)
+          if (extracted.website) setWebsite(extracted.website)
+          if (extracted.address) setAddress(extracted.address)
+        }
+      } catch (e) {
+        // If JSON parsing fails, just show the text
+        console.warn('Failed to parse extracted JSON:', e)
+      }
+    },
+    onError: (error) => {
+      const apiError = toApiError(error)
+      const errorMsg = apiError.message || 'ไม่สามารถสแกนนามบัตรได้'
+      toast.error('สแกนนามบัตรไม่สำเร็จ', errorMsg)
+      setScanResult(`เกิดข้อผิดพลาด: ${errorMsg}\n\nกรุณาลองใหม่อีกครั้ง หรือกรอกข้อมูลด้วยตนเอง`)
+    },
+  })
 
   const contactMutation = useMutation({
     mutationFn: async () => {
@@ -105,7 +148,9 @@ export function AgentContactCreatePage() {
     setWebsite('')
     setAddress('')
     setResult(null)
+    setScanResult(null)
     contactMutation.reset()
+    scanMutation.reset()
   }
 
   return (
@@ -234,6 +279,29 @@ export function AgentContactCreatePage() {
                 onChange={handleFileChange}
                 className="form-control mt-2"
               />
+              {selectedFile && (
+                <div className="mt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => scanMutation.mutate()}
+                    disabled={scanMutation.isPending}
+                    isLoading={scanMutation.isPending}
+                  >
+                    {scanMutation.isPending ? 'กำลังสแกน...' : 'สแกนนามบัตร (GPT-4 Vision)'}
+                  </Button>
+                </div>
+              )}
+              {scanResult && (
+                <div className="mt-2">
+                  <div className="alert alert-info small mb-0">
+                    <div className="fw-semibold mb-1">ผลการสแกน:</div>
+                    <pre className="small mb-0" style={{ whiteSpace: 'pre-wrap', maxHeight: '150px', overflow: 'auto' }}>
+                      {scanResult}
+                    </pre>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="d-flex gap-2">
@@ -267,8 +335,32 @@ export function AgentContactCreatePage() {
           <Card className="p-4">
             <h6 className="mb-3">ผลลัพธ์</h6>
             
+            {scanMutation.isPending && (
+              <div className="text-center text-muted py-4">
+                <div className="spinner-border spinner-border-sm me-2" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                กำลังสแกนนามบัตร...
+              </div>
+            )}
+
+            {scanMutation.isError && (
+              <div className="alert alert-danger mb-3">
+                <div className="fw-semibold mb-1">เกิดข้อผิดพลาดในการสแกน</div>
+                <div className="small">
+                  {toApiError(scanMutation.error).message}
+                </div>
+                <div className="small text-muted mt-2">
+                  กรุณาลองใหม่อีกครั้ง หรือกรอกข้อมูลด้วยตนเอง
+                </div>
+              </div>
+            )}
+
             {contactMutation.isPending && (
               <div className="text-center text-muted py-4">
+                <div className="spinner-border spinner-border-sm me-2" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
                 กำลังบันทึกผู้ติดต่อ...
               </div>
             )}
