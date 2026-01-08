@@ -408,6 +408,35 @@ export function DashboardPage() {
         </div>
         <div className="col-md-6 col-xl-3">
           <Card
+            onClick={() => navigate('/agent')}
+            role="button"
+            tabIndex={0}
+            className="qf-dashboard-card qf-dashboard-card-ai"
+            style={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              cursor: 'pointer',
+            }}
+          >
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <p className="small fw-medium mb-0" style={{ opacity: 0.9 }}>
+                ERPTH AI
+              </p>
+              <i
+                className="bi bi-magic"
+                style={{ fontSize: '1.5rem', color: 'white' }}
+              ></i>
+            </div>
+            <p className="h6 fw-semibold mb-2" style={{ color: 'white' }}>
+              สร้างด้วย AI
+            </p>
+            <p className="small mb-0" style={{ opacity: 0.8 }}>
+              สร้าง Contact, Invoice, Quotation, Expense จากภาพ
+            </p>
+          </Card>
+        </div>
+        <div className="col-md-6 col-xl-3">
+          <Card
             onClick={() => navigate('/excel-import')}
             role="button"
             tabIndex={0}

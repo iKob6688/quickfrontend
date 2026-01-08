@@ -32,7 +32,7 @@ export function DataTable<T>(props: {
       )}
 
       <div className="table-responsive">
-        <Table hover className="qf-table mb-0">
+        <Table hover bordered className="qf-table mb-0">
           <thead>
             <tr>
               {columns.map((c) => (

@@ -1,6 +1,7 @@
 import axios, { AxiosHeaders } from 'axios'
 import { getAccessToken, clearAuthStorage } from '@/lib/authToken'
 import { getInstanceId, clearInstanceId } from '@/lib/instanceId'
+import { getAgentToken } from '@/lib/agentToken'
 
 // Default to '/api' so Vite proxy works even if .env isn't loaded yet.
 const baseURL =
@@ -49,6 +50,7 @@ function handleUnauthorized() {
 apiClient.interceptors.request.use((config) => {
   const token = getAccessToken()
   const instanceId = getInstanceId()
+  const agentToken = getAgentToken()
 
   // Start from existing headers to avoid dropping anything the caller set.
   const headers = AxiosHeaders.from(config.headers ?? {})
@@ -63,6 +65,10 @@ apiClient.interceptors.request.use((config) => {
 
   if (apiKey) {
     headers.set('X-ADT-API-Key', apiKey)
+  }
+
+  if (agentToken) {
+    headers.set('X-Agent-Token', agentToken)
   }
 
   config.headers = headers

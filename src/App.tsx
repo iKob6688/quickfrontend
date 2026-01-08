@@ -30,6 +30,12 @@ import { GeneralLedgerAccountDrilldownPage } from '@/features/accounting/General
 import { MoveLineDetailPage } from '@/features/accounting/MoveLineDetailPage'
 import { BackendConnectionPage } from '@/features/backend-connection/BackendConnectionPage'
 import { ExcelImportPage } from '@/features/excel-import/ExcelImportPage'
+import { AgentDashboardPage } from '@/features/agent/AgentDashboardPage'
+import { AgentOCRUploadPage } from '@/features/agent/AgentOCRUploadPage'
+import { AgentExpenseAutoPostPage } from '@/features/agent/AgentExpenseAutoPostPage'
+import { AgentQuotationCreatePage } from '@/features/agent/AgentQuotationCreatePage'
+import { AgentContactCreatePage } from '@/features/agent/AgentContactCreatePage'
+import { AgentInvoiceCreatePage } from '@/features/agent/AgentInvoiceCreatePage'
 import { setUnauthorizedHandler } from '@/api/client'
 import { useAuthStore } from '@/features/auth/store'
 import { ErrorBoundary } from '@/components/system/ErrorBoundary'
@@ -101,6 +107,12 @@ function AppRoutes() {
             element={<BackendConnectionPage />}
           />
           <Route path="/excel-import" element={<ExcelImportPage />} />
+          <Route path="/agent" element={<AgentDashboardPage />} />
+          <Route path="/agent/ocr" element={<AgentOCRUploadPage />} />
+          <Route path="/agent/expense" element={<AgentExpenseAutoPostPage />} />
+          <Route path="/agent/quotation" element={<AgentQuotationCreatePage />} />
+          <Route path="/agent/contact" element={<AgentContactCreatePage />} />
+          <Route path="/agent/invoice" element={<AgentInvoiceCreatePage />} />
 
           {/* Reports Studio routes inside the same ERPTH shell */}
           <Route element={<StudioBootstrap />}>
