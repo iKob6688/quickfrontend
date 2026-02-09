@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="320" viewBox="0 0 1400 320">
+  <defs>
+    <linearGradient id="blueGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#243B6B"/>
+      <stop offset="100%" stop-color="#1F3C88"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E1B84F"/>
+      <stop offset="100%" stop-color="#B8932E"/>
+    </linearGradient>
+  </defs>
+
+  <text x="120" y="230"
+        font-family="Inter, Montserrat, Arial"
+        font-weight="700"
+        font-size="190"
+        letter-spacing="5"
+        fill="url(#blueGrad)">ERP</text>
+
+  <text x="720" y="230"
+        font-family="Inter, Montserrat, Arial"
+        font-weight="700"
+        font-size="190"
+        letter-spacing="5"
+        fill="url(#goldGrad)">TH</text>
+</svg>

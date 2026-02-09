@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Modal, Form, Alert } from 'react-bootstrap'
 import { Button } from '@/components/ui/Button'
 import { Label } from '@/components/ui/Label'
@@ -15,12 +15,15 @@ export function AmendInvoiceModal({ open, onClose, onSubmit, isSubmitting }: Pro
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (open) {
-      setReason('')
-      setError(null)
-    }
-  }, [open])
+  const resetState = () => {
+    setReason('')
+    setError(null)
+  }
+
+  const handleClose = () => {
+    resetState()
+    onClose()
+  }
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -37,7 +40,7 @@ export function AmendInvoiceModal({ open, onClose, onSubmit, isSubmitting }: Pro
   }
 
   return (
-    <Modal show={open} onHide={onClose} centered>
+    <Modal show={open} onHide={handleClose} onExited={resetState} centered>
       <Modal.Header closeButton>
         <Modal.Title className="h6 fw-semibold mb-0">แก้ไขใบแจ้งหนี้ (Amend)</Modal.Title>
       </Modal.Header>
@@ -66,7 +69,7 @@ export function AmendInvoiceModal({ open, onClose, onSubmit, isSubmitting }: Pro
           </div>
 
           <div className="d-flex justify-content-end gap-2">
-            <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
+            <Button type="button" variant="secondary" onClick={handleClose} disabled={isSubmitting}>
               ยกเลิก
             </Button>
             <Button type="submit" isLoading={Boolean(isSubmitting)}>
@@ -78,5 +81,4 @@ export function AmendInvoiceModal({ open, onClose, onSubmit, isSubmitting }: Pro
     </Modal>
   )
 }
-
 

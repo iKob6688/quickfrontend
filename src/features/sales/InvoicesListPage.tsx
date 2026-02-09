@@ -252,6 +252,7 @@ export function InvoicesListPage() {
             }
             columns={columns}
             rows={rows}
+            rowKey={(row) => row.id}
             empty={
               <div>
                 <p className="h6 fw-semibold mb-2">ยังไม่มีข้อมูล</p>
@@ -286,5 +287,4 @@ export function InvoicesListPage() {
     </div>
   )
 }
-
 

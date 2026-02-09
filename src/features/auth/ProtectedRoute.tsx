@@ -10,6 +10,15 @@ export function ProtectedRoute() {
   const user = useAuthStore((s) => s.user)
   const loadMe = useAuthStore((s) => s.loadMe)
 
+  // Keep hook order stable across renders.
+  // If we have a token but haven't hydrated the user profile yet, do it once.
+  useEffect(() => {
+    if (!isAuthenticated) return
+    if (user) return
+    if (isLoading) return
+    void loadMe()
+  }, [isAuthenticated, isLoading, loadMe, user])
+
   if (!isAuthenticated) {
     return (
       <Navigate
@@ -19,14 +28,6 @@ export function ProtectedRoute() {
       />
     )
   }
-
-  // If we have a token but haven't hydrated the user profile yet, do it once.
-  useEffect(() => {
-    if (!isAuthenticated) return
-    if (user) return
-    if (isLoading) return
-    void loadMe()
-  }, [isAuthenticated, isLoading, loadMe, user])
 
   if (!user) {
     return (
@@ -39,5 +40,4 @@ export function ProtectedRoute() {
 
   return <Outlet />
 }
-
 

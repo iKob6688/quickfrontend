@@ -17,10 +17,11 @@ export function DataTable<T>(props: {
   rows: T[]
   empty?: ReactNode
   className?: string
+  rowKey?: (row: T, index: number) => string | number
   /** When true, renders table without the Card wrapper (useful when you already are inside a Card) */
   plain?: boolean
 }) {
-  const { title, right, columns, rows, empty, className, plain } = props
+  const { title, right, columns, rows, empty, className, rowKey, plain } = props
 
   const content = (
     <>
@@ -51,7 +52,7 @@ export function DataTable<T>(props: {
               </tr>
             ) : (
               rows.map((row, idx) => (
-                <tr key={idx}>
+                <tr key={rowKey ? rowKey(row, idx) : idx}>
                   {columns.map((c) => (
                     <td key={c.key} className={twMerge('qf-td', c.className)}>
                       {c.cell(row)}
@@ -70,5 +71,4 @@ export function DataTable<T>(props: {
 
   return <Card className={twMerge('overflow-hidden', className)}>{content}</Card>
 }
-
 

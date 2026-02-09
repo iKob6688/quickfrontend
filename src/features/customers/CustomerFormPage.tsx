@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -19,6 +19,21 @@ import {
 } from '@/api/services/partners.service'
 import { CountrySelector } from '@/features/customers/CountrySelector'
 
+const DEFAULT_FORM_DATA: PartnerUpsertPayload = {
+  company_type: 'company',
+  name: '',
+  vat: '',
+  email: '',
+  phone: '',
+  mobile: '',
+  active: true,
+  street: '',
+  street2: '',
+  city: '',
+  zip: '',
+  countryId: null,
+}
+
 export function CustomerFormPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -37,39 +52,37 @@ export function CustomerFormPage() {
     staleTime: 30_000,
   })
 
-  const [formData, setFormData] = useState<PartnerUpsertPayload>({
-    company_type: 'company',
-    name: '',
-    vat: '',
-    email: '',
-    phone: '',
-    mobile: '',
-    active: true,
-    street: '',
-    street2: '',
-    city: '',
-    zip: '',
-    countryId: null,
-  })
+  const [draftOverrides, setDraftOverrides] = useState<Partial<PartnerUpsertPayload>>({})
 
-  useEffect(() => {
-    if (existingQuery.data) {
-      setFormData({
-        company_type: existingQuery.data.companyType,
-        name: existingQuery.data.name || '',
-        vat: existingQuery.data.vat || existingQuery.data.taxId || '',
-        email: existingQuery.data.email || '',
-        phone: existingQuery.data.phone || '',
-        mobile: existingQuery.data.mobile || '',
-        active: existingQuery.data.active,
-        street: existingQuery.data.street || '',
-        street2: existingQuery.data.street2 || '',
-        city: existingQuery.data.city || '',
-        zip: existingQuery.data.zip || '',
-        countryId: existingQuery.data.countryId ?? null,
-      })
+  const existingFormData = useMemo<PartnerUpsertPayload | null>(() => {
+    const data = existingQuery.data
+    if (!data) return null
+    return {
+      company_type: data.companyType,
+      name: data.name || '',
+      vat: data.vat || data.taxId || '',
+      email: data.email || '',
+      phone: data.phone || '',
+      mobile: data.mobile || '',
+      active: data.active,
+      street: data.street || '',
+      street2: data.street2 || '',
+      city: data.city || '',
+      zip: data.zip || '',
+      countryId: data.countryId ?? null,
     }
   }, [existingQuery.data])
+
+  const formData = useMemo<PartnerUpsertPayload>(() => {
+    if (isEdit && existingFormData) {
+      return { ...existingFormData, ...draftOverrides }
+    }
+    return { ...DEFAULT_FORM_DATA, ...draftOverrides }
+  }, [draftOverrides, existingFormData, isEdit])
+
+  const updateFormData = (patch: Partial<PartnerUpsertPayload>) => {
+    setDraftOverrides((prev) => ({ ...prev, ...patch }))
+  }
 
   const upsertMutation = useMutation({
     mutationFn: async (payload: PartnerUpsertPayload) => {
@@ -118,7 +131,7 @@ export function CustomerFormPage() {
   }
 
   const setCompanyType = (t: PartnerCompanyType) =>
-    setFormData((s) => ({ ...s, company_type: t }))
+    updateFormData({ company_type: t })
 
   return (
     <div>
@@ -167,7 +180,7 @@ export function CustomerFormPage() {
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => setFormData((s) => ({ ...s, name: e.target.value }))}
+                    onChange={(e) => updateFormData({ name: e.target.value })}
                     error={Boolean(fieldErrors.name)}
                   />
                   {fieldErrors.name ? <div className="small text-danger mt-1">{fieldErrors.name}</div> : null}
@@ -178,7 +191,7 @@ export function CustomerFormPage() {
                   <Input
                     id="vat"
                     value={formData.vat ?? ''}
-                    onChange={(e) => setFormData((s) => ({ ...s, vat: e.target.value }))}
+                    onChange={(e) => updateFormData({ vat: e.target.value })}
                   />
                 </div>
 
@@ -188,7 +201,7 @@ export function CustomerFormPage() {
                     id="email"
                     type="email"
                     value={formData.email ?? ''}
-                    onChange={(e) => setFormData((s) => ({ ...s, email: e.target.value }))}
+                    onChange={(e) => updateFormData({ email: e.target.value })}
                   />
                 </div>
                 <div className="col-md-4">
@@ -196,7 +209,7 @@ export function CustomerFormPage() {
                   <Input
                     id="phone"
                     value={formData.phone ?? ''}
-                    onChange={(e) => setFormData((s) => ({ ...s, phone: e.target.value }))}
+                    onChange={(e) => updateFormData({ phone: e.target.value })}
                   />
                 </div>
                 <div className="col-md-4">
@@ -204,7 +217,7 @@ export function CustomerFormPage() {
                   <Input
                     id="mobile"
                     value={formData.mobile ?? ''}
-                    onChange={(e) => setFormData((s) => ({ ...s, mobile: e.target.value }))}
+                    onChange={(e) => updateFormData({ mobile: e.target.value })}
                   />
                 </div>
               </div>
@@ -218,7 +231,7 @@ export function CustomerFormPage() {
                   <Input
                     id="street"
                     value={formData.street ?? ''}
-                    onChange={(e) => setFormData((s) => ({ ...s, street: e.target.value }))}
+                    onChange={(e) => updateFormData({ street: e.target.value })}
                   />
                 </div>
                 <div className="col-md-6">
@@ -226,7 +239,7 @@ export function CustomerFormPage() {
                   <Input
                     id="street2"
                     value={formData.street2 ?? ''}
-                    onChange={(e) => setFormData((s) => ({ ...s, street2: e.target.value }))}
+                    onChange={(e) => updateFormData({ street2: e.target.value })}
                   />
                 </div>
                 <div className="col-md-4">
@@ -234,7 +247,7 @@ export function CustomerFormPage() {
                   <Input
                     id="city"
                     value={formData.city ?? ''}
-                    onChange={(e) => setFormData((s) => ({ ...s, city: e.target.value }))}
+                    onChange={(e) => updateFormData({ city: e.target.value })}
                   />
                 </div>
                 <div className="col-md-4">
@@ -242,13 +255,13 @@ export function CustomerFormPage() {
                   <Input
                     id="zip"
                     value={formData.zip ?? ''}
-                    onChange={(e) => setFormData((s) => ({ ...s, zip: e.target.value }))}
+                    onChange={(e) => updateFormData({ zip: e.target.value })}
                   />
                 </div>
                 <div className="col-md-4">
                   <CountrySelector
                     value={formData.countryId}
-                    onChange={(value) => setFormData((s) => ({ ...s, countryId: value }))}
+                    onChange={(value) => updateFormData({ countryId: value })}
                   />
                 </div>
               </div>
@@ -289,7 +302,7 @@ export function CustomerFormPage() {
                     id="active"
                     checked={Boolean(formData.active)}
                     onChange={(e) =>
-                      setFormData((s) => ({ ...s, active: e.target.checked }))
+                      updateFormData({ active: e.target.checked })
                     }
                   />
                   <label className="form-check-label" htmlFor="active">
@@ -307,5 +320,4 @@ export function CustomerFormPage() {
     </div>
   )
 }
-
 

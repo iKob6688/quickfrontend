@@ -32,9 +32,8 @@ export function PageHeader({
           )}
         </div>
       </div>
-      {actions && <div className="d-flex flex-wrap gap-2">{actions}</div>}
+      {actions && <div className="qf-page-header__actions d-flex flex-wrap gap-2">{actions}</div>}
     </header>
   )
 }
-
 

@@ -30,3 +30,4 @@ dist-ssr
 
 # Backend Odoo files (not part of frontend repo)
 # Note: This is a frontend-only repository
+backup/*.zip

@@ -26,12 +26,12 @@ export function AppLayout() {
     }
   > = [
     { path: '/dashboard', label: 'แดชบอร์ด', icon: 'bi-speedometer2' },
-    { path: '/accounting/reports', label: 'รายงานบัญชี', scope: 'reports', icon: 'bi-graph-up-arrow' },
+    { path: '/accounting/reports', label: 'รายงานบัญชี', scope: 'accounting_reports', icon: 'bi-graph-up-arrow' },
     { path: '/customers', label: 'รายชื่อติดต่อ', scope: 'contacts', icon: 'bi-people' },
     { path: '/sales/invoices', label: 'ใบแจ้งหนี้', scope: 'invoice', icon: 'bi-receipt' },
-    { path: '/purchases/orders', label: 'ใบสั่งซื้อ', scope: 'purchases', icon: 'bi-cart' },
-    { path: '/purchases/requests', label: 'คำขอซื้อ', scope: 'purchases', icon: 'bi-clipboard-check' },
-    { path: '/expenses', label: 'รายจ่าย', scope: 'expenses', icon: 'bi-cash-stack' },
+    { path: '/purchases/orders', label: 'ใบสั่งซื้อ', scope: 'purchase', icon: 'bi-cart' },
+    { path: '/purchases/requests', label: 'คำขอซื้อ', scope: 'purchase', icon: 'bi-clipboard-check' },
+    { path: '/expenses', label: 'รายจ่าย', scope: 'expense', icon: 'bi-cash-stack' },
     { path: '/excel-import', label: 'Excel', scope: 'excel', icon: 'bi-file-earmark-spreadsheet' },
     { path: '/reports-studio', label: 'Reports Studio', mobileLabel: 'Reports\nStudio', icon: 'bi-layout-text-window-reverse' },
     // Provisioning is an admin/dev feature; keep behind auth scope.
@@ -125,12 +125,12 @@ export function AppLayout() {
                         navigate(item.path)
                       }
                     }}
-                    className={`btn btn-sm rounded ${
+                    className={`btn btn-sm rounded qf-top-nav-btn ${
                       active
-                        ? 'btn-primary'
+                        ? 'btn-primary qf-top-nav-btn--active'
                         : allowed
-                          ? 'btn-outline-secondary'
-                          : 'btn-outline-secondary opacity-50'
+                          ? 'btn-outline-secondary qf-top-nav-btn--idle'
+                          : 'btn-outline-secondary qf-top-nav-btn--idle opacity-50'
                     }`}
                     title={
                       !allowed && item.scope
@@ -196,5 +196,3 @@ export function AppLayout() {
     </div>
   )
 }
-
-

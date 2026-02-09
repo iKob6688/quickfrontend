@@ -15,7 +15,7 @@ export function Tabs<T extends string>(props: {
 }) {
   const { items, value, onChange, className } = props
   return (
-    <ButtonGroup className={twMerge('rounded', className)}>
+    <ButtonGroup className={twMerge('qf-tabs rounded-pill shadow-sm', className)}>
       {items.map((item) => {
         const active = item.key === value
         return (
@@ -23,8 +23,10 @@ export function Tabs<T extends string>(props: {
             key={item.key}
             variant={active ? 'primary' : 'outline-secondary'}
             onClick={() => onChange(item.key)}
+            aria-pressed={active}
             className={twMerge(
-              'd-flex align-items-center gap-2',
+              'qf-tabs__btn d-flex align-items-center gap-2',
+              active && 'qf-tabs__btn--active',
               !active && 'bg-white',
             )}
           >
@@ -40,5 +42,4 @@ export function Tabs<T extends string>(props: {
     </ButtonGroup>
   )
 }
-
 

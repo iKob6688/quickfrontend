@@ -90,20 +90,23 @@ export function PurchaseOrderFormPage() {
   // Hydrate form when editing order is loaded
   useEffect(() => {
     if (!isEdit || !existingOrder) return
-    setFormData({
-      vendorId: existingOrder.vendorId || 0,
-      orderDate: existingOrder.orderDate ? existingOrder.orderDate.split('T')[0] : new Date().toISOString().split('T')[0],
-      expectedDate: existingOrder.expectedDate ? existingOrder.expectedDate.split('T')[0] : undefined,
-      currency: existingOrder.currency || 'THB',
-      lines: existingOrder.lines || [],
-      notes: existingOrder.notes || '',
-    })
-    
-    // Prefill vendor search text with vendor name for display in edit mode
-    // This allows user to see the current vendor and optionally change it
-    if (existingOrder.vendorName) {
-      setVendorSearch(existingOrder.vendorName)
-    }
+    const timer = window.setTimeout(() => {
+      setFormData({
+        vendorId: existingOrder.vendorId || 0,
+        orderDate: existingOrder.orderDate ? existingOrder.orderDate.split('T')[0] : new Date().toISOString().split('T')[0],
+        expectedDate: existingOrder.expectedDate ? existingOrder.expectedDate.split('T')[0] : undefined,
+        currency: existingOrder.currency || 'THB',
+        lines: existingOrder.lines || [],
+        notes: existingOrder.notes || '',
+      })
+
+      // Prefill vendor search text with vendor name for display in edit mode
+      // This allows user to see the current vendor and optionally change it
+      if (existingOrder.vendorName) {
+        setVendorSearch(existingOrder.vendorName)
+      }
+    }, 0)
+    return () => window.clearTimeout(timer)
   }, [isEdit, existingOrder])
 
   // Update vendor search text when selected vendor details are loaded (fallback if vendorName was not in existingOrder)
@@ -112,9 +115,11 @@ export function PurchaseOrderFormPage() {
       const vendorName = selectedVendorQuery.data.displayName || selectedVendorQuery.data.name
       // Only update if vendorSearch is empty (not set by existingOrder.vendorName)
       if (!vendorSearch && vendorName) {
-        setVendorSearch(vendorName)
+        const timer = window.setTimeout(() => setVendorSearch(vendorName), 0)
+        return () => window.clearTimeout(timer)
       }
     }
+    return undefined
   }, [isEdit, selectedVendorQuery.data, existingOrder, vendorSearch])
 
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
@@ -500,4 +505,3 @@ export function PurchaseOrderFormPage() {
     </form>
   )
 }
-

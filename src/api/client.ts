@@ -8,6 +8,7 @@ const baseURL =
   import.meta.env.VITE_API_BASE_URL ?? '/api'
 
 const apiKey = import.meta.env.VITE_API_KEY
+const odooDb = import.meta.env.VITE_ODOO_DB
 
 export const apiClient = axios.create({
   baseURL,
@@ -71,6 +72,15 @@ apiClient.interceptors.request.use((config) => {
     headers.set('X-Agent-Token', agentToken)
   }
 
+  // In multi-db mode (dbfilter = .*), Odoo needs db in query string
+  // before route dispatch; body params are too late for initial routing.
+  if (odooDb) {
+    config.params = {
+      ...(config.params ?? {}),
+      db: config.params?.db ?? odooDb,
+    }
+  }
+
   config.headers = headers
 
   return config
@@ -99,5 +109,4 @@ apiClient.interceptors.response.use(
     return Promise.reject(error)
   },
 )
-
 

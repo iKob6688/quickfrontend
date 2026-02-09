@@ -15,6 +15,17 @@ import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { Combobox, type ComboboxOption } from '@/components/ui/Combobox'
 import { ProductCombobox } from '@/features/sales/ProductCombobox'
 
+function normalizeNotesForTextarea(raw?: string | null): string {
+  if (!raw) return ''
+  // Convert common HTML text into readable plain text for textarea editing.
+  if (raw.includes('<') || raw.includes('&')) {
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(raw, 'text/html')
+    return (doc.body.textContent || '').trim()
+  }
+  return raw
+}
+
 export function InvoiceFormPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -35,20 +46,16 @@ export function InvoiceFormPage() {
   })
 
   const [formData, setFormData] = useState<InvoicePayload>(() => ({
-    customerId: 0,
+    customerId:
+      !isEdit && customerIdPrefill && Number.isFinite(customerIdPrefill) && customerIdPrefill > 0
+        ? customerIdPrefill
+        : 0,
     invoiceDate: new Date().toISOString().split('T')[0],
     dueDate: new Date().toISOString().split('T')[0],
     currency: 'THB',
     lines: [],
     notes: '',
   }))
-
-  // Prefill customerId when coming from CustomerDetailPage
-  useEffect(() => {
-    if (isEdit) return
-    if (!customerIdPrefill || !Number.isFinite(customerIdPrefill) || customerIdPrefill <= 0) return
-    setFormData((prev) => (prev.customerId ? prev : { ...prev, customerId: customerIdPrefill }))
-  }, [customerIdPrefill, isEdit])
 
   const [customerSearch, setCustomerSearch] = useState('')
   const debouncedCustomerSearch = useDebouncedValue(customerSearch, 250)
@@ -90,14 +97,17 @@ export function InvoiceFormPage() {
   // Hydrate form when editing invoice is loaded (avoid stale initial state)
   useEffect(() => {
     if (!isEdit || !existingInvoice) return
-    setFormData({
-      customerId: existingInvoice.customerId,
-      invoiceDate: existingInvoice.invoiceDate || new Date().toISOString().split('T')[0],
-      dueDate: existingInvoice.dueDate || new Date().toISOString().split('T')[0],
-      currency: existingInvoice.currency || 'THB',
-      lines: existingInvoice.lines || [],
-      notes: existingInvoice.notes || '',
-    })
+    const timer = window.setTimeout(() => {
+      setFormData({
+        customerId: existingInvoice.customerId,
+        invoiceDate: existingInvoice.invoiceDate || new Date().toISOString().split('T')[0],
+        dueDate: existingInvoice.dueDate || new Date().toISOString().split('T')[0],
+        currency: existingInvoice.currency || 'THB',
+        lines: existingInvoice.lines || [],
+        notes: normalizeNotesForTextarea(existingInvoice.notes),
+      })
+    }, 0)
+    return () => window.clearTimeout(timer)
   }, [existingInvoice, isEdit])
 
   const canSubmit = useMemo(() => {
@@ -347,11 +357,14 @@ export function InvoiceFormPage() {
                 </div>
               ) : (
                 <div className="table-responsive">
-                  <table className="table table-sm table-hover align-middle mb-0" style={{ tableLayout: 'fixed' }}>
+                  <table
+                    className="table table-sm table-hover align-middle mb-0"
+                    style={{ tableLayout: 'fixed', minWidth: 1040 }}
+                  >
                     <thead className="table-light">
                       <tr className="text-muted small fw-semibold">
-                        <th style={{ width: 260 }}>สินค้า/บริการ</th>
-                        <th>รายละเอียด</th>
+                        <th style={{ width: 260, whiteSpace: 'nowrap' }}>สินค้า/บริการ</th>
+                        <th style={{ width: 260, whiteSpace: 'nowrap' }}>รายละเอียด</th>
                         <th style={{ width: 110 }} className="text-end">
                           จำนวน
                         </th>
@@ -506,4 +519,3 @@ export function InvoiceFormPage() {
     </div>
   )
 }
-

@@ -47,30 +47,61 @@ body {
 
 /* Bootstrap customizations for Quickfront18 theme */
 .qf-app .card {
-  border-radius: 16px;
-  border: 1px solid #e6eef7;
-  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.10);
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.10);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
 }
 
 .qf-app .card:hover {
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
+  box-shadow: 0 20px 44px rgba(15, 23, 42, 0.14);
 }
 
 .qf-app .btn {
   border-radius: 12px;
-  font-weight: 600;
-  padding: 0.5rem 1rem;
+  font-weight: 700;
+  padding: 0.52rem 1rem;
+  letter-spacing: 0.01em;
+  transition: transform 120ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.qf-app .btn:active {
+  transform: translateY(1px);
 }
 
 .qf-app .btn-primary {
-  background: linear-gradient(90deg, #2f80ed 0%, #1cc8b7 100%);
-  border: none;
+  background: linear-gradient(90deg, #2f7ceb 0%, #1bbcc6 55%, #21c6b2 100%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 8px 22px rgba(33, 114, 224, 0.26);
 }
 
 .qf-app .btn-primary:hover {
-  background: linear-gradient(90deg, #1d4ed8 0%, #15b89a 100%);
+  background: linear-gradient(90deg, #1f66db 0%, #16aeb6 55%, #17b39d 100%);
+  box-shadow: 0 10px 26px rgba(29, 78, 216, 0.34);
+}
+
+.qf-app .btn-outline-secondary {
+  border-color: rgba(71, 85, 105, 0.45);
+  background: rgba(255, 255, 255, 0.78);
+  color: #1f2937;
+}
+
+.qf-app .btn-outline-secondary:hover {
+  border-color: rgba(37, 99, 235, 0.42);
+  background: rgba(239, 246, 255, 0.9);
+  color: #0f172a;
+}
+
+.qf-app .btn-link {
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.qf-app .btn-link:hover {
+  color: #1d4ed8;
+  text-decoration: none;
 }
 
 .qf-app .table {
@@ -125,6 +156,12 @@ body {
   box-shadow: 0 0 0 0.2rem rgba(47, 128, 237, 0.25);
 }
 
+.qf-app .input-group .input-group-text {
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.86);
+  border-color: #d6e3f3;
+}
+
 .qf-app .badge {
   padding: var(--qf-badge-padding-y) var(--qf-badge-padding-x);
   font-weight: var(--qf-badge-font-weight);
@@ -147,6 +184,26 @@ body {
   font-weight: var(--qf-weight-bold);
   letter-spacing: -0.01em;
   margin: 0;
+}
+
+.qf-app .qf-page-header {
+  position: relative;
+  padding-bottom: 1rem;
+}
+
+.qf-app .qf-page-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.20), rgba(20, 184, 166, 0.45), rgba(59, 130, 246, 0.14));
+}
+
+.qf-app .qf-page-header__actions .btn {
+  min-height: 40px;
+  padding-inline: 1rem;
 }
 
 .qf-app .qf-subtitle {
@@ -306,6 +363,41 @@ body {
 .qf-report-card--pink { border-top: 3px solid #EC4899; }
 .qf-report-card--slate { border-top: 3px solid #64748B; }
 
+/* Top nav buttons */
+.qf-app .qf-top-nav-btn {
+  border-radius: 10px !important;
+  min-height: 36px;
+  padding: 0.45rem 0.9rem;
+  font-weight: 700;
+}
+
+.qf-app .qf-top-nav-btn--idle {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset;
+}
+
+.qf-app .qf-top-nav-btn--active {
+  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.22);
+}
+
+/* Segmented tabs */
+.qf-app .qf-tabs {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(248, 250, 252, 0.84);
+  padding: 3px;
+}
+
+.qf-app .qf-tabs .qf-tabs__btn {
+  border-radius: 10px !important;
+  border: 0 !important;
+  min-height: 38px;
+  padding: 0.45rem 0.95rem;
+  box-shadow: none !important;
+}
+
+.qf-app .qf-tabs .qf-tabs__btn--active {
+  box-shadow: 0 7px 16px rgba(30, 64, 175, 0.22) !important;
+}
+
 /* Selection bar (Customers) */
 .qf-app .qf-selection-bar {
   background: rgba(255, 255, 255, 0.75);
@@ -377,4 +469,3 @@ body {
     padding-bottom: calc(6rem + env(safe-area-inset-bottom)); /* tailwind pb-24 + safe area */
   }
 }
-
