@@ -9,12 +9,13 @@ const baseURL =
 
 const apiKey = import.meta.env.VITE_API_KEY
 const odooDb = import.meta.env.VITE_ODOO_DB
+const requestTimeoutMs = Number(import.meta.env.VITE_API_TIMEOUT_MS || 45000)
 
 export const apiClient = axios.create({
   baseURL,
   withCredentials: true,
   // Prevent UI from being stuck forever if the backend/proxy hangs.
-  timeout: 20000,
+  timeout: Number.isFinite(requestTimeoutMs) && requestTimeoutMs > 0 ? requestTimeoutMs : 45000,
 })
 
 export type UnauthorizedHandler = () => void
@@ -109,4 +110,3 @@ apiClient.interceptors.response.use(
     return Promise.reject(error)
   },
 )
-

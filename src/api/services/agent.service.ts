@@ -64,6 +64,8 @@ export interface QuotationCreateResponse {
   quotation_name: string
   customer_id: number
   amount_total: number
+  quotation_state?: string
+  order_type?: 'quotation' | 'sale'
 }
 
 export interface QuotationLineRequest {
@@ -267,4 +269,3 @@ export async function getAgentStatus(): Promise<AgentStatusResponse> {
   
   return result
 }
-

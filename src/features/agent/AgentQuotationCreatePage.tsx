@@ -228,6 +228,7 @@ export function AgentQuotationCreatePage() {
                   <div className="small">
                     <div>เลขที่: {result.quotation_name}</div>
                     <div>ลูกค้า ID: {result.customer_id}</div>
+                    <div>สถานะ: {result.quotation_state || 'draft'}</div>
                     <div>มูลค่ารวม: {result.amount_total.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</div>
                   </div>
                 </div>
@@ -235,14 +236,14 @@ export function AgentQuotationCreatePage() {
                   <Button
                     variant="primary"
                     size="sm"
-                    onClick={() => navigate(`/sales/invoices/${result.quotation_id}`)}
+                    onClick={() => navigate(`/sales/orders/${result.quotation_id}`)}
                   >
                     ดูรายละเอียด
                   </Button>
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => navigate('/sales/invoices')}
+                    onClick={() => navigate('/sales/orders?type=quotation')}
                   >
                     ไปที่รายการใบเสนอราคา
                   </Button>
@@ -261,4 +262,3 @@ export function AgentQuotationCreatePage() {
     </div>
   )
 }
-

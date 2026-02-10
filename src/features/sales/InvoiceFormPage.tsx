@@ -34,7 +34,12 @@ export function InvoiceFormPage() {
   const isEdit = !!id
   const invoiceId = id ? Number.parseInt(id, 10) : null
   const customerIdFromQuery = searchParams.get('customerId')
-  const customerIdPrefill = customerIdFromQuery ? Number(customerIdFromQuery) : null
+  const partnerIdFromQuery = searchParams.get('partnerId')
+  const customerIdPrefill = customerIdFromQuery
+    ? Number(customerIdFromQuery)
+    : partnerIdFromQuery
+      ? Number(partnerIdFromQuery)
+      : null
 
   const {
     data: existingInvoice,

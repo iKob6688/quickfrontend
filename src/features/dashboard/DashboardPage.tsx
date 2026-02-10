@@ -329,6 +329,44 @@ export function DashboardPage() {
         </div>
         <div className="col-md-6 col-xl-3">
           <Card
+            onClick={() => navigate('/sales/orders?type=quotation')}
+            role="button"
+            tabIndex={0}
+            className="qf-dashboard-card"
+          >
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <p className="small fw-medium text-muted mb-0">Quotations</p>
+              <i className="bi bi-file-earmark-text" style={{ fontSize: '1.5rem', color: '#0ea5e9' }}></i>
+            </div>
+            <p className="h6 fw-semibold mb-2">
+              จัดการใบเสนอราคา
+            </p>
+            <p className="small text-muted mb-0">
+              สร้าง/ติดตามใบเสนอราคา
+            </p>
+          </Card>
+        </div>
+        <div className="col-md-6 col-xl-3">
+          <Card
+            onClick={() => navigate('/sales/orders?type=sale')}
+            role="button"
+            tabIndex={0}
+            className="qf-dashboard-card"
+          >
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <p className="small fw-medium text-muted mb-0">Sale Orders</p>
+              <i className="bi bi-cart-check" style={{ fontSize: '1.5rem', color: '#16a34a' }}></i>
+            </div>
+            <p className="h6 fw-semibold mb-2">
+              จัดการ Sale Order
+            </p>
+            <p className="small text-muted mb-0">
+              ยืนยันและติดตามคำสั่งขาย
+            </p>
+          </Card>
+        </div>
+        <div className="col-md-6 col-xl-3">
+          <Card
             onClick={() => navigate('/accounting/reports')}
             role="button"
             tabIndex={0}
@@ -650,5 +688,4 @@ export function DashboardPage() {
     </div>
   )
 }
-
 

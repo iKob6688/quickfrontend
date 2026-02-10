@@ -5,12 +5,13 @@ import { getProduct, listProducts, type ProductSummary } from '@/api/services/pr
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 
 interface Props {
+  id?: string
   valueId: number | null
   onPick: (product: ProductSummary) => void
   disabled?: boolean
 }
 
-export function ProductCombobox({ valueId, onPick, disabled }: Props) {
+export function ProductCombobox({ id, valueId, onPick, disabled }: Props) {
   const [input, setInput] = useState('')
   const qTrim = input.trim()
   const qDebounced = useDebouncedValue(qTrim, 250)
@@ -31,11 +32,12 @@ export function ProductCombobox({ valueId, onPick, disabled }: Props) {
 
   const listQuery = useInfiniteQuery({
     queryKey: ['products', qDebounced],
-    enabled: qDebounced.length >= 1,
+    enabled: true,
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
       listProducts({
         q: qDebounced || undefined,
+        sale_ok: true,
         active: true,
         limit,
         offset: pageParam,
@@ -56,19 +58,27 @@ export function ProductCombobox({ valueId, onPick, disabled }: Props) {
     return items.map<ComboboxOption>((p) => ({
       id: p.id,
       label: p.name,
-      meta: p.defaultCode ? `[${p.defaultCode}]` : `ID: ${p.id}`,
+      meta:
+        [
+          p.defaultCode ? `[${p.defaultCode}]` : null,
+          typeof p.listPrice === 'number'
+            ? `${p.listPrice.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} THB`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(' · ') || `ID: ${p.id}`,
     }))
   }, [items])
 
   return (
     <div>
       <Combobox
-        id="productSearch"
+        id={id || 'productSearch'}
         value={input}
         onChange={setInput}
         disabled={disabled}
-        placeholder="ค้นหาสินค้า/บริการ (พิมพ์อย่างน้อย 1 ตัวอักษร)"
-        minChars={1}
+        placeholder="ค้นหา"
+        minChars={0}
         leftAdornment={<i className="bi bi-box-seam"></i>}
         options={options}
         total={total}
@@ -76,7 +86,8 @@ export function ProductCombobox({ valueId, onPick, disabled }: Props) {
         isLoadingMore={listQuery.isFetchingNextPage}
         onLoadMore={() => listQuery.hasNextPage && listQuery.fetchNextPage()}
         emptyText="ไม่พบสินค้า"
-        menuMaxHeight={220}
+        menuMaxHeight={320}
+        menuZIndex={4200}
         onPick={(opt) => {
           const picked = items.find((x) => x.id === Number(opt.id))
           if (picked) {
@@ -93,5 +104,3 @@ export function ProductCombobox({ valueId, onPick, disabled }: Props) {
     </div>
   )
 }
-
-

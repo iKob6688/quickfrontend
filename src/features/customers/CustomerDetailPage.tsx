@@ -87,10 +87,34 @@ export function CustomerDetailPage() {
             <Button
               size="sm"
               variant="ghost"
+              onClick={() => navigate(`/sales/orders/new?orderType=quotation&partnerId=${id}`)}
+              disabled={!query.data}
+            >
+              + สร้างใบเสนอราคา
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => navigate(`/sales/orders/new?orderType=sale&partnerId=${id}`)}
+              disabled={!query.data}
+            >
+              + สร้าง Sale Order
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
               onClick={() => navigate(`/sales/invoices/new?customerId=${id}`)}
               disabled={!query.data}
             >
               + สร้างใบแจ้งหนี้
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => navigate(`/purchases/orders/new?partnerId=${id}`)}
+              disabled={!query.data}
+            >
+              + สร้างใบสั่งซื้อ
             </Button>
             <Button
               size="sm"
@@ -221,5 +245,4 @@ export function CustomerDetailPage() {
     </div>
   )
 }
-
 

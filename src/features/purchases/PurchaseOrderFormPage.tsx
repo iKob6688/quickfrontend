@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import {
   getPurchaseOrder,
@@ -19,13 +19,22 @@ import { listPartners, getPartner } from '@/api/services/partners.service'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { Combobox, type ComboboxOption } from '@/components/ui/Combobox'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { ProductCombobox } from '@/features/sales/ProductCombobox'
 
 export function PurchaseOrderFormPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [searchParams] = useSearchParams()
   const isEdit = !!id
   const orderId = id ? Number.parseInt(id, 10) : null
+  const vendorIdFromQuery = searchParams.get('vendorId')
+  const partnerIdFromQuery = searchParams.get('partnerId')
+  const vendorIdPrefill = vendorIdFromQuery
+    ? Number(vendorIdFromQuery)
+    : partnerIdFromQuery
+      ? Number(partnerIdFromQuery)
+      : null
 
   const {
     data: existingOrder,
@@ -37,7 +46,10 @@ export function PurchaseOrderFormPage() {
   })
 
   const [formData, setFormData] = useState<PurchaseOrderPayload>(() => ({
-    vendorId: 0,
+    vendorId:
+      !isEdit && vendorIdPrefill && Number.isFinite(vendorIdPrefill) && vendorIdPrefill > 0
+        ? vendorIdPrefill
+        : 0,
     orderDate: new Date().toISOString().split('T')[0],
     currency: 'THB',
     lines: [],
@@ -225,8 +237,27 @@ export function PurchaseOrderFormPage() {
 
   const lineColumns: Column<(typeof lineRows)[number]>[] = [
     {
+      key: 'product',
+      header: 'สินค้า/บริการ',
+      className: 'qf-so-col-product',
+      cell: (r) => (
+        <ProductCombobox
+          id={`po-product-${r.id}`}
+          valueId={r.productId ?? null}
+          onPick={(product) =>
+            updateLine(r.id, {
+              productId: product.id,
+              description: (r.description || '').trim() ? r.description : product.name,
+              unitPrice: typeof product.listPrice === 'number' ? product.listPrice : r.unitPrice,
+            })
+          }
+        />
+      ),
+    },
+    {
       key: 'description',
       header: 'รายละเอียด',
+      className: 'qf-so-col-description',
       cell: (r) => (
         <input
           type="text"
@@ -240,7 +271,7 @@ export function PurchaseOrderFormPage() {
     {
       key: 'quantity',
       header: 'จำนวน',
-      className: 'text-end',
+      className: 'text-end qf-so-col-qty',
       cell: (r) => (
         <input
           type="number"
@@ -255,7 +286,7 @@ export function PurchaseOrderFormPage() {
     {
       key: 'unitPrice',
       header: 'ราคาต่อหน่วย',
-      className: 'text-end',
+      className: 'text-end qf-so-col-price',
       cell: (r) => (
         <input
           type="number"
@@ -270,7 +301,7 @@ export function PurchaseOrderFormPage() {
     {
       key: 'total',
       header: 'ยอดรวม',
-      className: 'text-end',
+      className: 'text-end qf-so-col-total',
       cell: (r) => (
         <span className="font-monospace">
           {r.total.toLocaleString('th-TH', {
@@ -283,7 +314,7 @@ export function PurchaseOrderFormPage() {
     {
       key: 'actions',
       header: '',
-      className: 'text-end',
+      className: 'text-end qf-so-col-action',
       cell: (r) => (
         <Button
           size="sm"
@@ -476,7 +507,7 @@ export function PurchaseOrderFormPage() {
                   </Button>
                 </div>
               ) : (
-                <DataTable columns={lineColumns} rows={lineRows} />
+                <DataTable allowMenuOverflow columns={lineColumns} rows={lineRows} />
               )}
             </BootstrapCard.Body>
           </BootstrapCard>

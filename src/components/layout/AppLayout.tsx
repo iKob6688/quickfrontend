@@ -16,6 +16,13 @@ export function AppLayout() {
   const isWide =
     location.pathname.startsWith('/reports-studio/editor') ||
     location.pathname.startsWith('/reports-studio/preview')
+  const hideMobileNav =
+    /\/sales\/orders\/new(?:\/)?$/.test(location.pathname) ||
+    /\/sales\/orders\/\d+\/edit(?:\/)?$/.test(location.pathname) ||
+    /\/sales\/invoices\/new(?:\/)?$/.test(location.pathname) ||
+    /\/sales\/invoices\/\d+\/edit(?:\/)?$/.test(location.pathname) ||
+    /\/purchases\/orders\/new(?:\/)?$/.test(location.pathname) ||
+    /\/purchases\/orders\/\d+\/edit(?:\/)?$/.test(location.pathname)
 
   // Scope gating (prod-grade): only hide items that would 403 consistently.
   // Dashboard stays visible even if KPI scope is missing; page will degrade gracefully.
@@ -28,6 +35,7 @@ export function AppLayout() {
     { path: '/dashboard', label: 'แดชบอร์ด', icon: 'bi-speedometer2' },
     { path: '/accounting/reports', label: 'รายงานบัญชี', scope: 'accounting_reports', icon: 'bi-graph-up-arrow' },
     { path: '/customers', label: 'รายชื่อติดต่อ', scope: 'contacts', icon: 'bi-people' },
+    { path: '/sales/orders', label: 'ใบเสนอราคา/SO', scope: 'invoice', icon: 'bi-file-earmark-text' },
     { path: '/sales/invoices', label: 'ใบแจ้งหนี้', scope: 'invoice', icon: 'bi-receipt' },
     { path: '/purchases/orders', label: 'ใบสั่งซื้อ', scope: 'purchase', icon: 'bi-cart' },
     { path: '/purchases/requests', label: 'คำขอซื้อ', scope: 'purchase', icon: 'bi-clipboard-check' },
@@ -44,9 +52,9 @@ export function AppLayout() {
   }
 
   return (
-    <div className="d-flex flex-column min-vh-100">
+    <div className={`d-flex flex-column min-vh-100 ${hideMobileNav ? 'qf-layout--mobile-form' : ''}`}>
       {/* PEAK-like Top Gradient Header */}
-      <header className="sticky-top" style={{ zIndex: 1030 }}>
+      <header className={`sticky-top ${hideMobileNav ? 'qf-header--mobile-form' : ''}`} style={{ zIndex: 1030 }}>
         <div className="text-white" style={{
           background: 'linear-gradient(90deg, #5B6CFF 0%, #3C9BEF 45%, #18D2C0 100%)',
           boxShadow: '0 14px 28px rgba(15, 23, 42, 0.10)'
@@ -148,7 +156,7 @@ export function AppLayout() {
       </header>
 
       {/* Main content */}
-      <PageContainer className="flex-1 qf-content" fluid={isWide}>
+      <PageContainer className={`flex-1 qf-content ${hideMobileNav ? 'qf-content--mobile-form' : ''}`} fluid={isWide}>
         <main className="min-w-0 flex-1">
           <ConfigBanner />
           <Outlet />
@@ -156,43 +164,45 @@ export function AppLayout() {
       </PageContainer>
 
       {/* Bottom nav for mobile */}
-      <nav
-        className="qf-mobile-nav fixed-bottom d-sm-none border-top"
-        style={{
-          zIndex: 1020,
-          backdropFilter: 'blur(12px)',
-        }}
-      >
-        <div className="qf-mobile-nav__inner container-fluid">
-          {navItems.map((item) => {
-            const allowed = !item.scope || hasScope(item.scope)
-            const active = location.pathname.startsWith(item.path)
-            
-            return (
-              <button
-                key={item.path}
-                type="button"
-                onClick={() => {
-                  if (allowed) {
-                    navigate(item.path)
-                  } else {
-                    const message = `Navigation blocked for "${item.label}": scope "${item.scope}" not allowed. Check VITE_ALLOWED_SCOPES in .env`
-                    console.warn(`[AppLayout] ${message}`)
-                    // Still allow navigation - backend will enforce scopes
-                    // This prevents UI from being completely blocked
-                    navigate(item.path)
-                  }
-                }}
-                className={`qf-mobile-nav__item ${active ? 'is-active' : ''} ${!allowed ? 'opacity-50' : ''}`}
-                title={!allowed && item.scope ? `ต้องเปิด scope: ${item.scope} (คลิกเพื่อลองเข้าดู - Backend จะ enforce scopes)` : undefined}
-              >
-                <i className={`bi ${item.icon} qf-mobile-nav__icon`} aria-hidden="true" />
-                <span className="qf-mobile-nav__label">{item.mobileLabel ?? item.label}</span>
-              </button>
-            )
-          })}
-        </div>
-      </nav>
+      {!hideMobileNav ? (
+        <nav
+          className="qf-mobile-nav fixed-bottom d-sm-none border-top"
+          style={{
+            zIndex: 1020,
+            backdropFilter: 'blur(12px)',
+          }}
+        >
+          <div className="qf-mobile-nav__inner container-fluid">
+            {navItems.map((item) => {
+              const allowed = !item.scope || hasScope(item.scope)
+              const active = location.pathname.startsWith(item.path)
+              
+              return (
+                <button
+                  key={item.path}
+                  type="button"
+                  onClick={() => {
+                    if (allowed) {
+                      navigate(item.path)
+                    } else {
+                      const message = `Navigation blocked for "${item.label}": scope "${item.scope}" not allowed. Check VITE_ALLOWED_SCOPES in .env`
+                      console.warn(`[AppLayout] ${message}`)
+                      // Still allow navigation - backend will enforce scopes
+                      // This prevents UI from being completely blocked
+                      navigate(item.path)
+                    }
+                  }}
+                  className={`qf-mobile-nav__item ${active ? 'is-active' : ''} ${!allowed ? 'opacity-50' : ''}`}
+                  title={!allowed && item.scope ? `ต้องเปิด scope: ${item.scope} (คลิกเพื่อลองเข้าดู - Backend จะ enforce scopes)` : undefined}
+                >
+                  <i className={`bi ${item.icon} qf-mobile-nav__icon`} aria-hidden="true" />
+                  <span className="qf-mobile-nav__label">{item.mobileLabel ?? item.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </nav>
+      ) : null}
     </div>
   )
 }

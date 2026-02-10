@@ -27,6 +27,10 @@ interface Props {
   menuMaxHeight?: number
   /** Dropdown menu z-index */
   menuZIndex?: number
+  /** Force dropdown min width (px), useful for narrow table cells */
+  menuMinWidth?: number
+  /** Dropdown max width (px) */
+  menuMaxWidth?: number
 }
 
 /**
@@ -52,9 +56,12 @@ export function Combobox({
   onLoadMore,
   menuMaxHeight = 280,
   menuZIndex = 1050,
+  menuMinWidth,
+  menuMaxWidth = 640,
 }: Props) {
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
+  const [anchorWidth, setAnchorWidth] = useState(0)
   const rootRef = useRef<HTMLDivElement | null>(null)
 
   const canOpen = useMemo(() => value.trim().length >= minChars, [minChars, value])
@@ -87,6 +94,12 @@ export function Combobox({
     // keep index in range
     setActiveIndex((i) => Math.max(0, Math.min(i, Math.max(0, shownOptions.length - 1))))
   }, [shownOptions.length])
+
+  useEffect(() => {
+    if (!open) return
+    const width = rootRef.current?.getBoundingClientRect().width ?? 0
+    setAnchorWidth(width)
+  }, [open, value, shownOptions.length])
 
   const footer = useMemo(() => {
     if (typeof total !== 'number') return null
@@ -130,9 +143,17 @@ export function Combobox({
               onPick(picked)
               setOpen(false)
             }
+          } else if (e.key === 'Tab') {
+            const picked = shownOptions[activeIndex]
+            if (picked) {
+              onPick(picked)
+              setOpen(false)
+            }
           }
         }}
         placeholder={placeholder}
+        autoComplete="off"
+        spellCheck={false}
         leftAdornment={leftAdornment}
         rightAdornment={
           isLoading ? <span className="text-muted small">กำลังโหลด...</span> : null
@@ -141,8 +162,15 @@ export function Combobox({
 
       {open && canOpen && (
         <div
-          className="dropdown-menu show w-100 mt-1 p-0"
-          style={{ maxHeight: menuMaxHeight, overflowY: 'auto', zIndex: menuZIndex }}
+          className="dropdown-menu show mt-1 p-0"
+          style={{
+            width: Math.max(anchorWidth, menuMinWidth ?? 0),
+            minWidth: Math.max(anchorWidth, menuMinWidth ?? 0),
+            maxWidth: menuMaxWidth,
+            maxHeight: menuMaxHeight,
+            overflowY: 'auto',
+            zIndex: menuZIndex,
+          }}
           role="listbox"
           aria-label="ตัวเลือก"
           onScroll={(e) => {
@@ -162,7 +190,7 @@ export function Combobox({
                 <button
                   key={String(opt.id)}
                   type="button"
-                  className={`dropdown-item d-flex align-items-center justify-content-between ${
+                  className={`dropdown-item text-start ${
                     idx === activeIndex ? 'active' : ''
                   }`}
                   onMouseEnter={() => setActiveIndex(idx)}
@@ -172,10 +200,10 @@ export function Combobox({
                     setOpen(false)
                   }}
                 >
-                  <span className="fw-semibold">{opt.label}</span>
-                  <span className="text-muted small">
+                  <div className="fw-semibold text-truncate">{opt.label}</div>
+                  <div className={`small ${idx === activeIndex ? 'text-white-50' : 'text-muted'}`}>
                     {opt.meta ? opt.meta : `ID: ${opt.id}`}
-                  </span>
+                  </div>
                 </button>
               ))}
               {canLoadMore ? (
@@ -200,5 +228,3 @@ export function Combobox({
     </div>
   )
 }
-
-

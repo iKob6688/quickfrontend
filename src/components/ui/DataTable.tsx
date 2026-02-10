@@ -20,8 +20,10 @@ export function DataTable<T>(props: {
   rowKey?: (row: T, index: number) => string | number
   /** When true, renders table without the Card wrapper (useful when you already are inside a Card) */
   plain?: boolean
+  /** Allow dropdown menus (e.g. combobox in cells) to overflow vertically */
+  allowMenuOverflow?: boolean
 }) {
-  const { title, right, columns, rows, empty, className, rowKey, plain } = props
+  const { title, right, columns, rows, empty, className, rowKey, plain, allowMenuOverflow } = props
 
   const content = (
     <>
@@ -32,7 +34,7 @@ export function DataTable<T>(props: {
         </div>
       )}
 
-      <div className="table-responsive">
+      <div className={twMerge('table-responsive', allowMenuOverflow && 'qf-table-responsive-menu')}>
         <Table hover bordered className="qf-table mb-0">
           <thead>
             <tr>
@@ -71,4 +73,3 @@ export function DataTable<T>(props: {
 
   return <Card className={twMerge('overflow-hidden', className)}>{content}</Card>
 }
-

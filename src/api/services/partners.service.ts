@@ -1,6 +1,7 @@
 import { apiClient } from '@/api/client'
 import { unwrapResponse } from '@/api/response'
 import { makeRpc } from '@/api/services/rpc'
+import { isAxiosError } from 'axios'
 
 export type PartnerCompanyType = 'company' | 'person'
 
@@ -296,21 +297,30 @@ export async function listPartners(params: PartnerListParams) {
       limit: params.limit || 0,
     }
   } catch (error) {
-    // Log error for debugging
-    console.error('[listPartners] API error:', error)
-    
-    // Enhance error message with more context
+    if (isAxiosError(error)) {
+      // React Query may cancel in-flight requests while typing/searching.
+      if (error.code === 'ERR_CANCELED') {
+        if (import.meta.env.DEV) console.debug('[listPartners] request canceled')
+        throw error
+      }
+
+      if (error.code === 'ECONNABORTED') {
+        throw new Error(
+          'โหลดรายชื่อติดต่อไม่ทันเวลา (timeout). ตรวจสอบการเชื่อมต่อ backend/proxy และลองใหม่อีกครั้ง'
+        )
+      }
+    }
+
     if (error instanceof Error) {
       const enhancedError = new Error(
         `ไม่สามารถโหลดรายชื่อติดต่อได้: ${error.message}. ` +
-        `ตรวจสอบว่า API endpoint /api/th/v1/partners/list มีอยู่และทำงานได้`
+        `ตรวจสอบ endpoint /api/th/v1/partners/list และ VITE_PROXY_TARGET`
       )
       enhancedError.name = error.name
       enhancedError.stack = error.stack
       throw enhancedError
     }
-    
-    // Re-throw to let react-query handle it
+
     throw error
   }
 }
@@ -357,10 +367,15 @@ export async function getPartner(id: number) {
 
     return mapped
   } catch (error) {
-    // Log error for debugging
-    console.error('[getPartner] API error:', error)
-    
-    // Re-throw to let react-query handle it
+    if (isAxiosError(error)) {
+      if (error.code === 'ERR_CANCELED') {
+        if (import.meta.env.DEV) console.debug('[getPartner] request canceled')
+        throw error
+      }
+      if (error.code === 'ECONNABORTED') {
+        throw new Error('โหลดข้อมูลลูกค้าไม่ทันเวลา (timeout). ตรวจสอบ backend/proxy แล้วลองใหม่')
+      }
+    }
     throw error
   }
 }
@@ -503,5 +518,4 @@ export async function setPartnersActiveByQuery(
     truncated: total > maxItems,
   }
 }
-
 

@@ -236,6 +236,47 @@ export function CustomersListPage() {
     },
     { key: 'phone', header: 'โทร', className: 'text-nowrap', cell: (r: Row) => <span>{r.phone}</span> },
     { key: 'email', header: 'อีเมล', cell: (r: Row) => <span>{r.email}</span> },
+    {
+      key: 'actions',
+      header: 'สร้างเอกสาร',
+      className: 'text-nowrap',
+      cell: (r: Row) => (
+        <div className="d-flex flex-wrap gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => navigate(`/sales/orders/new?orderType=quotation&partnerId=${r.id}`)}
+            title="สร้างใบเสนอราคา"
+          >
+            ใบเสนอราคา
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => navigate(`/sales/orders/new?orderType=sale&partnerId=${r.id}`)}
+            title="สร้าง Sale Order"
+          >
+            Sale Order
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => navigate(`/sales/invoices/new?partnerId=${r.id}`)}
+            title="สร้างใบแจ้งหนี้"
+          >
+            Invoice
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => navigate(`/purchases/orders/new?partnerId=${r.id}`)}
+            title="สร้างใบสั่งซื้อ"
+          >
+            Purchase
+          </Button>
+        </div>
+      ),
+    },
   ]
 
   return (
@@ -467,5 +508,4 @@ export function CustomersListPage() {
     </div>
   )
 }
-
 

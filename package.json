@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:lan": "vite --host 0.0.0.0 --port 5173",
     "build": "npm run validate-env && tsc -b && vite build",
     "build:dev": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "preview:lan": "vite preview --host 0.0.0.0 --port 4173",
     "bootstrap": "node scripts/bootstrap.js",
     "update-env": "node scripts/update-env.js",
     "set-api-db": "node scripts/set-api-db.js",
