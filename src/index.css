@@ -553,11 +553,23 @@ body {
   color: #1e293b;
 }
 
-.qf-app .qf-so-page .qf-so-line__grid {
+.qf-app .qf-so-page .qf-so-line__index {
+  font-size: 1rem;
+}
+
+.qf-app .qf-so-page .qf-so-line__delete-btn {
+  min-height: 34px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  padding-inline: 0.75rem;
+}
+
+.qf-app .qf-so-page .qf-so-line__main {
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-columns: repeat(9, minmax(0, 1fr));
   gap: 0.7rem;
   align-items: end;
+  margin-bottom: 0.7rem;
 }
 
 .qf-app .qf-so-page .qf-so-line__field--product {
@@ -565,22 +577,34 @@ body {
 }
 
 .qf-app .qf-so-page .qf-so-line__field--description {
-  grid-column: span 4;
+  grid-column: span 5;
+}
+
+.qf-app .qf-so-page .qf-so-line__meta {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 0.7rem;
+  align-items: end;
 }
 
 .qf-app .qf-so-page .qf-so-line__field--qty {
-  grid-column: span 1;
-}
-
-.qf-app .qf-so-page .qf-so-line__field--price {
   grid-column: span 2;
 }
 
-.qf-app .qf-so-page .qf-so-line__field--discount {
-  grid-column: span 1;
+.qf-app .qf-so-page .qf-so-line__field--price {
+  grid-column: span 3;
 }
 
-.qf-app .qf-so-page .qf-so-line__grid > * {
+.qf-app .qf-so-page .qf-so-line__field--discount {
+  grid-column: span 2;
+}
+
+.qf-app .qf-so-page .qf-so-line__field--line-total {
+  grid-column: span 3;
+}
+
+.qf-app .qf-so-page .qf-so-line__main > *,
+.qf-app .qf-so-page .qf-so-line__meta > * {
   min-width: 0;
 }
 
@@ -594,13 +618,29 @@ body {
   min-height: 42px;
 }
 
-.qf-app .qf-so-page .qf-so-line__total {
-  margin-top: 0.8rem;
-  border-top: 1px dashed rgba(148, 163, 184, 0.52);
-  padding-top: 0.6rem;
+.qf-app .qf-so-page input[type='number']::-webkit-outer-spin-button,
+.qf-app .qf-so-page input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.qf-app .qf-so-page input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+.qf-app .qf-so-page .qf-so-line__total-box {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #d6e3f3;
+  background: rgba(248, 250, 252, 0.95);
+  border-radius: 12px;
+  padding: 0.5rem 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-weight: 700;
+  color: #0f172a;
 }
 
 .qf-app .qf-so-page .qf-so-line .dropdown-menu {
@@ -608,7 +648,7 @@ body {
 }
 
 @media (max-width: 1199.98px) {
-  .qf-app .qf-so-page .qf-so-line__grid {
+  .qf-app .qf-so-page .qf-so-line__main {
     grid-template-columns: repeat(8, minmax(0, 1fr));
   }
 
@@ -620,6 +660,10 @@ body {
     grid-column: span 4;
   }
 
+  .qf-app .qf-so-page .qf-so-line__meta {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+
   .qf-app .qf-so-page .qf-so-line__field--qty {
     grid-column: span 2;
   }
@@ -629,13 +673,25 @@ body {
   }
 
   .qf-app .qf-so-page .qf-so-line__field--discount {
-    grid-column: span 3;
+    grid-column: span 2;
+  }
+
+  .qf-app .qf-so-page .qf-so-line__field--line-total {
+    grid-column: span 1;
   }
 }
 
 @media (max-width: 991.98px) {
-  .qf-app .qf-so-page .qf-so-line__grid {
+  .qf-app .qf-so-page .qf-so-line__main,
+  .qf-app .qf-so-page .qf-so-line__meta {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .qf-app .qf-so-page .qf-so-line__field--qty,
+  .qf-app .qf-so-page .qf-so-line__field--price,
+  .qf-app .qf-so-page .qf-so-line__field--discount,
+  .qf-app .qf-so-page .qf-so-line__field--line-total {
+    grid-column: span 1;
   }
 }
 
@@ -694,7 +750,8 @@ body {
     padding: 0.85rem;
   }
 
-  .qf-app .qf-so-page .qf-so-line__grid {
+  .qf-app .qf-so-page .qf-so-line__main,
+  .qf-app .qf-so-page .qf-so-line__meta {
     grid-template-columns: 1fr;
     gap: 0.65rem;
   }
@@ -703,16 +760,13 @@ body {
   .qf-app .qf-so-page .qf-so-line__field--description,
   .qf-app .qf-so-page .qf-so-line__field--qty,
   .qf-app .qf-so-page .qf-so-line__field--price,
-  .qf-app .qf-so-page .qf-so-line__field--discount {
+  .qf-app .qf-so-page .qf-so-line__field--discount,
+  .qf-app .qf-so-page .qf-so-line__field--line-total {
     grid-column: auto;
   }
 
   .qf-app .qf-so-page .qf-so-line__head {
     margin-bottom: 0.55rem;
-  }
-
-  .qf-app .qf-so-page .qf-so-line__total {
-    margin-top: 0.65rem;
   }
 
   .qf-app .qf-so-page {

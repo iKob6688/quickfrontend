@@ -77,9 +77,8 @@ export function ProductCombobox({ id, valueId, onPick, disabled }: Props) {
         value={input}
         onChange={setInput}
         disabled={disabled}
-        placeholder="ค้นหา"
+        placeholder="ค้นหาสินค้า"
         minChars={0}
-        leftAdornment={<i className="bi bi-box-seam"></i>}
         options={options}
         total={total}
         isLoading={listQuery.isFetching}

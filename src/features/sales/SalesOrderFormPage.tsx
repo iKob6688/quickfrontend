@@ -285,7 +285,6 @@ export function SalesOrderFormPage() {
                   value={partnerSearch}
                   onChange={setPartnerSearch}
                   placeholder="พิมพ์เพื่อค้นหาลูกค้า (ชื่อ / VAT / อีเมล)"
-                  leftAdornment={<i className="bi bi-search"></i>}
                   minChars={1}
                   isLoading={partnerOptionsQuery.isFetching || selectedPartnerQuery.isFetching}
                   isLoadingMore={partnerOptionsQuery.isFetchingNextPage}
@@ -355,18 +354,18 @@ export function SalesOrderFormPage() {
                   {formData.lines.map((line, idx) => (
                     <div key={idx} className="qf-so-line">
                       <div className="qf-so-line__head">
-                        <span>รายการที่ {idx + 1}</span>
+                        <span className="qf-so-line__index">รายการที่ {idx + 1}</span>
                         <button
                           type="button"
-                          className="btn btn-sm btn-link text-danger p-0"
+                          className="btn btn-sm btn-outline-danger qf-so-line__delete-btn"
                           onClick={() => removeLine(idx)}
                           title="ลบรายการ"
                         >
-                          <i className="bi bi-trash"></i>
+                          ลบรายการ
                         </button>
                       </div>
 
-                      <div className="qf-so-line__grid">
+                      <div className="qf-so-line__main">
                         <div className="qf-so-line__field qf-so-line__field--product">
                           <Label htmlFor={`so-product-${idx}`}>สินค้า/บริการ</Label>
                           <ProductCombobox
@@ -391,7 +390,9 @@ export function SalesOrderFormPage() {
                             placeholder="ชื่อสินค้า / รายละเอียด"
                           />
                         </div>
+                      </div>
 
+                      <div className="qf-so-line__meta">
                         <div className="qf-so-line__field qf-so-line__field--qty">
                           <Label htmlFor={`so-qty-${idx}`}>จำนวน</Label>
                           <Input
@@ -431,13 +432,13 @@ export function SalesOrderFormPage() {
                             step="0.01"
                           />
                         </div>
-                      </div>
 
-                      <div className="qf-so-line__total">
-                        <span className="text-muted small">ยอดรวมรายการ</span>
-                        <span className="font-monospace fw-semibold">
-                          {line.total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
+                        <div className="qf-so-line__field qf-so-line__field--line-total">
+                          <Label htmlFor={`so-total-${idx}`}>ยอดรวมรายการ</Label>
+                          <div id={`so-total-${idx}`} className="qf-so-line__total-box">
+                            {line.total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
