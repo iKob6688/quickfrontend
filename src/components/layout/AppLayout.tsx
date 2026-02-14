@@ -5,6 +5,7 @@ import { PageContainer } from '@/components/layout/PageContainer'
 import { useAuthStore } from '@/features/auth/store'
 import { hasScope } from '@/lib/scopes'
 import { ConfigBanner } from '@/components/system/ConfigBanner'
+import { AvatarAssistant } from '@/features/assistant/AvatarAssistant'
 
 type NavItem = { path: string; label: string; scope?: string }
 
@@ -203,6 +204,7 @@ export function AppLayout() {
           </div>
         </nav>
       ) : null}
+      <AvatarAssistant />
     </div>
   )
 }

@@ -10,6 +10,7 @@ import { listInvoices } from '@/api/services/invoices.service'
 import { listPurchaseOrders } from '@/api/services/purchases.service'
 import { listPurchaseRequests } from '@/api/services/purchase-requests.service'
 import { getProfitLoss } from '@/api/services/accounting-reports.service'
+import { getAssistantTasks } from '@/api/services/ai-assistant.service'
 import { hasScope } from '@/lib/scopes'
 import { useMemo } from 'react'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts'
@@ -106,6 +107,12 @@ export function DashboardPage() {
     retry: 1,
   })
 
+  const aiTasksQuery = useQuery({
+    queryKey: ['ai', 'tasks', 'dashboard'],
+    queryFn: () => getAssistantTasks(5),
+    staleTime: 30_000,
+  })
+
   const accountingSnapshot = useMemo(() => {
     const rd = profitLossQuery.data?.reportData
     const income = parseNumber(rd?.totalIncome)
@@ -167,6 +174,13 @@ export function DashboardPage() {
     const totalValue = requests.reduce((sum, r) => sum + (r.totalEstimatedCost || 0), 0)
     return { draftCount, toApproveCount, approvedCount, doneCount, totalValue, totalCount: requests.length }
   }, [purchaseRequestsQuery.data])
+
+  const statusMeta = (status: string) => {
+    if (status === 'executed') return { label: 'สำเร็จ', cls: 'bg-success-subtle text-success-emphasis' }
+    if (status === 'failed') return { label: 'ผิดพลาด', cls: 'bg-danger-subtle text-danger-emphasis' }
+    if (status === 'planned') return { label: 'วางแผนแล้ว', cls: 'bg-warning-subtle text-warning-emphasis' }
+    return { label: 'ร่าง', cls: 'bg-secondary-subtle text-secondary-emphasis' }
+  }
 
   return (
     <div>
@@ -468,9 +482,43 @@ export function DashboardPage() {
             <p className="h6 fw-semibold mb-2" style={{ color: 'white' }}>
               สร้างด้วย AI
             </p>
-            <p className="small mb-0" style={{ opacity: 0.8 }}>
-              สร้าง Contact, Invoice, Quotation, Expense จากภาพ
-            </p>
+            <div className="small" style={{ opacity: 0.95 }}>
+              {aiTasksQuery.isLoading ? (
+                <div>กำลังโหลด task...</div>
+              ) : aiTasksQuery.isError ? (
+                <div>โหลด task ไม่สำเร็จ</div>
+              ) : (aiTasksQuery.data || []).length === 0 ? (
+                <div>ยังไม่มี task</div>
+              ) : (
+                <div className="d-flex flex-column gap-1">
+                  {(aiTasksQuery.data || []).slice(0, 3).map((task) => {
+                    const meta = statusMeta(task.status)
+                    return (
+                      <div
+                        key={task.session_id}
+                        className="rounded p-2"
+                        style={{ background: 'rgba(255,255,255,0.16)' }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="fw-semibold text-truncate" title={task.title}>
+                          {task.title}
+                        </div>
+                        <div className="d-flex align-items-center justify-content-between mt-1">
+                          <span className={`badge ${meta.cls}`}>{meta.label}</span>
+                          <button
+                            type="button"
+                            className="btn btn-link btn-sm p-0 text-white text-decoration-underline"
+                            onClick={() => navigate(task.source?.route || '/agent')}
+                          >
+                            {task.source?.label || 'Source'}
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </Card>
         </div>
         <div className="col-md-6 col-xl-3">
@@ -688,4 +736,3 @@ export function DashboardPage() {
     </div>
   )
 }
-
