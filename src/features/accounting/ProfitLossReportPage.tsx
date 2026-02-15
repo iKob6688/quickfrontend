@@ -54,11 +54,20 @@ function parseNumber(v: unknown): number {
 }
 
 function safeEntries(v: unknown): ProfitLossEntry[] {
-  if (!v || typeof v !== 'object') return []
-  const anyV = v as { entries?: unknown }
-  const entries = anyV.entries
+  let entries: unknown = null
+  if (Array.isArray(v)) {
+    entries = v[0]
+  } else if (v && typeof v === 'object') {
+    entries = (v as { entries?: unknown }).entries
+  }
   if (!Array.isArray(entries)) return []
   return entries.filter((e): e is ProfitLossEntry => !!e && typeof e === 'object' && 'name' in (e as any) && 'amount' in (e as any))
+}
+
+function safeSectionTotal(v: unknown): number {
+  if (Array.isArray(v)) return parseNumber(v[1])
+  if (v && typeof v === 'object') return parseNumber((v as { total?: unknown }).total)
+  return 0
 }
 
 function extractAccountCodeFromName(name: unknown): string | null {
@@ -155,9 +164,9 @@ export function ProfitLossReportPage() {
 
   const kpis = useMemo(() => {
     const income = parseNumber((reportData as any)?.totalIncome)
-    const expenseMain = parseNumber((reportData as any)?.expense?.total)
-    const expenseDep = parseNumber((reportData as any)?.expenseDepreciation?.total)
-    const expenseDirect = parseNumber((reportData as any)?.expenseDirectCost?.total)
+    const expenseMain = safeSectionTotal((reportData as any)?.expense)
+    const expenseDep = safeSectionTotal((reportData as any)?.expenseDepreciation)
+    const expenseDirect = safeSectionTotal((reportData as any)?.expenseDirectCost)
     const expenseFromBuckets = expenseMain + expenseDep + expenseDirect
     const expenseFallback = parseNumber((reportData as any)?.totalExpense)
     const expense = expenseFromBuckets || expenseFallback
@@ -373,4 +382,3 @@ export function ProfitLossReportPage() {
     </div>
   )
 }
-

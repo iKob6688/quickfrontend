@@ -44,10 +44,14 @@ type Entry = {
 }
 
 function extractEntries(section: unknown): Entry[] {
-  if (!section || typeof section !== 'object') return []
-  const anyS = section as { entries?: unknown }
-  if (!Array.isArray(anyS.entries)) return []
-  return anyS.entries.filter((e): e is Entry => !!e && typeof e === 'object' && 'name' in (e as any))
+  let entries: unknown = null
+  if (Array.isArray(section)) {
+    entries = section[0]
+  } else if (section && typeof section === 'object') {
+    entries = (section as { entries?: unknown }).entries
+  }
+  if (!Array.isArray(entries)) return []
+  return entries.filter((e): e is Entry => !!e && typeof e === 'object' && 'name' in (e as any))
 }
 
 export function BalanceSheetReportPage() {
@@ -273,4 +277,3 @@ export function BalanceSheetReportPage() {
     </div>
   )
 }
-

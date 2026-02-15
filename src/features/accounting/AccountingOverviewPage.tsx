@@ -35,6 +35,12 @@ function safeEntries(entries: unknown): ProfitLossEntry[] {
   })
 }
 
+function extractSectionEntries(section: unknown): ProfitLossEntry[] {
+  if (Array.isArray(section)) return safeEntries(section[0])
+  if (section && typeof section === 'object') return safeEntries((section as { entries?: unknown }).entries)
+  return []
+}
+
 const pieColors = [
   '#ef4444',
   '#f97316',
@@ -76,7 +82,7 @@ export function AccountingOverviewPage() {
   }, [plQuery.data])
 
   const expensePie = useMemo(() => {
-    const entries = safeEntries(plQuery.data?.reportData?.expense && (plQuery.data.reportData.expense as any).entries)
+    const entries = extractSectionEntries(plQuery.data?.reportData?.expense)
     return entries
       .map((e) => ({ name: e.name, value: parseNumber(e.amount) }))
       .filter((x) => x.value > 0)
@@ -240,5 +246,4 @@ export function AccountingOverviewPage() {
     </div>
   )
 }
-
 

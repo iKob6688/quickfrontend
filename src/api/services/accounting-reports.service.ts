@@ -60,13 +60,23 @@ function toBackendParams(params: ReportBaseParams) {
   }
 }
 
+async function postWithProdFallback<T>(path: string, payload: Record<string, unknown>) {
+  try {
+    const response = await apiClient.post(path, makeRpc(payload))
+    return unwrapResponse<T>(response)
+  } catch {
+    // Productionบางชุด expose ภายใต้ /web/adt/... แทน /api...
+    const response = await apiClient.post(`/web/adt${path}`, makeRpc(payload), { baseURL: '' })
+    return unwrapResponse<T>(response)
+  }
+}
+
 // NOTE: backend reality (adt_th_api): accounting reports are exposed under /api/th/v1/accounting/reports/*
 export async function getProfitLoss(params: ReportBaseParams) {
-  const response = await apiClient.post(
+  return postWithProdFallback<ProfitLossResponse>(
     '/th/v1/accounting/reports/profit-loss',
-    makeRpc(toBackendParams(params)),
+    toBackendParams(params),
   )
-  return unwrapResponse<ProfitLossResponse>(response)
 }
 
 export interface BalanceSheetResponse {
@@ -81,11 +91,10 @@ export interface BalanceSheetResponse {
 }
 
 export async function getBalanceSheet(params: ReportBaseParams) {
-  const response = await apiClient.post(
+  return postWithProdFallback<BalanceSheetResponse>(
     '/th/v1/accounting/reports/balance-sheet',
-    makeRpc(toBackendParams(params)),
+    toBackendParams(params),
   )
-  return unwrapResponse<BalanceSheetResponse>(response)
 }
 
 // ===== Phase 2: Drilldowns =====
@@ -128,11 +137,10 @@ export interface GeneralLedgerAccountDrilldownResponse {
 }
 
 export async function getGeneralLedgerAccountDrilldown(accountId: number, params: ReportBaseParams) {
-  const response = await apiClient.post(
+  return postWithProdFallback<GeneralLedgerAccountDrilldownResponse>(
     `/th/v1/accounting/reports/general-ledger/account/${accountId}`,
-    makeRpc(toBackendParams(params)),
+    toBackendParams(params),
   )
-  return unwrapResponse<GeneralLedgerAccountDrilldownResponse>(response)
 }
 
 export interface PartnerLedgerPartnerMoveLine extends GeneralLedgerAccountMoveLine {
@@ -158,11 +166,10 @@ export interface PartnerLedgerPartnerDrilldownResponse {
 }
 
 export async function getPartnerLedgerPartnerDrilldown(partnerId: number, params: ReportBaseParams) {
-  const response = await apiClient.post(
+  return postWithProdFallback<PartnerLedgerPartnerDrilldownResponse>(
     `/th/v1/accounting/reports/partner-ledger/partner/${partnerId}`,
-    makeRpc(toBackendParams(params)),
+    toBackendParams(params),
   )
-  return unwrapResponse<PartnerLedgerPartnerDrilldownResponse>(response)
 }
 
 export interface MoveLineDetailResponse {
@@ -170,11 +177,10 @@ export interface MoveLineDetailResponse {
 }
 
 export async function getMoveLineDetail(moveLineId: number) {
-  const response = await apiClient.post(
+  return postWithProdFallback<MoveLineDetailResponse>(
     `/th/v1/accounting/reports/move-lines/${moveLineId}`,
-    makeRpc({}),
+    {},
   )
-  return unwrapResponse<MoveLineDetailResponse>(response)
 }
 
 export interface AccountByCodeResponse {
@@ -185,11 +191,10 @@ export interface AccountByCodeResponse {
 }
 
 export async function getAccountByCode(code: string) {
-  const response = await apiClient.post(
+  return postWithProdFallback<AccountByCodeResponse>(
     '/th/v1/accounting/reports/accounts/by-code',
-    makeRpc({ code }),
+    { code },
   )
-  return unwrapResponse<AccountByCodeResponse>(response)
 }
 
 // ===== Phase 2: Base reports for the Accounting Reports hub =====
@@ -204,69 +209,62 @@ export interface GenericReportResponse {
 }
 
 export async function getGeneralLedger(params: Record<string, unknown> = {}) {
-  const response = await apiClient.post(
+  return postWithProdFallback<GenericReportResponse>(
     '/th/v1/accounting/reports/general-ledger',
-    makeRpc(params),
+    params,
   )
-  return unwrapResponse<GenericReportResponse>(response)
 }
 
 export async function getPartnerLedger(params: Record<string, unknown> = {}) {
-  const response = await apiClient.post(
+  return postWithProdFallback<GenericReportResponse>(
     '/th/v1/accounting/reports/partner-ledger',
-    makeRpc(params),
+    params,
   )
-  return unwrapResponse<GenericReportResponse>(response)
 }
 
 export async function getTrialBalance(params: ReportBaseParams) {
-  const response = await apiClient.post(
+  return postWithProdFallback<GenericReportResponse>(
     '/th/v1/accounting/reports/trial-balance',
-    makeRpc(toBackendParams(params)),
+    toBackendParams(params),
   )
-  return unwrapResponse<GenericReportResponse>(response)
 }
 
 export async function getAgedReceivables(params: { companyId?: number; date?: string; partnerIds?: number[]; accountIds?: number[] }) {
-  const response = await apiClient.post(
+  return postWithProdFallback<GenericReportResponse>(
     '/th/v1/accounting/reports/aged-receivables',
-    makeRpc({
+    {
       ...(params.companyId !== undefined ? { company_id: params.companyId } : {}),
       ...(params.date ? { date: params.date } : {}),
       ...(params.partnerIds?.length ? { partner_ids: params.partnerIds } : {}),
       ...(params.accountIds?.length ? { account_ids: params.accountIds } : {}),
-    }),
+    },
   )
-  return unwrapResponse<GenericReportResponse>(response)
 }
 
 export async function getAgedPayables(params: { companyId?: number; date?: string; partnerIds?: number[]; accountIds?: number[] }) {
-  const response = await apiClient.post(
+  return postWithProdFallback<GenericReportResponse>(
     '/th/v1/accounting/reports/aged-payables',
-    makeRpc({
+    {
       ...(params.companyId !== undefined ? { company_id: params.companyId } : {}),
       ...(params.date ? { date: params.date } : {}),
       ...(params.partnerIds?.length ? { partner_ids: params.partnerIds } : {}),
       ...(params.accountIds?.length ? { account_ids: params.accountIds } : {}),
-    }),
+    },
   )
-  return unwrapResponse<GenericReportResponse>(response)
 }
 
 export async function getCashBook(params: Record<string, unknown> = {}) {
-  const response = await apiClient.post(
+  return postWithProdFallback<GenericReportResponse>(
     '/th/v1/accounting/reports/cash-book',
-    makeRpc(params),
+    params,
   )
-  return unwrapResponse<GenericReportResponse>(response)
 }
 
 export async function getBankBook(params: Record<string, unknown> = {}) {
-  const response = await apiClient.post(
+  return postWithProdFallback<GenericReportResponse>(
     '/th/v1/accounting/reports/bank-book',
-    makeRpc(params),
+    params,
   )
-  return unwrapResponse<GenericReportResponse>(response)
 }
 
 // ===== Phase 2: Tax Reports (VAT/WHT) =====
@@ -291,9 +289,9 @@ export interface WhtReportParams {
 }
 
 export async function getVatReport(params: VatReportParams) {
-  const response = await apiClient.post(
+  return postWithProdFallback<GenericReportResponse>(
     '/th/v1/tax-reports/vat',
-    makeRpc({
+    {
       ...(params.companyId !== undefined ? { company_id: params.companyId } : {}),
       tax_id: params.taxId,
       tax_type: params.taxType,
@@ -301,24 +299,21 @@ export async function getVatReport(params: VatReportParams) {
       date_to: params.dateTo,
       ...(params.showCancel !== undefined ? { show_cancel: params.showCancel } : {}),
       ...(params.format ? { format: params.format } : {}),
-    }),
+    },
   )
-  return unwrapResponse<GenericReportResponse>(response)
 }
 
 export async function getWhtReport(params: WhtReportParams) {
-  const response = await apiClient.post(
+  return postWithProdFallback<GenericReportResponse>(
     '/th/v1/tax-reports/wht',
-    makeRpc({
+    {
       ...(params.companyId !== undefined ? { company_id: params.companyId } : {}),
       wht_type: params.whtType,
       date_from: params.dateFrom,
       date_to: params.dateTo,
       ...(params.showCancel !== undefined ? { show_cancel: params.showCancel } : {}),
       ...(params.format ? { format: params.format } : {}),
-    }),
+    },
   )
-  return unwrapResponse<GenericReportResponse>(response)
 }
-
 

@@ -20,6 +20,7 @@ import {
   type AssistantLanguage,
 } from '@/lib/assistantLanguage'
 import { toast } from '@/lib/toastStore'
+import { toApiError } from '@/api/response'
 import './avatar-assistant.css'
 
 type ChatItem = {
@@ -44,6 +45,24 @@ type AssistantResultCard = {
 }
 
 const AVATAR_SRC = '/avatar-assistant.png'
+const REPORT_ROUTE_BY_KEY: Record<string, string> = {
+  'profit-loss': '/accounting/reports/profit-loss',
+  profit_loss: '/accounting/reports/profit-loss',
+  balance_sheet: '/accounting/reports/balance-sheet',
+  'balance-sheet': '/accounting/reports/balance-sheet',
+  general_ledger: '/accounting/reports/general-ledger',
+  'general-ledger': '/accounting/reports/general-ledger',
+  trial_balance: '/accounting/reports/trial-balance',
+  'trial-balance': '/accounting/reports/trial-balance',
+  partner_ledger: '/accounting/reports/partner-ledger',
+  'partner-ledger': '/accounting/reports/partner-ledger',
+  aged_receivables: '/accounting/reports/aged-receivables',
+  aged_payables: '/accounting/reports/aged-payables',
+  cash_book: '/accounting/reports/cash-book',
+  bank_book: '/accounting/reports/bank-book',
+  vat: '/accounting/reports/vat',
+  wht: '/accounting/reports/wht',
+}
 
 export function AvatarAssistant() {
   const navigate = useNavigate()
@@ -118,6 +137,37 @@ export function AvatarAssistant() {
   const previewPlan = lastChat?.plan || []
   const showDebugBlocks = import.meta.env.DEV
 
+  const normalizeAssistantRoute = (rawRoute: unknown, payload?: Record<string, unknown>): string => {
+    const direct = String(rawRoute || '').trim()
+
+    const reportKey = String(payload?.report_key || payload?.key || '').trim().toLowerCase()
+    if (reportKey && REPORT_ROUTE_BY_KEY[reportKey]) return REPORT_ROUTE_BY_KEY[reportKey]
+
+    const title = String(payload?.title || payload?.label || payload?.report || '').toLowerCase()
+    if (title.includes('profit') && title.includes('loss')) return '/accounting/reports/profit-loss'
+    if (title.includes('balance') && title.includes('sheet')) return '/accounting/reports/balance-sheet'
+    if (title.includes('trial') && title.includes('balance')) return '/accounting/reports/trial-balance'
+    if (title.includes('partner') && title.includes('ledger')) return '/accounting/reports/partner-ledger'
+
+    if (direct.startsWith('/web#') || direct.startsWith('/web?#')) {
+      const lower = direct.toLowerCase()
+      if (lower.includes('profit') && lower.includes('loss')) return '/accounting/reports/profit-loss'
+      if (lower.includes('balance') && lower.includes('sheet')) return '/accounting/reports/balance-sheet'
+      if (lower.includes('trial') && lower.includes('balance')) return '/accounting/reports/trial-balance'
+      if (lower.includes('partner') && lower.includes('ledger')) return '/accounting/reports/partner-ledger'
+    }
+    if (direct.startsWith('/')) return direct
+
+    if (!direct) return ''
+    try {
+      const u = new URL(direct)
+      if (u.pathname.startsWith('/accounting/reports')) return `${u.pathname}${u.search}`
+    } catch {
+      // not an absolute URL
+    }
+    return direct
+  }
+
   const safeNavigate = (route: string) => {
     if (!route) return
     if (
@@ -190,7 +240,7 @@ export function AvatarAssistant() {
         return
       }
       if (action.type === 'OPEN_ROUTE') {
-        const route = String(payload.route || '')
+        const route = normalizeAssistantRoute(payload.route, payload)
         if (route) {
           safeNavigate(route)
           routeNotes.push(route)
@@ -202,7 +252,7 @@ export function AvatarAssistant() {
         return
       }
       if (action.type === 'OPEN_RECORD') {
-        const route = String(payload.route || '')
+        const route = normalizeAssistantRoute(payload.route, payload)
         if (route) {
           safeNavigate(route)
           routeNotes.push(route)
@@ -362,9 +412,11 @@ export function AvatarAssistant() {
       }
       setHistory((prev) => [...prev, { role: 'assistant', text: 'พร้อมทำงานแล้ว กด "เริ่มทำงาน" ได้เลย' }])
     } catch (err) {
+      const apiErr = toApiError(err)
+      toast.error('Assistant error', apiErr.message)
       setHistory((prev) => [
         ...prev,
-        { role: 'assistant', text: 'ขออภัย ตอนนี้ประมวลผลไม่สำเร็จ ลองใหม่อีกครั้งได้เลย' },
+        { role: 'assistant', text: `ขออภัย ตอนนี้ประมวลผลไม่สำเร็จ: ${apiErr.message}` },
       ])
     } finally {
       setLoading(false)
@@ -413,9 +465,11 @@ export function AvatarAssistant() {
         ])
       }
     } catch (err) {
+      const apiErr = toApiError(err)
+      toast.error('Assistant error', apiErr.message)
       setHistory((prev) => [
         ...prev,
-        { role: 'assistant', text: 'ไม่สามารถยืนยันขั้นตอนนี้ได้ในขณะนี้' },
+        { role: 'assistant', text: `ไม่สามารถยืนยันขั้นตอนนี้ได้: ${apiErr.message}` },
       ])
     } finally {
       setLoading(false)
@@ -465,9 +519,11 @@ export function AvatarAssistant() {
         ])
       }
     } catch (err) {
+      const apiErr = toApiError(err)
+      toast.error('Assistant error', apiErr.message)
       setHistory((prev) => [
         ...prev,
-        { role: 'assistant', text: 'ไม่สามารถเริ่มทำงานได้ในขณะนี้' },
+        { role: 'assistant', text: `ไม่สามารถเริ่มทำงานได้: ${apiErr.message}` },
       ])
     } finally {
       setLoading(false)
@@ -505,9 +561,11 @@ export function AvatarAssistant() {
         ])
       }
     } catch (err) {
+      const apiErr = toApiError(err)
+      toast.error('Assistant error', apiErr.message)
       setHistory((prev) => [
         ...prev,
-        { role: 'assistant', text: 'ไม่สามารถยืนยันรายการได้ในขณะนี้' },
+        { role: 'assistant', text: `ไม่สามารถยืนยันรายการได้: ${apiErr.message}` },
       ])
     } finally {
       setLoading(false)
