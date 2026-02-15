@@ -101,16 +101,26 @@ export interface AssistantTaskItem {
 }
 
 async function postWithFallback<T>(apiPath: string, webPath: string, payload: Record<string, unknown>) {
-  try {
-    const response = await apiClient.post(apiPath, makeRpc(payload))
-    return unwrapResponse<T>(response)
-  } catch {
+  const rpcPayload = makeRpc(payload)
+  const candidates: Array<{ url: string; baseURL?: string }> = [
+    { url: apiPath },
+    { url: `/api${apiPath}`, baseURL: '' },
     // IMPORTANT:
     // webPath must bypass apiClient baseURL (/api), otherwise it becomes
     // /api/web/adt/... and fails on production proxies.
-    const response = await apiClient.post(webPath, makeRpc(payload), { baseURL: '' })
-    return unwrapResponse<T>(response)
+    { url: webPath, baseURL: '' },
+    { url: apiPath, baseURL: '' },
+  ]
+  let lastError: unknown = null
+  for (const candidate of candidates) {
+    try {
+      const response = await apiClient.post(candidate.url, rpcPayload, candidate.baseURL ? { baseURL: candidate.baseURL } : undefined)
+      return unwrapResponse<T>(response)
+    } catch (err) {
+      lastError = err
+    }
   }
+  throw lastError instanceof Error ? lastError : new Error('Assistant request failed')
 }
 
 export async function getAssistantCapabilities(lang?: string) {

@@ -61,14 +61,23 @@ function toBackendParams(params: ReportBaseParams) {
 }
 
 async function postWithProdFallback<T>(path: string, payload: Record<string, unknown>) {
-  try {
-    const response = await apiClient.post(path, makeRpc(payload))
-    return unwrapResponse<T>(response)
-  } catch {
-    // Productionบางชุด expose ภายใต้ /web/adt/... แทน /api...
-    const response = await apiClient.post(`/web/adt${path}`, makeRpc(payload), { baseURL: '' })
-    return unwrapResponse<T>(response)
+  const rpcPayload = makeRpc(payload)
+  const candidates: Array<{ url: string; baseURL?: string }> = [
+    { url: path },
+    { url: `/api${path}`, baseURL: '' },
+    { url: `/web/adt${path}`, baseURL: '' },
+    { url: path, baseURL: '' },
+  ]
+  let lastError: unknown = null
+  for (const candidate of candidates) {
+    try {
+      const response = await apiClient.post(candidate.url, rpcPayload, candidate.baseURL ? { baseURL: candidate.baseURL } : undefined)
+      return unwrapResponse<T>(response)
+    } catch (err) {
+      lastError = err
+    }
   }
+  throw lastError instanceof Error ? lastError : new Error('Accounting report request failed')
 }
 
 // NOTE: backend reality (adt_th_api): accounting reports are exposed under /api/th/v1/accounting/reports/*
@@ -316,4 +325,3 @@ export async function getWhtReport(params: WhtReportParams) {
     },
   )
 }
-
