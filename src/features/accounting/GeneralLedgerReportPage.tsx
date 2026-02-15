@@ -23,7 +23,7 @@ export function GeneralLedgerReportPage() {
     <div>
       <PageHeader
         title="สมุดบัญชีแยกประเภท (General Ledger)"
-        subtitle="Phase 2: เชื่อมต่อ API และสามารถ drilldown ต่อไปดู move line detail ได้"
+        subtitle="Phase 2: เชื่อมต่อ API และสามารถ รายละเอียดต่อไปดู move line detail ได้"
         breadcrumb="Home · Accounting · Reports"
         actions={
           <div className="d-flex gap-2 flex-wrap">
@@ -42,7 +42,7 @@ export function GeneralLedgerReportPage() {
         <div className="fw-semibold mb-1">หมายเหตุ</div>
         <div className="text-muted small">
           หน้า General Ledger แบบเต็ม (เลือกบัญชี/ตัวกรองละเอียด) ขึ้นกับ wizard ของ Odoo add-on ที่ติดตั้งอยู่ใน instance นี้
-          แต่การ drilldown หลักจะทำผ่าน P&amp;L / Balance Sheet → เลือกบัญชี → เปิดหน้า General Ledger (Account Drilldown)
+          แต่การ รายละเอียดหลักจะทำผ่าน P&amp;L / Balance Sheet → เลือกบัญชี → เปิดหน้า General Ledger (Account Drilldown)
         </div>
         <div className="row g-2 align-items-end mt-2">
           <div className="col-md-5">

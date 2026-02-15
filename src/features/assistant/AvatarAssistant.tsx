@@ -1,12 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
+  confirmAssistantDocument,
   executeAssistantPlan,
   getAssistantCapabilities,
   sendAssistantChat,
   type AssistantCapabilities,
   type AssistantChatResponse,
 } from '@/api/services/ai-assistant.service'
+import {
+  getAssistantLanguage,
+  getAssistantLanguageEventName,
+  type AssistantLanguage,
+} from '@/lib/assistantLanguage'
 import { toast } from '@/lib/toastStore'
 import './avatar-assistant.css'
 
@@ -27,12 +33,27 @@ export function AvatarAssistant() {
   const [history, setHistory] = useState<ChatItem[]>([])
   const [lastChat, setLastChat] = useState<AssistantChatResponse | null>(null)
   const [pendingApprovalIds, setPendingApprovalIds] = useState<string[]>([])
+  const [pendingRunIds, setPendingRunIds] = useState<string[]>([])
+  const [assistantLang, setAssistantLang] = useState<AssistantLanguage>(() => getAssistantLanguage())
+  const [pendingConfirm, setPendingConfirm] = useState<{
+    session_id: string
+    nonce?: string
+    doc_type: string
+    contact_name: string
+    product_name: string
+    contact_id?: number
+    product_id?: number
+    contact_candidates?: Array<{ id: number; name: string; vat?: string }>
+    product_candidates?: Array<{ id: number; name: string; code?: string; barcode?: string }>
+    qty: number
+    summary: string
+  } | null>(null)
 
   useEffect(() => {
     let mounted = true
     ;(async () => {
       try {
-        const data = await getAssistantCapabilities()
+        const data = await getAssistantCapabilities(assistantLang)
         if (mounted) {
           setCaps(data)
           if (!data.show_bot && import.meta.env.DEV) {
@@ -51,12 +72,21 @@ export function AvatarAssistant() {
     return () => {
       mounted = false
     }
+  }, [assistantLang])
+
+  useEffect(() => {
+    const eventName = getAssistantLanguageEventName()
+    const onLangChange = () => setAssistantLang(getAssistantLanguage())
+    window.addEventListener(eventName, onLangChange as EventListener)
+    return () => window.removeEventListener(eventName, onLangChange as EventListener)
   }, [])
 
   const reportRouteSet = useMemo(() => new Set((caps?.reports || []).map((r) => r.route)), [caps?.reports])
   const perms = caps?.permissions || {}
+  const previewPlan = lastChat?.plan || []
 
   const applyUiActions = (actions: Array<{ type: string; payload: Record<string, unknown> }>) => {
+    const routeNotes: string[] = []
     actions.forEach((action) => {
       const payload = action.payload || {}
       if (action.type === 'SHOW_TOAST') {
@@ -70,8 +100,16 @@ export function AvatarAssistant() {
       }
       if (action.type === 'OPEN_ROUTE') {
         const route = String(payload.route || '')
-        if (route && (reportRouteSet.has(route) || route.startsWith('/customers') || route.startsWith('/sales/'))) {
+        if (
+          route &&
+          (reportRouteSet.has(route) ||
+            route.startsWith('/customers') ||
+            route.startsWith('/sales/') ||
+            route.startsWith('/accounting/reports') ||
+            route.startsWith('/reports-studio'))
+        ) {
           navigate(route)
+          routeNotes.push(route)
         } else {
           toast.info('Assistant', `Blocked route: ${route}`)
         }
@@ -79,9 +117,18 @@ export function AvatarAssistant() {
       }
       if (action.type === 'OPEN_RECORD') {
         const route = String(payload.route || '')
-        if (route) navigate(route)
+        if (route) {
+          navigate(route)
+          routeNotes.push(route)
+        }
       }
     })
+    if (routeNotes.length > 0) {
+      setHistory((prev) => [
+        ...prev,
+        { role: 'assistant', text: `Navigating to: ${routeNotes.join(' -> ')}` },
+      ])
+    }
   }
 
   const onSend = async () => {
@@ -93,9 +140,19 @@ export function AvatarAssistant() {
     try {
       const res = await sendAssistantChat(text, {
         ui: { route: location.pathname },
+        lang: assistantLang,
+        language: assistantLang.startsWith('th') ? 'th' : 'en',
+        reply_language: assistantLang.startsWith('th') ? 'th' : 'en',
+        plan_only: true,
       })
       setLastChat(res)
       setHistory((prev) => [...prev, { role: 'assistant', text: res.reply || 'Done.' }])
+      if ((res.plan || []).length > 0) {
+        const planText = (res.plan || [])
+          .map((p, i) => `${i + 1}. ${p.tool}${p.requires_approval ? ' (approval)' : ''}`)
+          .join(' | ')
+        setHistory((prev) => [...prev, { role: 'assistant', text: `Draft workflow: ${planText}` }])
+      }
       if ((res.permission_explanations || []).length > 0) {
         setHistory((prev) => [
           ...prev,
@@ -106,36 +163,30 @@ export function AvatarAssistant() {
         ])
       }
       const needApprove = (res.plan || []).filter((p) => p.requires_approval).map((p) => p.id)
-      const autoRunSteps = (res.plan || []).filter((p) => !p.requires_approval).map((p) => p.id)
+      const runnableSteps = (res.plan || []).filter((p) => !p.requires_approval).map((p) => p.id)
       setPendingApprovalIds(needApprove)
-      applyUiActions(res.ui_actions || [])
-
-      // In approve_required mode, execute safe steps immediately and keep only restricted steps for explicit approval.
-      if ((caps?.mode || 'approve_required') === 'approve_required' && autoRunSteps.length > 0) {
-        const autoRes = await executeAssistantPlan(res.session_id, autoRunSteps, res.nonce)
-        applyUiActions(autoRes.ui_actions || [])
-        const denied = (autoRes.results || []).filter((r) => r.status === 'denied')
-        const errors = (autoRes.results || []).filter((r) => r.status === 'error')
-        const created = (autoRes.records || []).map((r) => `${r.model}#${r.id}${r.name ? ` (${r.name})` : ''}`)
-        if (denied.length > 0 || errors.length > 0) {
-          const msg = [
-            ...denied.map((d) => `${d.tool}: ${d.error || 'denied'}`),
-            ...errors.map((d) => `${d.tool}: ${d.error || 'error'}`),
-          ].join(' | ')
-          setHistory((prev) => [...prev, { role: 'assistant', text: `Auto-run restrictions: ${msg}` }])
-        } else {
-          setHistory((prev) => [
-            ...prev,
-            {
-              role: 'assistant',
-              text:
-                created.length > 0
-                  ? `Auto-run completed. Created/used: ${created.join(' | ')}`
-                  : 'Auto-run completed for safe steps.',
-            },
-          ])
-        }
+      setPendingRunIds(runnableSteps)
+      if (res.confirmation_request) {
+        setPendingConfirm({
+          session_id: res.session_id,
+          nonce: res.nonce,
+          doc_type: String(res.confirmation_request.doc_type || ''),
+          contact_name: String(res.confirmation_request.contact_name || ''),
+          product_name: String(res.confirmation_request.product_name || ''),
+          contact_id: Number(res.confirmation_request.contact_id || 0) || undefined,
+          product_id: Number(res.confirmation_request.product_id || 0) || undefined,
+          contact_candidates: Array.isArray(res.confirmation_request.contact_candidates)
+            ? res.confirmation_request.contact_candidates
+            : [],
+          product_candidates: Array.isArray(res.confirmation_request.product_candidates)
+            ? res.confirmation_request.product_candidates
+            : [],
+          qty: Number(res.confirmation_request.qty || 1),
+          summary: String(res.confirmation_request.summary || ''),
+        })
+        return
       }
+      setHistory((prev) => [...prev, { role: 'assistant', text: 'Workflow draft ready. Click "Run Workflow" to execute.' }])
     } catch (err) {
       setHistory((prev) => [
         ...prev,
@@ -150,7 +201,7 @@ export function AvatarAssistant() {
     if (!lastChat?.session_id || pendingApprovalIds.length === 0 || loading) return
     setLoading(true)
     try {
-      const res = await executeAssistantPlan(lastChat.session_id, pendingApprovalIds)
+      const res = await executeAssistantPlan(lastChat.session_id, pendingApprovalIds, lastChat.nonce)
       setPendingApprovalIds([])
       const denied = (res.results || []).filter((r) => r.status === 'denied')
       const errors = (res.results || []).filter((r) => r.status === 'error')
@@ -179,6 +230,70 @@ export function AvatarAssistant() {
     }
   }
 
+  const onRunWorkflow = async () => {
+    if (!lastChat?.session_id || pendingRunIds.length === 0 || loading) return
+    setLoading(true)
+    try {
+      const res = await executeAssistantPlan(lastChat.session_id, pendingRunIds, lastChat.nonce)
+      setPendingRunIds([])
+      applyUiActions(res.ui_actions || [])
+      const denied = (res.results || []).filter((r) => r.status === 'denied')
+      const errors = (res.results || []).filter((r) => r.status === 'error')
+      const created = (res.records || []).map((r) => `${r.model}#${r.id}${r.name ? ` (${r.name})` : ''}`)
+      if (denied.length > 0 || errors.length > 0) {
+        const msg = [
+          ...denied.map((d) => `${d.tool}: ${d.error || 'denied'}`),
+          ...errors.map((d) => `${d.tool}: ${d.error || 'error'}`),
+        ].join(' | ')
+        setHistory((prev) => [...prev, { role: 'assistant', text: `Workflow executed with restrictions: ${msg}` }])
+      } else {
+        setHistory((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            text: created.length > 0 ? `Workflow completed: ${created.join(' | ')}` : 'Workflow completed.',
+          },
+        ])
+      }
+    } catch (err) {
+      setHistory((prev) => [
+        ...prev,
+        { role: 'assistant', text: `Run workflow failed: ${String((err as Error)?.message || err)}` },
+      ])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const onConfirmDocument = async (confirmed: boolean) => {
+    if (!pendingConfirm || loading) return
+    setLoading(true)
+    try {
+      const res = await confirmAssistantDocument({
+        session_id: pendingConfirm.session_id,
+        nonce: pendingConfirm.nonce,
+        confirmed,
+        contact_name: pendingConfirm.contact_name,
+        product_name: pendingConfirm.product_name,
+        contact_id: pendingConfirm.contact_id,
+        product_id: pendingConfirm.product_id,
+        qty: pendingConfirm.qty,
+      })
+      setPendingConfirm(null)
+      if (res.reply) {
+        setHistory((prev) => [...prev, { role: 'assistant', text: res.reply as string }])
+      }
+      applyUiActions(res.ui_actions || [])
+    } catch (err) {
+      setHistory((prev) => [
+        ...prev,
+        { role: 'assistant', text: `Confirm failed: ${String((err as Error)?.message || err)}` },
+      ])
+    } finally {
+      setLoading(false)
+    }
+  }
+
   if (!caps?.show_bot) return null
 
   return (
@@ -186,7 +301,7 @@ export function AvatarAssistant() {
       {open ? (
         <div className="avatar-assistant-panel card shadow">
           <div className="card-header d-flex align-items-center justify-content-between">
-            <strong>Avatar AI Assistant</strong>
+            <strong>iMeaw Assistant</strong>
             <button className="btn btn-sm btn-light" onClick={() => setOpen(false)}>
               ✕
             </button>
@@ -213,6 +328,154 @@ export function AvatarAssistant() {
                 ))}
               </div>
             </div>
+            {previewPlan.length > 0 && (
+              <div className="avatar-preview-box mb-2">
+                <div className="avatar-preview-title">Workflow Preview</div>
+                <div className="avatar-preview-subtitle">ตรวจสอบก่อนกด Run Workflow</div>
+                <div className="avatar-preview-steps">
+                  {previewPlan.map((step, idx) => (
+                    <div key={step.id || `${step.tool}-${idx}`} className="avatar-preview-step">
+                      <div className="d-flex align-items-center justify-content-between">
+                        <div className="fw-semibold small">
+                          {idx + 1}. {step.tool}
+                        </div>
+                        <span className={`badge ${step.requires_approval ? 'text-bg-warning' : 'text-bg-success'}`}>
+                          {step.requires_approval ? 'approval' : 'safe'}
+                        </span>
+                      </div>
+                      {step.args ? (
+                        <div className="avatar-preview-args">
+                          {Object.entries(step.args || {})
+                            .filter(([k]) => ['customer_name', 'customer_id', 'product_name', 'product_id', 'qty', 'route'].includes(k))
+                            .map(([k, v]) => (
+                              <div key={k}>
+                                <span className="text-muted">{k}:</span> {String(v)}
+                              </div>
+                            ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+                {pendingConfirm ? (
+                  <div className="avatar-preview-picked mt-2">
+                    <div className="small fw-semibold">Selected for confirm</div>
+                    <div className="small">contact: {pendingConfirm.contact_name}{pendingConfirm.contact_id ? ` (#${pendingConfirm.contact_id})` : ''}</div>
+                    <div className="small">product: {pendingConfirm.product_name}{pendingConfirm.product_id ? ` (#${pendingConfirm.product_id})` : ''}</div>
+                    <div className="small">qty: {pendingConfirm.qty}</div>
+                  </div>
+                ) : null}
+              </div>
+            )}
+            {pendingConfirm && (
+              <div className="avatar-confirm-box mb-2">
+                <div className="small fw-semibold mb-1">Confirm {pendingConfirm.doc_type}</div>
+                <div className="small text-muted mb-2">{pendingConfirm.summary}</div>
+                <div className="d-flex flex-column gap-2">
+                  <input
+                    className="form-control form-control-sm"
+                    value={pendingConfirm.contact_name}
+                    onChange={(e) =>
+                      setPendingConfirm((prev) => (prev ? { ...prev, contact_name: e.target.value } : prev))
+                    }
+                    placeholder="Contact"
+                    disabled={loading}
+                  />
+                  {(pendingConfirm.contact_candidates || []).length > 0 && (
+                    <select
+                      className="form-select form-select-sm"
+                      value={pendingConfirm.contact_id || ''}
+                      onChange={(e) => {
+                        const id = Number(e.target.value || 0)
+                        const row = (pendingConfirm.contact_candidates || []).find((c) => c.id === id)
+                        setPendingConfirm((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                contact_id: id || undefined,
+                                contact_name: row?.name || prev.contact_name,
+                              }
+                            : prev,
+                        )
+                      }}
+                      disabled={loading}
+                    >
+                      <option value="">เลือก contact ที่จะใช้</option>
+                      {(pendingConfirm.contact_candidates || []).map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} {c.vat ? `(VAT: ${c.vat})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <input
+                    className="form-control form-control-sm"
+                    value={pendingConfirm.product_name}
+                    onChange={(e) =>
+                      setPendingConfirm((prev) => (prev ? { ...prev, product_name: e.target.value } : prev))
+                    }
+                    placeholder="Product"
+                    disabled={loading}
+                  />
+                  {(pendingConfirm.product_candidates || []).length > 0 && (
+                    <select
+                      className="form-select form-select-sm"
+                      value={pendingConfirm.product_id || ''}
+                      onChange={(e) => {
+                        const id = Number(e.target.value || 0)
+                        const row = (pendingConfirm.product_candidates || []).find((c) => c.id === id)
+                        setPendingConfirm((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                product_id: id || undefined,
+                                product_name: row?.name || prev.product_name,
+                              }
+                            : prev,
+                        )
+                      }}
+                      disabled={loading}
+                    >
+                      <option value="">เลือกสินค้า/บริการที่จะใช้</option>
+                      {(pendingConfirm.product_candidates || []).map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} {p.code ? `[${p.code}]` : ''} {p.barcode ? `(BC: ${p.barcode})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <input
+                    className="form-control form-control-sm"
+                    type="number"
+                    min={1}
+                    value={pendingConfirm.qty}
+                    onChange={(e) =>
+                      setPendingConfirm((prev) =>
+                        prev ? { ...prev, qty: Math.max(Number(e.target.value || 1), 1) } : prev,
+                      )
+                    }
+                    placeholder="Qty"
+                    disabled={loading}
+                  />
+                  <div className="d-flex gap-2">
+                    <button
+                      className="btn btn-success btn-sm"
+                      disabled={loading}
+                      onClick={() => void onConfirmDocument(true)}
+                    >
+                      Confirm
+                    </button>
+                    <button
+                      className="btn btn-outline-secondary btn-sm"
+                      disabled={loading}
+                      onClick={() => void onConfirmDocument(false)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="d-flex gap-2">
               <input
                 className="form-control"
@@ -231,7 +494,14 @@ export function AvatarAssistant() {
             {pendingApprovalIds.length > 0 && (
               <div className="mt-2">
                 <button className="btn btn-warning btn-sm" onClick={() => void onApprove()} disabled={loading}>
-                  Approve ({pendingApprovalIds.length})
+                  Approve Restricted ({pendingApprovalIds.length})
+                </button>
+              </div>
+            )}
+            {pendingRunIds.length > 0 && (
+              <div className="mt-2">
+                <button className="btn btn-success btn-sm" onClick={() => void onRunWorkflow()} disabled={loading}>
+                  Run Workflow ({pendingRunIds.length})
                 </button>
               </div>
             )}

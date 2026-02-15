@@ -66,9 +66,9 @@ export function LoginPage() {
               <div className="d-flex justify-content-center mb-2">
                 <AppLogo size="lg" />
               </div>
-              <h1 className="h4 fw-semibold mb-1">เข้าสู่ระบบ Quickfront18</h1>
+              <h1 className="h4 fw-semibold mb-1">เข้าสู่ระบบ CLT Online</h1>
               <p className="text-muted mb-0">
-                เชื่อมต่อกับ Odoo 18 เพื่อจัดการบัญชี ภาษี ใบแจ้งหนี้ และแดชบอร์ด
+                เชื่อมต่อเพื่อจัดการบัญชี ภาษี ใบแจ้งหนี้ และแดชบอร์ด
               </p>
             </div>
 
@@ -120,11 +120,11 @@ export function LoginPage() {
                 className="w-100"
                 isLoading={isLoading}
               >
-                เข้าสู่ระบบ Quickfront18
+                เข้าสู่ระบบ CLT Online
               </Button>
 
               <p className="text-muted small mt-3 mb-0">
-                ระบบจะเชื่อมต่อผ่าน Quickfront middleware ไปยัง Odoo 18 โดยใช้โทเคนที่ปลอดภัยและรองรับหลายบริษัท (Instance ID)
+                ระบบจะเชื่อมต่อผ่าน CLT middleware ไปยัง ODOO Backend โดยใช้โทเคนที่ปลอดภัยและรองรับหลายบริษัท (Instance ID)
               </p>
             </form>
           </div>

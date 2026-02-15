@@ -54,13 +54,20 @@ export function VatReportPage() {
     staleTime: 60_000,
   })
 
-  const options = useMemo(() => taxesQuery.data ?? [], [taxesQuery.data])
+  const options = useMemo(() => {
+    const raw = taxesQuery.data as unknown
+    if (Array.isArray(raw)) return raw
+    if (raw && typeof raw === 'object') {
+      const maybeItems = (raw as { items?: unknown }).items
+      if (Array.isArray(maybeItems)) return maybeItems
+    }
+    return []
+  }, [taxesQuery.data])
 
   // auto select first tax if none selected
-  useMemo(() => {
+  useEffect(() => {
     if (taxId == null && options.length > 0) setTaxId(options[0].id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options.length])
+  }, [taxId, options])
 
   const reportQuery = useQuery({
     queryKey: ['taxReports', 'vat', taxType, taxId, dateFrom, dateTo],
@@ -277,5 +284,4 @@ export function WhtReportPage() {
     </div>
   )
 }
-
 

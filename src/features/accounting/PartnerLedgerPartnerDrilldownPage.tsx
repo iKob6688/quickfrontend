@@ -102,7 +102,7 @@ export function PartnerLedgerPartnerDrilldownPage() {
     <div>
       <PageHeader
         title={partner ? `Partner Ledger: ${partner.displayName || partner.name || `#${partner.id}`}` : 'Partner Ledger (Drilldown)'}
-        subtitle="Drilldown จาก Aged Receivables/Payables หรือระบุ Partner ID"
+        subtitle="รายละเอียดจาก Aged Receivables/Payables หรือระบุ Partner ID"
         breadcrumb="Home · Accounting · Reports"
         actions={
           <div className="d-flex gap-2 flex-wrap">

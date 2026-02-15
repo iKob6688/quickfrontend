@@ -3,8 +3,10 @@ import { unwrapResponse } from '@/api/response'
 import { makeRpc } from '@/api/services/rpc'
 import {
   createInvoice,
+  fetchInvoicePdf,
   getInvoice,
   listInvoices,
+  openInvoicePdf,
   postInvoice,
   updateInvoice,
   type Invoice,
@@ -464,4 +466,82 @@ export async function confirmSalesOrder(id: number) {
     }
     throw err
   }
+}
+
+async function fetchPdfFromEndpoints(endpoints: string[]) {
+  for (const url of endpoints) {
+    try {
+      const response = await apiClient.get(url, {
+        responseType: 'arraybuffer',
+        headers: { Accept: 'application/pdf,application/json' },
+      })
+      const contentType = String(response.headers?.['content-type'] ?? '')
+      if (contentType.includes('application/pdf')) {
+        return new Blob([response.data], { type: 'application/pdf' })
+      }
+    } catch {
+      // try next endpoint
+    }
+  }
+  return null
+}
+
+export async function fetchSalesOrderPdf(id: number) {
+  const endpoints = [
+    `${basePath}/${id}/pdf`,
+    `/web/adt/th/v1/sales/orders/${id}/pdf`,
+  ]
+
+  const directBlob = await fetchPdfFromEndpoints(endpoints)
+  if (directBlob) return directBlob
+
+  // Invoice-compat mode: when sales order endpoints map to invoice backend.
+  return fetchInvoicePdf(id)
+}
+
+export async function openSalesOrderPdf(id: number) {
+  try {
+    const blob = await fetchSalesOrderPdf(id)
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener,noreferrer')
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  } catch {
+    // Final fallback: try legacy invoice open helper.
+    await openInvoicePdf(id)
+  }
+}
+
+export interface SendSalesOrderEmailPayload {
+  emailTo: string
+  contactId?: number
+  subject?: string
+  message?: string
+}
+
+export async function sendSalesOrderEmail(id: number, payload: SendSalesOrderEmailPayload) {
+  const body = makeRpc({
+    email_to: payload.emailTo,
+    ...(payload.contactId ? { contact_id: payload.contactId } : {}),
+    ...(payload.subject ? { subject: payload.subject } : {}),
+    ...(payload.message ? { message: payload.message } : {}),
+  })
+
+  const endpoints = [
+    `${basePath}/${id}/send-email`,
+    `/web/adt/th/v1/sales/orders/${id}/send-email`,
+    `${basePath}/${id}/email/send`,
+    `/web/adt/th/v1/sales/orders/${id}/email/send`,
+    `/th/v1/sales/invoices/${id}/send-email`,
+  ]
+
+  let lastError: unknown = null
+  for (const url of endpoints) {
+    try {
+      const response = await apiClient.post(url, body)
+      return unwrapResponse<Record<string, unknown> | { sent?: boolean }>(response)
+    } catch (err) {
+      lastError = err
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('Send email endpoint not available')
 }

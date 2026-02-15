@@ -19,7 +19,7 @@ export interface ProfitLossEntry {
   name: string
   code?: string
   amount: string | number
-  // Phase 2 drilldown (optional; provided by backend)
+  // Phase 2 รายละเอียด(optional; provided by backend)
   accountId?: number
   accountCode?: string
   accountName?: string

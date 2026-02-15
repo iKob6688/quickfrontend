@@ -9,10 +9,12 @@ import { getDashboardKpis } from '@/api/services/dashboard.service'
 import { listInvoices } from '@/api/services/invoices.service'
 import { listPurchaseOrders } from '@/api/services/purchases.service'
 import { listPurchaseRequests } from '@/api/services/purchase-requests.service'
+import { listProducts } from '@/api/services/products.service'
 import { getProfitLoss } from '@/api/services/accounting-reports.service'
 import { getAssistantTasks } from '@/api/services/ai-assistant.service'
 import { hasScope } from '@/lib/scopes'
-import { useMemo } from 'react'
+import { getAssistantLanguage, setAssistantLanguage, type AssistantLanguage } from '@/lib/assistantLanguage'
+import { useMemo, useState } from 'react'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts'
 
 function formatLocalISODate(d: Date) {
@@ -50,6 +52,7 @@ export function DashboardPage() {
   const instancePublicId = useAuthStore((s) => s.instancePublicId)
   const canSeeKpis = hasScope('dashboard')
   const canSeeReports = hasScope('reports')
+  const [assistantLang, setAssistantLangState] = useState<AssistantLanguage>(() => getAssistantLanguage())
 
   const accDateFrom = formatLocalISODate(firstDayOfCurrentMonthLocal())
   const accDateTo = formatLocalISODate(new Date())
@@ -88,6 +91,13 @@ export function DashboardPage() {
     queryKey: ['purchaseRequests', 'dashboard'],
     enabled: canSeeKpis,
     queryFn: () => listPurchaseRequests({ limit: 1000 }), // Get all purchase requests for calculation
+    staleTime: 60_000,
+  })
+
+  const productsQuery = useQuery({
+    queryKey: ['products', 'dashboard'],
+    enabled: canSeeKpis,
+    queryFn: () => listProducts({ limit: 1000, active: true }),
     staleTime: 60_000,
   })
 
@@ -343,6 +353,29 @@ export function DashboardPage() {
         </div>
         <div className="col-md-6 col-xl-3">
           <Card
+            onClick={() => navigate('/products')}
+            role="button"
+            tabIndex={0}
+            className="qf-dashboard-card"
+          >
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <p className="small fw-medium text-muted mb-0">Products</p>
+              <i className="bi bi-box-seam" style={{ fontSize: '1.5rem', color: '#0ea5e9' }}></i>
+            </div>
+            <p className="h6 fw-semibold mb-2">
+              {productsQuery.isLoading
+                ? 'กำลังโหลด...'
+                : productsQuery.isError
+                  ? '—'
+                  : `${productsQuery.data?.total ?? productsQuery.data?.items.length ?? 0} รายการ`}
+            </p>
+            <p className="small text-muted mb-0">
+              จัดการสินค้าและบริการ
+            </p>
+          </Card>
+        </div>
+        <div className="col-md-6 col-xl-3">
+          <Card
             onClick={() => navigate('/sales/orders?type=quotation')}
             role="button"
             tabIndex={0}
@@ -474,13 +507,32 @@ export function DashboardPage() {
               <p className="small fw-medium mb-0" style={{ opacity: 0.9 }}>
                 ERPTH AI
               </p>
-              <i
-                className="bi bi-magic"
-                style={{ fontSize: '1.5rem', color: 'white' }}
-              ></i>
+              <div className="d-flex align-items-center gap-2">
+                <select
+                  className="form-select form-select-sm"
+                  value={assistantLang}
+                  style={{ minWidth: 88, background: 'rgba(255,255,255,0.88)', color: '#0f172a' }}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => {
+                    const next = e.target.value === 'en_US' ? 'en_US' : 'th_TH'
+                    setAssistantLanguage(next)
+                    setAssistantLangState(next)
+                  }}
+                >
+                  <option value="th_TH">TH</option>
+                  <option value="en_US">EN</option>
+                </select>
+                <i
+                  className="bi bi-magic"
+                  style={{ fontSize: '1.5rem', color: 'white' }}
+                ></i>
+              </div>
             </div>
             <p className="h6 fw-semibold mb-2" style={{ color: 'white' }}>
               สร้างด้วย AI
+            </p>
+            <p className="small mb-2" style={{ opacity: 0.95 }}>
+              ภาษา Assistant: {assistantLang === 'th_TH' ? 'ไทย (ค่าเริ่มต้น)' : 'English'}
             </p>
             <div className="small" style={{ opacity: 0.95 }}>
               {aiTasksQuery.isLoading ? (
@@ -601,7 +653,7 @@ export function DashboardPage() {
                     navigate(`/accounting/reports/profit-loss?${sp.toString()}`)
                   }}
                 >
-                  Drilldown รายได้
+                  รายละเอียด รายได้
                 </Button>
                 <Button
                   size="sm"
@@ -611,7 +663,7 @@ export function DashboardPage() {
                     navigate(`/accounting/reports/profit-loss?${sp.toString()}`)
                   }}
                 >
-                  Drilldown รายจ่าย
+                  รายละเอียด รายจ่าย
                 </Button>
                 <Button size="sm" variant="secondary" onClick={() => navigate('/accounting/reports')}>
                   ไปหน้ารายงานบัญชี

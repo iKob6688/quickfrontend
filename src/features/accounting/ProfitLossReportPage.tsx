@@ -197,7 +197,7 @@ export function ProfitLossReportPage() {
         const canDrill = Boolean(accountId) || isUsableAccountCode(fallbackCode)
         
         if (import.meta.env.DEV) {
-          console.debug('[ProfitLossReportPage] Drilldown button:', {
+          console.debug('[ProfitLossReportPage] รายละเอียดbutton:', {
             accountId,
             fallbackCode,
             canDrill,
@@ -215,7 +215,7 @@ export function ProfitLossReportPage() {
               e.stopPropagation()
               
               if (import.meta.env.DEV) {
-                console.debug('[ProfitLossReportPage] Drilldown clicked:', { accountId, fallbackCode })
+                console.debug('[ProfitLossReportPage] รายละเอียดclicked:', { accountId, fallbackCode })
               }
               
               const params = new URLSearchParams({ dateFrom, dateTo, targetMove })
@@ -229,7 +229,7 @@ export function ProfitLossReportPage() {
                   return
                 }
                 if (!isUsableAccountCode(fallbackCode)) {
-                  toast.info('ไม่สามารถ drilldown ได้', 'รายการนี้ไม่มี accountId/accountCode')
+                  toast.info('ไม่สามารถ รายละเอียดได้', 'รายการนี้ไม่มี accountId/accountCode')
                   return
                 }
                 const acc = await getAccountByCode(fallbackCode)
@@ -239,8 +239,8 @@ export function ProfitLossReportPage() {
                 }
                 navigate(path)
               } catch (e) {
-                console.error('[ProfitLossReportPage] Drilldown error:', e)
-                toast.error('Drilldown ไม่สำเร็จ', e instanceof Error ? e.message : 'Unknown error')
+                console.error('[ProfitLossReportPage] รายละเอียดerror:', e)
+                toast.error('รายละเอียดไม่สำเร็จ', e instanceof Error ? e.message : 'Unknown error')
               }
             }}
           >
@@ -252,7 +252,7 @@ export function ProfitLossReportPage() {
   ]
 
   const title = 'งบกำไรขาดทุน (Profit & Loss)'
-  const subtitle = 'คลิก Drilldown เพื่อดู General Ledger รายบัญชี'
+  const subtitle = 'คลิก รายละเอียด เพื่อดู General Ledger รายบัญชี'
 
   return (
     <div>

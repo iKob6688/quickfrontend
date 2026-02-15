@@ -6,6 +6,7 @@ export interface ProductSummary {
   id: number
   name: string
   defaultCode?: string
+  barcode?: string
   uomId?: number | null
   uomName?: string | null
   listPrice?: number | null
@@ -15,6 +16,8 @@ export interface ProductSummary {
 
 export interface ProductDetail extends ProductSummary {
   description?: string | null
+  saleOk?: boolean
+  purchaseOk?: boolean
 }
 
 export interface ProductListParams {
@@ -33,6 +36,17 @@ export interface ProductListResponse {
   limit: number
 }
 
+export interface ProductUpsertPayload {
+  name: string
+  defaultCode?: string
+  barcode?: string
+  listPrice?: number | null
+  saleOk?: boolean
+  purchaseOk?: boolean
+  active?: boolean
+  description?: string | null
+}
+
 const basePath = '/th/v1/products'
 
 interface BackendProductSummary {
@@ -41,12 +55,19 @@ interface BackendProductSummary {
   display_name?: string
   defaultCode?: string
   default_code?: string
+  barcode?: string
   uomId?: number | null
   uomName?: string | null
   price?: number | string | null
   listPrice?: number | string | null
   list_price?: number | string | null
   active?: boolean
+  saleOk?: boolean
+  sale_ok?: boolean
+  purchaseOk?: boolean
+  purchase_ok?: boolean
+  description?: string | null
+  description_sale?: string | null
 }
 
 function toNumberOrNull(v: unknown): number | null {
@@ -64,6 +85,7 @@ function mapProductSummary(raw: BackendProductSummary): ProductSummary {
     id: raw.id,
     name: raw.name || raw.display_name || '',
     defaultCode: raw.defaultCode || raw.default_code,
+    barcode: raw.barcode || undefined,
     uomId: raw.uomId ?? null,
     uomName: raw.uomName ?? null,
     listPrice,
@@ -101,5 +123,43 @@ export async function getProduct(id: number) {
   return {
     ...mapped,
     description: data?.description ?? null,
+    saleOk: Boolean(data?.saleOk ?? data?.sale_ok ?? true),
+    purchaseOk: Boolean(data?.purchaseOk ?? data?.purchase_ok ?? false),
   }
+}
+
+export async function createProduct(payload: ProductUpsertPayload) {
+  const response = await apiClient.post(
+    `${basePath}`,
+    makeRpc({
+      name: payload.name,
+      defaultCode: payload.defaultCode,
+      barcode: payload.barcode,
+      listPrice: payload.listPrice,
+      saleOk: payload.saleOk,
+      purchaseOk: payload.purchaseOk,
+      active: payload.active,
+      description: payload.description,
+    }),
+  )
+  const data = unwrapResponse<BackendProductSummary>(response)
+  return mapProductSummary(data)
+}
+
+export async function updateProduct(id: number, payload: Partial<ProductUpsertPayload>) {
+  const response = await apiClient.put(
+    `${basePath}/${id}`,
+    makeRpc({
+      name: payload.name,
+      defaultCode: payload.defaultCode,
+      barcode: payload.barcode,
+      listPrice: payload.listPrice,
+      saleOk: payload.saleOk,
+      purchaseOk: payload.purchaseOk,
+      active: payload.active,
+      description: payload.description,
+    }),
+  )
+  const data = unwrapResponse<BackendProductSummary>(response)
+  return mapProductSummary(data)
 }

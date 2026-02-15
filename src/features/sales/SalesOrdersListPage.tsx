@@ -140,6 +140,12 @@ export function SalesOrdersListPage() {
         breadcrumb="รายรับ · ใบเสนอราคา · Sale Order"
         actions={
           <div className="d-flex align-items-center gap-2">
+            <Button size="sm" variant="ghost" onClick={() => navigate('/products')}>
+              สินค้า
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => navigate('/products/new')}>
+              + เพิ่มสินค้า
+            </Button>
             <Button size="sm" variant="secondary" onClick={() => navigate('/sales/orders/new?orderType=quotation')}>
               + สร้างใบเสนอราคา
             </Button>

@@ -10,15 +10,20 @@ import { InvoiceFormPage } from '@/features/sales/InvoiceFormPage'
 import { SalesOrdersListPage } from '@/features/sales/SalesOrdersListPage'
 import { SalesOrderDetailPage } from '@/features/sales/SalesOrderDetailPage'
 import { SalesOrderFormPage } from '@/features/sales/SalesOrderFormPage'
+import { SalesOrderPrintPreviewPage } from '@/features/sales/SalesOrderPrintPreviewPage'
 import { PurchaseOrdersListPage } from '@/features/purchases/PurchaseOrdersListPage'
 import { PurchaseOrderDetailPage } from '@/features/purchases/PurchaseOrderDetailPage'
 import { PurchaseOrderFormPage } from '@/features/purchases/PurchaseOrderFormPage'
 import { PurchaseRequestsListPage } from '@/features/purchases/PurchaseRequestsListPage'
+import { PurchaseRequestFormPage } from '@/features/purchases/PurchaseRequestFormPage'
+import { PurchaseRequestDetailPage } from '@/features/purchases/PurchaseRequestDetailPage'
 import { ExpensesListPage } from '@/features/expenses/ExpensesListPage'
 import { ExpenseDetailPage } from '@/features/expenses/ExpenseDetailPage'
 import { CustomersListPage } from '@/features/customers/CustomersListPage'
 import { CustomerDetailPage } from '@/features/customers/CustomerDetailPage'
 import { CustomerFormPage } from '@/features/customers/CustomerFormPage'
+import { ProductsListPage } from '@/features/products/ProductsListPage'
+import { ProductFormPage } from '@/features/products/ProductFormPage'
 import { AccountingReportsPage } from '@/features/accounting/AccountingReportsPage'
 import { ProfitLossReportPage } from '@/features/accounting/ProfitLossReportPage'
 import { BalanceSheetReportPage } from '@/features/accounting/BalanceSheetReportPage'
@@ -69,6 +74,7 @@ function AppRoutes() {
             </StudioBootstrap>
           }
         />
+        <Route path="/sales/orders/:id/print-preview" element={<SalesOrderPrintPreviewPage />} />
 
         <Route element={<AppLayout />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
@@ -77,6 +83,9 @@ function AppRoutes() {
           <Route path="/customers/new" element={<CustomerFormPage />} />
           <Route path="/customers/:id" element={<CustomerDetailPage />} />
           <Route path="/customers/:id/edit" element={<CustomerFormPage />} />
+          <Route path="/products" element={<ProductsListPage />} />
+          <Route path="/products/new" element={<ProductFormPage />} />
+          <Route path="/products/:id/edit" element={<ProductFormPage />} />
           <Route path="/sales/invoices" element={<InvoicesListPage />} />
           <Route path="/sales/invoices/new" element={<InvoiceFormPage />} />
           <Route path="/sales/invoices/:id" element={<InvoiceDetailPage />} />
@@ -90,6 +99,9 @@ function AppRoutes() {
           <Route path="/purchases/orders/:id" element={<PurchaseOrderDetailPage />} />
           <Route path="/purchases/orders/:id/edit" element={<PurchaseOrderFormPage />} />
           <Route path="/purchases/requests" element={<PurchaseRequestsListPage />} />
+          <Route path="/purchases/requests/new" element={<PurchaseRequestFormPage />} />
+          <Route path="/purchases/requests/:id" element={<PurchaseRequestDetailPage />} />
+          <Route path="/purchases/requests/:id/edit" element={<PurchaseRequestFormPage />} />
           <Route path="/expenses" element={<ExpensesListPage />} />
           <Route path="/expenses/:id" element={<ExpenseDetailPage />} />
           <Route path="/accounting/reports" element={<AccountingReportsPage />} />

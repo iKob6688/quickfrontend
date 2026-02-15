@@ -127,7 +127,7 @@ export function GeneralLedgerAccountDrilldownPage() {
     <div>
       <PageHeader
         title={title}
-        subtitle="Drilldown จาก Profit & Loss / Balance Sheet"
+        subtitle="รายละเอียดจาก Profit & Loss / Balance Sheet"
         breadcrumb="Home · Accounting · Reports"
         actions={
           <div className="d-flex gap-2 flex-wrap">

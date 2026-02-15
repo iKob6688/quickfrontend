@@ -135,7 +135,7 @@ export function AgedReportPage(props: { mode: Mode }) {
     <div>
       <PageHeader
         title={title}
-        subtitle="ดูรายการคงค้างตามอายุ พร้อม drilldown ไป Partner Ledger"
+        subtitle="ดูรายการคงค้างตามอายุ พร้อม รายละเอียดไป Partner Ledger"
         breadcrumb="Home · Accounting · Reports"
         actions={
           <div className="d-flex gap-2 flex-wrap">
@@ -158,7 +158,7 @@ export function AgedReportPage(props: { mode: Mode }) {
           </div>
           <div className="col-md-8">
             <div className="text-muted small">
-              หมายเหตุ: Backend แปะ <code>partnerId</code> ลงใน entries เพื่อ drilldown ได้ (ต้อง restart/upgrade module ให้โหลด route ใหม่)
+              หมายเหตุ: Backend แปะ <code>partnerId</code> ลงใน entries เพื่อ รายละเอียดได้ (ต้อง restart/upgrade module ให้โหลด route ใหม่)
             </div>
           </div>
         </div>

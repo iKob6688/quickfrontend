@@ -145,7 +145,7 @@ export function BalanceSheetReportPage() {
         const canDrill = Boolean(r.accountId) || isUsableAccountCode(fallbackCode)
         
         if (import.meta.env.DEV) {
-          console.debug('[BalanceSheetReportPage] Drilldown button:', {
+          console.debug('[BalanceSheetReportPage] รายละเอียดbutton:', {
             accountId: r.accountId,
             fallbackCode,
             canDrill,
@@ -163,7 +163,7 @@ export function BalanceSheetReportPage() {
               e.stopPropagation()
               
               if (import.meta.env.DEV) {
-                console.debug('[BalanceSheetReportPage] Drilldown clicked:', { accountId: r.accountId, fallbackCode })
+                console.debug('[BalanceSheetReportPage] รายละเอียดclicked:', { accountId: r.accountId, fallbackCode })
               }
               
               try {
@@ -176,7 +176,7 @@ export function BalanceSheetReportPage() {
                   return
                 }
                 if (!isUsableAccountCode(fallbackCode)) {
-                  toast.info('ไม่สามารถ drilldown ได้', 'รายการนี้ไม่มี accountId/accountCode')
+                  toast.info('ไม่สามารถ รายละเอียดได้', 'รายการนี้ไม่มี accountId/accountCode')
                   return
                 }
                 const acc = await getAccountByCode(fallbackCode)
@@ -186,8 +186,8 @@ export function BalanceSheetReportPage() {
                 }
                 navigate(path)
               } catch (e) {
-                console.error('[BalanceSheetReportPage] Drilldown error:', e)
-                toast.error('Drilldown ไม่สำเร็จ', e instanceof Error ? e.message : 'Unknown error')
+                console.error('[BalanceSheetReportPage] รายละเอียดerror:', e)
+                toast.error('รายละเอียดไม่สำเร็จ', e instanceof Error ? e.message : 'Unknown error')
               }
             }}
           >
@@ -202,7 +202,7 @@ export function BalanceSheetReportPage() {
     <div>
       <PageHeader
         title="งบดุล (Balance Sheet)"
-        subtitle="คลิก Drilldown เพื่อดู General Ledger รายบัญชี"
+        subtitle="คลิก รายละเอียดเพื่อดู General Ledger รายบัญชี"
         breadcrumb="Home · Accounting · Reports"
         actions={
           <div className="d-flex gap-2 flex-wrap">

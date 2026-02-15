@@ -54,6 +54,17 @@ export interface AssistantChatResponse {
   nonce?: string
   reply: string
   permission_explanations?: string[]
+  confirmation_request?: {
+    doc_type: 'quotation' | 'invoice' | string
+    contact_name: string
+    product_name: string
+    contact_id?: number
+    product_id?: number
+    contact_candidates?: Array<{ id: number; name: string; vat?: string }>
+    product_candidates?: Array<{ id: number; name: string; code?: string; barcode?: string }>
+    qty: number
+    summary: string
+  } | false
   plan: AssistantPlanStep[]
   ui_actions: AssistantUiAction[]
   records: AssistantRecordRef[]
@@ -61,6 +72,8 @@ export interface AssistantChatResponse {
 
 export interface AssistantExecuteResponse {
   session_id: string
+  reply?: string
+  confirmed?: boolean
   permission_explanations?: string[]
   results: Array<{
     plan_id: string
@@ -97,11 +110,13 @@ async function postWithFallback<T>(apiPath: string, webPath: string, payload: Re
   }
 }
 
-export async function getAssistantCapabilities() {
+export async function getAssistantCapabilities(lang?: string) {
   return postWithFallback<AssistantCapabilities>(
     '/th/v1/ai/capabilities',
     '/web/adt/th/v1/ai/capabilities',
-    {},
+    {
+      ...(lang ? { lang } : {}),
+    },
   )
 }
 
@@ -137,5 +152,22 @@ export async function getAssistantTasks(limit = 5) {
     '/th/v1/ai/tasks',
     '/web/adt/th/v1/ai/tasks',
     { limit },
+  )
+}
+
+export async function confirmAssistantDocument(payload: {
+  session_id: string
+  nonce?: string
+  confirmed: boolean
+  contact_name?: string
+  product_name?: string
+  contact_id?: number
+  product_id?: number
+  qty?: number
+}) {
+  return postWithFallback<AssistantExecuteResponse>(
+    '/th/v1/ai/confirm',
+    '/web/adt/th/v1/ai/confirm',
+    payload,
   )
 }

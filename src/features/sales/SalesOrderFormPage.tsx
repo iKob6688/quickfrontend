@@ -233,6 +233,9 @@ export function SalesOrderFormPage() {
         breadcrumb="รายรับ · ใบเสนอราคา · Sale Order"
         actions={
           <div className="d-flex align-items-center gap-2 qf-so-actions">
+            <Button size="sm" variant="ghost" onClick={() => navigate('/products')}>
+              เมนูสินค้า
+            </Button>
             <Button size="sm" variant="secondary" onClick={() => navigate(isEdit ? `/sales/orders/${orderId}` : '/sales/orders')}>
               ยกเลิก
             </Button>

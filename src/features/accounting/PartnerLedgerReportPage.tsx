@@ -24,7 +24,7 @@ export function PartnerLedgerReportPage() {
     <div>
       <PageHeader
         title="ลูกหนี้/เจ้าหนี้ (Partner Ledger)"
-        subtitle="ดู ledger แยกตามคู่ค้า และ drilldown ไป move lines ของคู่ค้ารายบุคคล"
+        subtitle="ดู ledger แยกตามคู่ค้า และ รายละเอียดไป move lines ของคู่ค้ารายบุคคล"
         breadcrumb="Home · Accounting · Reports"
         actions={
           <div className="d-flex gap-2 flex-wrap">

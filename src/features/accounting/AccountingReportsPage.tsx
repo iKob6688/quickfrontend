@@ -128,7 +128,7 @@ export function AccountingReportsPage() {
     <div>
       <PageHeader
         title="รายงานบัญชี"
-        subtitle="ศูนย์รวมรายงานมาตรฐานไทย พร้อม drilldown ไปเอกสารที่เกี่ยวข้อง"
+        subtitle="ศูนย์รวมรายงานมาตรฐานไทย พร้อม รายละเอียดไปเอกสารที่เกี่ยวข้อง"
         breadcrumb="Home · Accounting"
         actions={
           <div className="d-flex gap-2 flex-wrap">

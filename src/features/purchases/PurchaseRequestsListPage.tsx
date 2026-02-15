@@ -167,6 +167,12 @@ export function PurchaseRequestsListPage() {
         breadcrumb="รายจ่าย · คำขอซื้อ"
         actions={
           <div className="d-flex align-items-center gap-2">
+            <Button size="sm" variant="ghost" onClick={() => navigate('/products')}>
+              สินค้า
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => navigate('/products/new')}>
+              + เพิ่มสินค้า
+            </Button>
             <Button
               size="sm"
               onClick={() => navigate('/purchases/requests/new')}
@@ -269,4 +275,3 @@ export function PurchaseRequestsListPage() {
     </div>
   )
 }
-

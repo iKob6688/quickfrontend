@@ -135,7 +135,7 @@ export function AccountingOverviewPage() {
           </div>
         </div>
         <div className="mt-2 text-muted small">
-          Phase 1 จะดึง Profit &amp; Loss เพื่อทำ KPI + กราฟเบื้องต้น (drilldown ไปเมนู invoice/expenses/purchases ได้)
+          Phase 1 จะดึง Profit &amp; Loss เพื่อทำ KPI + กราฟเบื้องต้น (รายละเอียดไปเมนู invoice/expenses/purchases ได้)
         </div>
       </Card>
 
@@ -202,7 +202,7 @@ export function AccountingOverviewPage() {
         <div className="col-xl-5">
           <Card className="p-3">
             <div className="fw-semibold mb-2">สัดส่วนค่าใช้จ่าย (Top 8)</div>
-            <div className="text-muted small mb-2">คลิก “รายจ่าย” เพื่อ drilldown ดูรายละเอียด</div>
+            <div className="text-muted small mb-2">คลิก “รายจ่าย” เพื่อ รายละเอียดดูรายละเอียด</div>
             <div style={{ height: 290 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
