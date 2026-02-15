@@ -10,6 +10,12 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { listProducts } from '@/api/services/products.service'
 
+function productImageSrc(row: { id: number; image128?: string | null; imageUrl?: string | null }) {
+  if (row.image128) return `data:image/png;base64,${row.image128}`
+  if (row.imageUrl) return row.imageUrl
+  return `/web/image?model=product.product&id=${row.id}&field=image_128`
+}
+
 export function ProductsListPage() {
   const navigate = useNavigate()
   const [q, setQ] = useState('')
@@ -43,7 +49,10 @@ export function ProductsListPage() {
         id: p.id,
         name: p.name,
         defaultCode: p.defaultCode || '—',
+        image128: p.image128 || null,
+        imageUrl: p.imageUrl || null,
         uom: p.uomName || '—',
+        qtyAvailable: p.qtyAvailable,
         listPrice: p.listPrice ?? p.price ?? 0,
         active: p.active !== false,
       })),
@@ -55,13 +64,25 @@ export function ProductsListPage() {
       key: 'name',
       header: 'สินค้า/บริการ',
       cell: (r) => (
-        <button
-          type="button"
-          className="btn btn-link p-0 fw-semibold text-decoration-none"
-          onClick={() => navigate(`/products/${r.id}/edit`)}
-        >
-          {r.name}
-        </button>
+        <div className="d-flex align-items-center gap-2">
+          <img
+            src={productImageSrc(r)}
+            alt={r.name}
+            width={34}
+            height={34}
+            style={{ borderRadius: 6, objectFit: 'cover', border: '1px solid #e2e8f0' }}
+            onError={(e) => {
+              ;(e.currentTarget as HTMLImageElement).src = '/vite.svg'
+            }}
+          />
+          <button
+            type="button"
+            className="btn btn-link p-0 fw-semibold text-decoration-none text-start"
+            onClick={() => navigate(`/products/${r.id}/edit`)}
+          >
+            {r.name}
+          </button>
+        </div>
       ),
     },
     {
@@ -75,6 +96,16 @@ export function ProductsListPage() {
       header: 'หน่วยนับ',
       className: 'text-nowrap',
       cell: (r) => <span>{r.uom}</span>,
+    },
+    {
+      key: 'qtyAvailable',
+      header: 'คงเหลือ',
+      className: 'text-end text-nowrap',
+      cell: (r) => (
+        <span className="font-monospace">
+          {typeof r.qtyAvailable === 'number' ? r.qtyAvailable.toLocaleString('th-TH', { maximumFractionDigits: 2 }) : '—'}
+        </span>
+      ),
     },
     {
       key: 'listPrice',

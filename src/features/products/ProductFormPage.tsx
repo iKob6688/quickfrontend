@@ -21,6 +21,13 @@ const DEFAULT_FORM: ProductUpsertPayload = {
   description: '',
 }
 
+function productImageSrc(row: { id?: number | null; image128?: string | null; imageUrl?: string | null }) {
+  if (row.image128) return `data:image/png;base64,${row.image128}`
+  if (row.imageUrl) return row.imageUrl
+  if (row.id) return `/web/image?model=product.product&id=${row.id}&field=image_128`
+  return '/vite.svg'
+}
+
 export function ProductFormPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -126,7 +133,34 @@ export function ProductFormPage() {
           <div className="col-lg-8">
             <Card className="p-4">
               <div className="qf-section-title mb-3">ข้อมูลสินค้า</div>
-              <div className="row g-3">
+        <div className="row g-3">
+                {isEdit && productQuery.data ? (
+                  <div className="col-12 d-flex align-items-center gap-3">
+                    <img
+                      src={productImageSrc({
+                        id: productId,
+                        image128: productQuery.data.image128 || null,
+                        imageUrl: productQuery.data.imageUrl || null,
+                      })}
+                      alt={productQuery.data.name || 'product'}
+                      width={72}
+                      height={72}
+                      style={{ borderRadius: 10, objectFit: 'cover', border: '1px solid #e2e8f0' }}
+                      onError={(e) => {
+                        ;(e.currentTarget as HTMLImageElement).src = '/vite.svg'
+                      }}
+                    />
+                    <div className="small text-muted">
+                      <div>รูปสินค้าดึงจาก Odoo</div>
+                      <div>
+                        คงเหลือ:{' '}
+                        {typeof productQuery.data.qtyAvailable === 'number'
+                          ? productQuery.data.qtyAvailable.toLocaleString('th-TH', { maximumFractionDigits: 2 })
+                          : '—'}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
                 <div className="col-md-8">
                   <Label htmlFor="name" required>
                     ชื่อสินค้า

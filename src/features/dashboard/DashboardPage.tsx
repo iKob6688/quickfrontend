@@ -14,7 +14,7 @@ import { getProfitLoss } from '@/api/services/accounting-reports.service'
 import { getAssistantTasks } from '@/api/services/ai-assistant.service'
 import { hasScope } from '@/lib/scopes'
 import { getAssistantLanguage, setAssistantLanguage, type AssistantLanguage } from '@/lib/assistantLanguage'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts'
 
 function formatLocalISODate(d: Date) {
@@ -29,11 +29,38 @@ function firstDayOfCurrentMonthLocal() {
   return new Date(d.getFullYear(), d.getMonth(), 1)
 }
 
+function normalizeUiDate(value: string): string {
+  const raw = (value || '').trim()
+  if (!raw) return ''
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw
+  const m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (m) {
+    const day = String(Number(m[1])).padStart(2, '0')
+    const month = String(Number(m[2])).padStart(2, '0')
+    const year = String(Number(m[3]))
+    return `${year}-${month}-${day}`
+  }
+  const parsed = new Date(raw)
+  if (!Number.isNaN(parsed.getTime())) return formatLocalISODate(parsed)
+  return ''
+}
+
 function parseNumber(v: unknown): number {
   if (typeof v === 'number') return Number.isFinite(v) ? v : 0
   if (typeof v === 'string') {
-    const n = Number(v.replace(/,/g, ''))
-    return Number.isFinite(n) ? n : 0
+    const raw = v.trim()
+    if (!raw) return 0
+    // Accounting formats can include commas, currency symbols, spaces, and negatives in parentheses.
+    const isParenNegative = /^\(.*\)$/.test(raw)
+    const cleaned = raw
+      .replace(/[,\s]/g, '')
+      .replace(/[฿$€£]/g, '')
+      .replace(/[()]/g, '')
+      .replace(/[^0-9.-]/g, '')
+    if (!cleaned) return 0
+    const n = Number(cleaned)
+    if (!Number.isFinite(n)) return 0
+    return isParenNegative ? -Math.abs(n) : n
   }
   return 0
 }
@@ -46,16 +73,71 @@ function plExpenseTotal(rd: any): number {
   return expenseFromBuckets || parseNumber(rd?.totalExpense)
 }
 
+type DashboardCardKey =
+  | 'kpis'
+  | 'invoices'
+  | 'products'
+  | 'quotations'
+  | 'salesOrders'
+  | 'accounting'
+  | 'purchaseOrders'
+  | 'purchaseRequests'
+  | 'ai'
+  | 'excel'
+  | 'backend'
+  | 'connection'
+
+const DASHBOARD_CARD_PREF_KEY = 'qf.dashboard.cards.v1'
+const DASHBOARD_CARD_DEFAULTS: Record<DashboardCardKey, boolean> = {
+  kpis: true,
+  invoices: true,
+  products: true,
+  quotations: true,
+  salesOrders: true,
+  accounting: true,
+  purchaseOrders: true,
+  purchaseRequests: true,
+  ai: true,
+  excel: true,
+  backend: true,
+  connection: true,
+}
+
+function loadDashboardCardPrefs(): Record<DashboardCardKey, boolean> {
+  if (typeof window === 'undefined') return DASHBOARD_CARD_DEFAULTS
+  try {
+    const raw = window.localStorage.getItem(DASHBOARD_CARD_PREF_KEY)
+    if (!raw) return DASHBOARD_CARD_DEFAULTS
+    const parsed = JSON.parse(raw) as Partial<Record<DashboardCardKey, boolean>>
+    return { ...DASHBOARD_CARD_DEFAULTS, ...parsed }
+  } catch {
+    return DASHBOARD_CARD_DEFAULTS
+  }
+}
+
 export function DashboardPage() {
   const navigate = useNavigate()
-  const user = useAuthStore((s) => s.user)
   const instancePublicId = useAuthStore((s) => s.instancePublicId)
   const canSeeKpis = hasScope('dashboard')
   const canSeeReports = hasScope('reports')
   const [assistantLang, setAssistantLangState] = useState<AssistantLanguage>(() => getAssistantLanguage())
+  const [showCardControl, setShowCardControl] = useState(false)
+  const [cardVisibility, setCardVisibility] =
+    useState<Record<DashboardCardKey, boolean>>(loadDashboardCardPrefs)
 
-  const accDateFrom = formatLocalISODate(firstDayOfCurrentMonthLocal())
-  const accDateTo = formatLocalISODate(new Date())
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(DASHBOARD_CARD_PREF_KEY, JSON.stringify(cardVisibility))
+  }, [cardVisibility])
+
+  const [accDateFrom, setAccDateFrom] = useState<string>(() =>
+    formatLocalISODate(firstDayOfCurrentMonthLocal()),
+  )
+  const [accDateTo, setAccDateTo] = useState<string>(() => formatLocalISODate(new Date()))
+  const [accFilterFrom, setAccFilterFrom] = useState<string>(() =>
+    formatLocalISODate(firstDayOfCurrentMonthLocal()),
+  )
+  const [accFilterTo, setAccFilterTo] = useState<string>(() => formatLocalISODate(new Date()))
 
   const pingQuery = useQuery({
     queryKey: ['system', 'ping'],
@@ -102,14 +184,14 @@ export function DashboardPage() {
   })
 
   const profitLossQuery = useQuery({
-    queryKey: ['accounting', 'profitLoss', 'dashboard', accDateFrom, accDateTo],
+    queryKey: ['accounting', 'profitLoss', 'dashboard', accFilterFrom, accFilterTo],
     // Even if scope isn't enabled, allow request; backend will enforce scopes.
     // This keeps UX consistent with the rest of the app.
     enabled: true,
     queryFn: () =>
       getProfitLoss({
-        dateFrom: accDateFrom,
-        dateTo: accDateTo,
+        dateFrom: accFilterFrom,
+        dateTo: accFilterTo,
         targetMove: 'posted',
         comparison: 0,
       }),
@@ -125,8 +207,14 @@ export function DashboardPage() {
 
   const accountingSnapshot = useMemo(() => {
     const rd = profitLossQuery.data?.reportData
-    const income = parseNumber(rd?.totalIncome)
-    const expense = plExpenseTotal(rd as any)
+    const incomeTotal = parseNumber(rd?.totalIncome)
+    const incomeFromBucket = parseNumber((rd as any)?.income?.total)
+    const income = incomeTotal || incomeFromBucket
+
+    const expenseTotal = parseNumber(rd?.totalExpense)
+    const expenseBucket = plExpenseTotal(rd as any)
+    const expense = expenseBucket || expenseTotal
+
     const profit = income - expense
     return { income, expense, profit }
   }, [profitLossQuery.data])
@@ -192,6 +280,43 @@ export function DashboardPage() {
     return { label: 'ร่าง', cls: 'bg-secondary-subtle text-secondary-emphasis' }
   }
 
+  const applyAccountingRange = () => {
+    const from = normalizeUiDate(accDateFrom)
+    const to = normalizeUiDate(accDateTo)
+    if (!from || !to) return
+    if (new Date(from).getTime() > new Date(to).getTime()) return
+    setAccDateFrom(from)
+    setAccDateTo(to)
+    setAccFilterFrom(from)
+    setAccFilterTo(to)
+  }
+
+  const resetAccountingRange = () => {
+    const from = formatLocalISODate(firstDayOfCurrentMonthLocal())
+    const to = formatLocalISODate(new Date())
+    setAccDateFrom(from)
+    setAccDateTo(to)
+    setAccFilterFrom(from)
+    setAccFilterTo(to)
+  }
+
+  const goToProfitLossDetail = (tab: 'income' | 'expense') => {
+    const sp = new URLSearchParams({
+      tab,
+      dateFrom: accFilterFrom,
+      dateTo: accFilterTo,
+      targetMove: 'posted',
+    })
+    navigate(`/accounting/reports/profit-loss?${sp.toString()}`)
+  }
+
+  const onMetricCardKeyDown = (e: KeyboardEvent<HTMLDivElement>, tab: 'income' | 'expense') => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      goToProfitLossDetail(tab)
+    }
+  }
+
   return (
     <div>
       <PageHeader
@@ -223,12 +348,73 @@ export function DashboardPage() {
               <i className="bi bi-arrow-clockwise me-1"></i>
               ตรวจสอบการเชื่อมต่อ
             </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowCardControl((s) => !s)}
+              style={{ border: '1px solid #e5e7eb' }}
+            >
+              <i className="bi bi-grid me-1"></i>
+              {showCardControl ? 'ปิดตั้งค่าการ์ด' : 'จัดการการ์ด'}
+            </Button>
           </div>
         }
       />
 
+      {showCardControl && (
+        <div className="mb-3">
+          <Card className="p-3">
+            <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+              <div className="fw-semibold">เลือกการ์ดที่ต้องการแสดงบน Dashboard</div>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setCardVisibility({ ...DASHBOARD_CARD_DEFAULTS })}
+              >
+                รีเซ็ตค่าเริ่มต้น
+              </Button>
+            </div>
+            <div className="row g-2">
+              {(
+                [
+                  ['kpis', 'KPI Cards'],
+                  ['invoices', 'Invoices'],
+                  ['products', 'Products'],
+                  ['quotations', 'Quotations'],
+                  ['salesOrders', 'Sale Orders'],
+                  ['accounting', 'รายงานบัญชี'],
+                  ['purchaseOrders', 'Purchase Orders'],
+                  ['purchaseRequests', 'Purchase Requests'],
+                  ['ai', 'ERPTH AI'],
+                  ['excel', 'Excel Import'],
+                  ['backend', 'Backend'],
+                  ['connection', 'Connection'],
+                ] as Array<[DashboardCardKey, string]>
+              ).map(([key, label]) => (
+                <div className="col-6 col-md-4 col-xl-3" key={key}>
+                  <label className="form-check form-switch mb-0 rounded border bg-light px-3 py-2 w-100">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      checked={Boolean(cardVisibility[key])}
+                      onChange={() =>
+                        setCardVisibility((prev) => ({
+                          ...prev,
+                          [key]: !prev[key],
+                        }))
+                      }
+                    />
+                    <span className="form-check-label ms-2">{label}</span>
+                  </label>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
+
       <div className="row g-4">
-        {canSeeKpis && (
+        {canSeeKpis && cardVisibility.kpis && (
           <>
             <div className="col-md-6 col-xl-3">
               <Card>
@@ -332,12 +518,12 @@ export function DashboardPage() {
           </>
         )}
 
-        <div className="col-md-6 col-xl-3">
+        {cardVisibility.invoices && <div className="col-md-6 col-xl-3">
           <Card
             onClick={() => navigate('/sales/invoices')}
             role="button"
             tabIndex={0}
-            className="qf-dashboard-card qf-dashboard-card-invoices"
+            className="qf-dashboard-card qf-dashboard-card-invoices h-100"
           >
             <div className="d-flex align-items-center justify-content-between mb-2">
               <p className="small fw-medium text-muted mb-0">Invoices</p>
@@ -350,13 +536,13 @@ export function DashboardPage() {
               สร้าง/แก้ไข/โพสต์ใบแจ้งหนี้
             </p>
           </Card>
-        </div>
-        <div className="col-md-6 col-xl-3">
+        </div>}
+        {cardVisibility.products && <div className="col-md-6 col-xl-3">
           <Card
             onClick={() => navigate('/products')}
             role="button"
             tabIndex={0}
-            className="qf-dashboard-card"
+            className="qf-dashboard-card h-100"
           >
             <div className="d-flex align-items-center justify-content-between mb-2">
               <p className="small fw-medium text-muted mb-0">Products</p>
@@ -373,13 +559,13 @@ export function DashboardPage() {
               จัดการสินค้าและบริการ
             </p>
           </Card>
-        </div>
-        <div className="col-md-6 col-xl-3">
+        </div>}
+        {cardVisibility.quotations && <div className="col-md-6 col-xl-3">
           <Card
             onClick={() => navigate('/sales/orders?type=quotation')}
             role="button"
             tabIndex={0}
-            className="qf-dashboard-card"
+            className="qf-dashboard-card h-100"
           >
             <div className="d-flex align-items-center justify-content-between mb-2">
               <p className="small fw-medium text-muted mb-0">Quotations</p>
@@ -392,13 +578,13 @@ export function DashboardPage() {
               สร้าง/ติดตามใบเสนอราคา
             </p>
           </Card>
-        </div>
-        <div className="col-md-6 col-xl-3">
+        </div>}
+        {cardVisibility.salesOrders && <div className="col-md-6 col-xl-3">
           <Card
             onClick={() => navigate('/sales/orders?type=sale')}
             role="button"
             tabIndex={0}
-            className="qf-dashboard-card"
+            className="qf-dashboard-card h-100"
           >
             <div className="d-flex align-items-center justify-content-between mb-2">
               <p className="small fw-medium text-muted mb-0">Sale Orders</p>
@@ -411,13 +597,13 @@ export function DashboardPage() {
               ยืนยันและติดตามคำสั่งขาย
             </p>
           </Card>
-        </div>
-        <div className="col-md-6 col-xl-3">
+        </div>}
+        {cardVisibility.accounting && <div className="col-md-6 col-xl-3">
           <Card
             onClick={() => navigate('/accounting/reports')}
             role="button"
             tabIndex={0}
-            className="qf-dashboard-card qf-dashboard-card-accounting"
+            className="qf-dashboard-card qf-dashboard-card-accounting h-100"
           >
             <div className="d-flex align-items-center justify-content-between mb-2">
               <p className="small fw-medium text-muted mb-0">รายงานบัญชี</p>
@@ -430,13 +616,13 @@ export function DashboardPage() {
               งบการเงิน · เล่มบัญชี · ภาษี (คลิกเพื่อดูรายงาน)
             </p>
           </Card>
-        </div>
-        <div className="col-md-6 col-xl-3">
+        </div>}
+        {cardVisibility.purchaseOrders && <div className="col-md-6 col-xl-3">
           <Card
             onClick={() => navigate('/purchases/orders')}
             role="button"
             tabIndex={0}
-            className="qf-dashboard-card qf-dashboard-card-purchases"
+            className="qf-dashboard-card qf-dashboard-card-purchases h-100"
           >
             <div className="d-flex align-items-center justify-content-between mb-2">
               <p className="small fw-medium text-muted mb-0">Purchase Orders</p>
@@ -460,13 +646,13 @@ export function DashboardPage() {
                 : 'จัดการใบสั่งซื้อ'}
             </p>
           </Card>
-        </div>
-        <div className="col-md-6 col-xl-3">
+        </div>}
+        {cardVisibility.purchaseRequests && <div className="col-md-6 col-xl-3">
           <Card
             onClick={() => navigate('/purchases/requests')}
             role="button"
             tabIndex={0}
-            className="qf-dashboard-card qf-dashboard-card-requests"
+            className="qf-dashboard-card qf-dashboard-card-requests h-100"
           >
             <div className="d-flex align-items-center justify-content-between mb-2">
               <p className="small fw-medium text-muted mb-0">Purchase Requests</p>
@@ -490,13 +676,13 @@ export function DashboardPage() {
                 : 'จัดการคำขอซื้อ'}
             </p>
           </Card>
-        </div>
-        <div className="col-md-6 col-xl-3">
+        </div>}
+        {cardVisibility.ai && <div className="col-md-6 col-xl-3">
           <Card
             onClick={() => navigate('/agent')}
             role="button"
             tabIndex={0}
-            className="qf-dashboard-card qf-dashboard-card-ai"
+            className="qf-dashboard-card qf-dashboard-card-ai h-100"
             style={{
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               color: 'white',
@@ -572,13 +758,13 @@ export function DashboardPage() {
               )}
             </div>
           </Card>
-        </div>
-        <div className="col-md-6 col-xl-3">
+        </div>}
+        {cardVisibility.excel && <div className="col-md-6 col-xl-3">
           <Card
             onClick={() => navigate('/excel-import')}
             role="button"
             tabIndex={0}
-            className="qf-dashboard-card qf-dashboard-card-excel"
+            className="qf-dashboard-card qf-dashboard-card-excel h-100"
           >
             <div className="d-flex align-items-center justify-content-between mb-2">
               <p className="small fw-medium text-muted mb-0">Excel Import</p>
@@ -591,13 +777,13 @@ export function DashboardPage() {
               อัปโหลด .xlsx เพื่อสร้างข้อมูล
             </p>
           </Card>
-        </div>
-        <div className="col-md-6 col-xl-3">
+        </div>}
+        {cardVisibility.backend && <div className="col-md-6 col-xl-3">
           <Card
             onClick={() => navigate('/backend-connection')}
             role="button"
             tabIndex={0}
-            className="qf-dashboard-card qf-dashboard-card-backend"
+            className="qf-dashboard-card qf-dashboard-card-backend h-100"
           >
             <div className="d-flex align-items-center justify-content-between mb-2">
               <p className="small fw-medium text-muted mb-0">Backend</p>
@@ -610,9 +796,9 @@ export function DashboardPage() {
               สร้างบริษัทและ admin ใหม่
             </p>
           </Card>
-        </div>
-        <div className="col-md-6 col-xl-3">
-          <Card>
+        </div>}
+        {cardVisibility.connection && <div className="col-md-6 col-xl-3">
+          <Card className="h-100">
             <p className="small fw-medium text-muted mb-2">Connection</p>
             <p className="h6 fw-semibold mb-2">
               {pingQuery.isLoading
@@ -627,7 +813,7 @@ export function DashboardPage() {
               Instance ID: {instancePublicId ?? '—'}
             </p>
           </Card>
-        </div>
+        </div>}
       </div>
 
       <div className="row g-4 mt-4">
@@ -637,7 +823,7 @@ export function DashboardPage() {
               <div>
                 <div className="h6 fw-semibold mb-1">สรุปบัญชี (เดือนนี้)</div>
                 <div className="small text-muted">
-                  ช่วงวันที่ {accDateFrom} ถึง {accDateTo}
+                  ช่วงวันที่ {accFilterFrom} ถึง {accFilterTo}
                   {!canSeeReports && (
                     <span className="ms-2">
                       (ถ้าเรียกไม่ได้ ให้เปิด scope: <code>reports</code>)
@@ -646,25 +832,38 @@ export function DashboardPage() {
                 </div>
               </div>
               <div className="d-flex gap-2 flex-wrap">
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    const sp = new URLSearchParams({ tab: 'income', dateFrom: accDateFrom, dateTo: accDateTo, targetMove: 'posted' })
-                    navigate(`/accounting/reports/profit-loss?${sp.toString()}`)
-                  }}
-                >
-                  รายละเอียด รายได้
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => {
-                    const sp = new URLSearchParams({ tab: 'expense', dateFrom: accDateFrom, dateTo: accDateTo, targetMove: 'posted' })
-                    navigate(`/accounting/reports/profit-loss?${sp.toString()}`)
-                  }}
-                >
-                  รายละเอียด รายจ่าย
-                </Button>
+                <div className="d-flex gap-2 align-items-center flex-wrap">
+                  <input
+                    type="date"
+                    className="form-control form-control-sm"
+                    style={{ width: 150 }}
+                    value={accDateFrom}
+                    onChange={(e) => setAccDateFrom(e.target.value)}
+                  />
+                  <span className="small text-muted">ถึง</span>
+                  <input
+                    type="date"
+                    className="form-control form-control-sm"
+                    style={{ width: 150 }}
+                    value={accDateTo}
+                    onChange={(e) => setAccDateTo(e.target.value)}
+                  />
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={applyAccountingRange}
+                    disabled={
+                      !accDateFrom ||
+                      !accDateTo ||
+                      new Date(accDateFrom).getTime() > new Date(accDateTo).getTime()
+                    }
+                  >
+                    ใช้ช่วงวันที่
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={resetAccountingRange}>
+                    เดือนนี้
+                  </Button>
+                </div>
                 <Button size="sm" variant="secondary" onClick={() => navigate('/accounting/reports')}>
                   ไปหน้ารายงานบัญชี
                 </Button>
@@ -679,46 +878,72 @@ export function DashboardPage() {
                 </div>
               </div>
             ) : (
-              <div className="row g-3 align-items-stretch">
-                <div className="col-lg-7">
+              <div className="row g-3">
+                <div className="col-12">
                   <div className="row g-2">
-                    <div className="col-md-4">
-                      <div className="rounded bg-light p-3 h-100">
+                    <div className="col-12 col-md-4">
+                      <div
+                        className="rounded bg-light p-3 h-100 qf-clickable-metric qf-clickable-metric--income"
+                        role="button"
+                        tabIndex={0}
+                        aria-label="เปิดรายละเอียดรายได้"
+                        onClick={() => goToProfitLossDetail('income')}
+                        onKeyDown={(e) => onMetricCardKeyDown(e, 'income')}
+                      >
                         <div className="small text-muted">รายได้รวม</div>
-                        <div className="h5 fw-semibold mb-0 font-monospace">
+                        <div className="h4 fw-semibold mb-0 font-monospace">
                           {accountingSnapshot.income.toLocaleString('th-TH')}
                         </div>
-                      </div>
-                    </div>
-                    <div className="col-md-4">
-                      <div className="rounded bg-light p-3 h-100">
-                        <div className="small text-muted">รายจ่ายรวม</div>
-                        <div className="h5 fw-semibold mb-0 font-monospace">
-                          {accountingSnapshot.expense.toLocaleString('th-TH')}
+                        <div className="qf-clickable-metric__hint">
+                          คลิกเพื่อดูรายละเอียด
+                          <i className="bi bi-arrow-right-short ms-1" />
                         </div>
                       </div>
                     </div>
-                    <div className="col-md-4">
-                      <div className="rounded bg-light p-3 h-100">
+                    <div className="col-12 col-md-4">
+                      <div
+                        className="rounded bg-light p-3 h-100 qf-clickable-metric qf-clickable-metric--expense"
+                        role="button"
+                        tabIndex={0}
+                        aria-label="เปิดรายละเอียดรายจ่าย"
+                        onClick={() => goToProfitLossDetail('expense')}
+                        onKeyDown={(e) => onMetricCardKeyDown(e, 'expense')}
+                      >
+                        <div className="small text-muted">รายจ่ายรวม</div>
+                        <div className="h4 fw-semibold mb-0 font-monospace">
+                          {accountingSnapshot.expense.toLocaleString('th-TH')}
+                        </div>
+                        <div className="qf-clickable-metric__hint">
+                          คลิกเพื่อดูรายละเอียด
+                          <i className="bi bi-arrow-right-short ms-1" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="col-12 col-md-4">
+                      <div
+                        className={`rounded p-3 h-100 qf-profit-metric ${
+                          accountingSnapshot.profit >= 0 ? 'qf-profit-metric--gain' : 'qf-profit-metric--loss'
+                        }`}
+                      >
                         <div className="small text-muted">กำไรสุทธิ</div>
-                        <div className="h5 fw-semibold mb-0 font-monospace">
+                        <div className="h4 fw-semibold mb-0 font-monospace">
                           {accountingSnapshot.profit.toLocaleString('th-TH')}
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-                <div className="col-lg-5">
-                  <div className="rounded bg-light p-2 h-100">
-                    <div className="small text-muted px-2 pt-1">กราฟสรุป</div>
-                    <div style={{ height: 120 }}>
+                <div className="col-12">
+                  <div className="rounded bg-light p-3">
+                    <div className="small text-muted mb-2">กราฟสรุป</div>
+                    <div style={{ height: 280 }}>
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={accountingChartData} margin={{ top: 8, right: 12, left: 8, bottom: 0 }}>
+                        <BarChart data={accountingChartData} margin={{ top: 12, right: 20, left: 8, bottom: 0 }}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                          <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                          <XAxis dataKey="name" tick={{ fontSize: 13 }} />
                           <YAxis tick={{ fontSize: 12 }} />
                           <Tooltip />
-                          <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false}>
+                          <Bar dataKey="value" radius={[8, 8, 0, 0]} isAnimationActive={false} barSize={72}>
                             {accountingChartData.map((d, idx) => (
                               <Cell key={idx} fill={d.fill} />
                             ))}
@@ -732,48 +957,7 @@ export function DashboardPage() {
             )}
           </Card>
         </div>
-        <div className="col-lg-8">
-          <Card>
-            <p className="h6 fw-semibold mb-3">ผู้ใช้งานปัจจุบัน</p>
-            <div className="row g-2">
-              <div className="col-sm-6">
-                <div className="rounded bg-light p-3">
-                  <p className="small fw-medium text-muted mb-1">
-                    ชื่อ
-                  </p>
-                  <p className="fw-semibold mb-0">{user?.name ?? '—'}</p>
-                </div>
-              </div>
-              <div className="col-sm-6">
-                <div className="rounded bg-light p-3">
-                  <p className="small fw-medium text-muted mb-1">
-                    Login
-                  </p>
-                  <p className="fw-semibold mb-0 font-monospace">{user?.login ?? '—'}</p>
-                </div>
-              </div>
-              <div className="col-sm-6">
-                <div className="rounded bg-light p-3">
-                  <p className="small fw-medium text-muted mb-1">
-                    Company
-                  </p>
-                  <p className="fw-semibold mb-0">{user?.companyName ?? '—'}</p>
-                </div>
-              </div>
-              <div className="col-sm-6">
-                <div className="rounded bg-light p-3">
-                  <p className="small fw-medium text-muted mb-1">
-                    Companies
-                  </p>
-                  <p className="fw-semibold mb-0 font-monospace">
-                    {user?.companies?.length ?? 0}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </div>
-        <div className="col-lg-4">
+        <div className="col-12">
           <Card>
             <p className="h6 fw-semibold mb-2">
               Next: KPI จริงจาก Odoo

@@ -7,6 +7,10 @@ export interface ProductSummary {
   name: string
   defaultCode?: string
   barcode?: string
+  image128?: string | null
+  imageUrl?: string | null
+  qtyAvailable?: number | null
+  virtualAvailable?: number | null
   uomId?: number | null
   uomName?: string | null
   listPrice?: number | null
@@ -56,6 +60,14 @@ interface BackendProductSummary {
   defaultCode?: string
   default_code?: string
   barcode?: string
+  image128?: string | null
+  image_128?: string | null
+  imageUrl?: string | null
+  image_url?: string | null
+  qty_available?: number | string | null
+  qtyAvailable?: number | string | null
+  virtual_available?: number | string | null
+  virtualAvailable?: number | string | null
   uomId?: number | null
   uomName?: string | null
   price?: number | string | null
@@ -86,6 +98,10 @@ function mapProductSummary(raw: BackendProductSummary): ProductSummary {
     name: raw.name || raw.display_name || '',
     defaultCode: raw.defaultCode || raw.default_code,
     barcode: raw.barcode || undefined,
+    image128: raw.image128 ?? raw.image_128 ?? null,
+    imageUrl: raw.imageUrl ?? raw.image_url ?? null,
+    qtyAvailable: toNumberOrNull(raw.qtyAvailable ?? raw.qty_available),
+    virtualAvailable: toNumberOrNull(raw.virtualAvailable ?? raw.virtual_available),
     uomId: raw.uomId ?? null,
     uomName: raw.uomName ?? null,
     listPrice,

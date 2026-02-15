@@ -27,6 +27,12 @@
   margin-bottom: 12px;
 }
 
+.avatar-assistant-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .avatar-assistant-history {
   max-height: 260px;
   overflow: auto;
@@ -97,4 +103,59 @@
 .avatar-preview-picked {
   border-top: 1px dashed #cbd5e1;
   padding-top: 6px;
+}
+
+.avatar-results-box {
+  border: 1px solid #d9dee8;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 8px 10px;
+}
+
+.avatar-results-list {
+  display: grid;
+  gap: 8px;
+  max-height: 210px;
+  overflow: auto;
+}
+
+.avatar-result-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  padding: 8px;
+}
+
+.avatar-result-rows {
+  display: grid;
+  gap: 6px;
+}
+
+.avatar-result-row {
+  display: grid;
+  grid-template-columns: minmax(80px, 1fr) minmax(100px, 2fr) auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.78rem;
+}
+
+.avatar-result-label {
+  color: #0f172a;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.avatar-result-value {
+  color: #475569;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.avatar-result-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }

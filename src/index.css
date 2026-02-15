@@ -391,6 +391,145 @@ body {
   border-top: 3px solid #16A34A;
 }
 
+/* Clickable accounting metric cards on dashboard */
+.qf-clickable-metric {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease, background-color 140ms ease;
+  cursor: pointer;
+}
+
+.qf-clickable-metric:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+  border-color: rgba(59, 130, 246, 0.32);
+  background-color: #fff !important;
+}
+
+.qf-clickable-metric:active {
+  transform: translateY(0);
+}
+
+.qf-clickable-metric:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.24);
+  border-color: rgba(59, 130, 246, 0.48);
+}
+
+.qf-clickable-metric--income:hover {
+  border-color: rgba(37, 99, 235, 0.4);
+}
+
+.qf-clickable-metric--expense:hover {
+  border-color: rgba(220, 38, 38, 0.35);
+}
+
+.qf-clickable-metric--income {
+  border-color: rgba(37, 99, 235, 0.24);
+  background: linear-gradient(180deg, rgba(239, 246, 255, 0.92) 0%, rgba(255, 255, 255, 0.98) 100%) !important;
+}
+
+.qf-clickable-metric--expense {
+  border-color: rgba(220, 38, 38, 0.22);
+  background: linear-gradient(180deg, rgba(254, 242, 242, 0.92) 0%, rgba(255, 255, 255, 0.98) 100%) !important;
+}
+
+.qf-clickable-metric--income .small.text-muted {
+  color: #1d4ed8 !important;
+}
+
+.qf-clickable-metric--expense .small.text-muted {
+  color: #b91c1c !important;
+}
+
+.qf-clickable-metric--income .font-monospace {
+  color: #1e3a8a;
+}
+
+.qf-clickable-metric--expense .font-monospace {
+  color: #7f1d1d;
+}
+
+.qf-clickable-metric--income .qf-clickable-metric__hint {
+  color: #1d4ed8;
+}
+
+.qf-clickable-metric--expense .qf-clickable-metric__hint {
+  color: #b91c1c;
+}
+
+.qf-clickable-metric__hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.9;
+}
+
+.qf-clickable-metric:hover .qf-clickable-metric__hint {
+  color: #334155;
+}
+
+.qf-drilldown-btn {
+  border-radius: 999px !important;
+  border: 1px solid rgba(37, 99, 235, 0.28) !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
+  color: #1d4ed8 !important;
+  font-weight: 700 !important;
+  min-width: 104px;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease, background-color 120ms ease;
+}
+
+.qf-drilldown-btn:hover:not(:disabled) {
+  border-color: rgba(37, 99, 235, 0.5) !important;
+  background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%) !important;
+  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.18);
+  transform: translateY(-1px);
+}
+
+.qf-drilldown-btn:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25), 0 6px 14px rgba(37, 99, 235, 0.12) !important;
+}
+
+.qf-drilldown-btn:disabled {
+  color: #94a3b8 !important;
+  border-color: rgba(148, 163, 184, 0.28) !important;
+  background: #f8fafc !important;
+  box-shadow: none !important;
+}
+
+.qf-profit-metric {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.qf-profit-metric--gain {
+  border-color: rgba(22, 163, 74, 0.28);
+  background: linear-gradient(180deg, rgba(240, 253, 244, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%) !important;
+}
+
+.qf-profit-metric--gain .small.text-muted {
+  color: #15803d !important;
+}
+
+.qf-profit-metric--gain .font-monospace {
+  color: #166534;
+}
+
+.qf-profit-metric--loss {
+  border-color: rgba(100, 116, 139, 0.28);
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%) !important;
+}
+
+.qf-profit-metric--loss .small.text-muted {
+  color: #475569 !important;
+}
+
+.qf-profit-metric--loss .font-monospace {
+  color: #334155;
+}
+
 /* Accounting Reports hub */
 .qf-report-card {
   border: 1px solid rgba(15, 23, 42, 0.08);

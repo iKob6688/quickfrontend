@@ -209,6 +209,7 @@ export function ProfitLossReportPage() {
           <Button
             size="sm"
             variant="secondary"
+            className="qf-drilldown-btn"
             disabled={!canDrill}
             onClick={async (e) => {
               e.preventDefault()
@@ -244,7 +245,8 @@ export function ProfitLossReportPage() {
               }
             }}
           >
-            Drilldown
+            <i className="bi bi-box-arrow-up-right me-1" aria-hidden="true" />
+            รายละเอียด
           </Button>
         )
       },
@@ -371,5 +373,4 @@ export function ProfitLossReportPage() {
     </div>
   )
 }
-
 

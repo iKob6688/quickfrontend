@@ -116,12 +116,14 @@ export function AgedReportPage(props: { mode: Mode }) {
           <Button
             size="sm"
             variant="secondary"
+            className="qf-drilldown-btn"
             onClick={() => {
               const sp = new URLSearchParams({ targetMove: 'posted' })
               navigate(`/accounting/reports/partner-ledger/partner/${r.partnerId}?${sp.toString()}`)
             }}
           >
-            Drilldown
+            <i className="bi bi-box-arrow-up-right me-1" aria-hidden="true" />
+            รายละเอียด
           </Button>
         ) : (
           <span className="text-muted small">—</span>
@@ -189,5 +191,4 @@ export function AgedReportPage(props: { mode: Mode }) {
     </div>
   )
 }
-
 

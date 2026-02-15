@@ -55,13 +55,15 @@ export function PartnerLedgerReportPage() {
               <input className="form-control" value={partnerId} onChange={(e) => setPartnerId(e.target.value)} placeholder="เช่น 12" />
               <Button
                 variant="secondary"
+                className="qf-drilldown-btn"
                 onClick={() => {
                   const id = Number(partnerId)
                   if (!Number.isFinite(id) || id <= 0) return
                   navigate(`/accounting/reports/partner-ledger/partner/${id}`)
                 }}
               >
-                Drilldown
+                <i className="bi bi-box-arrow-up-right me-1" aria-hidden="true" />
+                รายละเอียด
               </Button>
             </div>
           </div>
@@ -83,5 +85,4 @@ export function PartnerLedgerReportPage() {
     </div>
   )
 }
-
 

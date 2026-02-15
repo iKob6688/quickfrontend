@@ -9,6 +9,12 @@ import {
   type AssistantChatResponse,
 } from '@/api/services/ai-assistant.service'
 import {
+  buildAssistantInsight,
+  isAssistantDataQuery,
+  type AssistantInsight,
+  type AssistantInsightSource,
+} from '@/features/assistant/assistantInsights'
+import {
   getAssistantLanguage,
   getAssistantLanguageEventName,
   type AssistantLanguage,
@@ -19,6 +25,22 @@ import './avatar-assistant.css'
 type ChatItem = {
   role: 'user' | 'assistant'
   text: string
+}
+
+type AssistantSourceLink = {
+  label: string
+  route: string
+}
+
+type AssistantResultCard = {
+  id: string
+  title: string
+  summary: string
+  confidence?: number
+  generatedAt?: string
+  explain?: string
+  rows: Array<{ label: string; value: string; route?: string }>
+  sources: AssistantSourceLink[]
 }
 
 const AVATAR_SRC = '/avatar-assistant.png'
@@ -35,6 +57,7 @@ export function AvatarAssistant() {
   const [pendingApprovalIds, setPendingApprovalIds] = useState<string[]>([])
   const [pendingRunIds, setPendingRunIds] = useState<string[]>([])
   const [assistantLang, setAssistantLang] = useState<AssistantLanguage>(() => getAssistantLanguage())
+  const [resultCards, setResultCards] = useState<AssistantResultCard[]>([])
   const [pendingConfirm, setPendingConfirm] = useState<{
     session_id: string
     nonce?: string
@@ -84,9 +107,68 @@ export function AvatarAssistant() {
   const reportRouteSet = useMemo(() => new Set((caps?.reports || []).map((r) => r.route)), [caps?.reports])
   const perms = caps?.permissions || {}
   const previewPlan = lastChat?.plan || []
+  const showDebugBlocks = import.meta.env.DEV
+
+  const safeNavigate = (route: string) => {
+    if (!route) return
+    if (
+      reportRouteSet.has(route) ||
+      route.startsWith('/customers') ||
+      route.startsWith('/products') ||
+      route.startsWith('/sales/') ||
+      route.startsWith('/purchases/') ||
+      route.startsWith('/accounting/reports') ||
+      route.startsWith('/reports-studio')
+    ) {
+      navigate(route)
+      return
+    }
+    toast.info('Assistant', `Blocked route: ${route}`)
+  }
+
+  const mapRecordRoute = (model: string, id: number): string => {
+    if (!model || !id) return ''
+    if (model === 'res.partner') return `/customers/${id}`
+    if (model === 'product.product' || model === 'product.template') return `/products/${id}/edit`
+    if (model === 'sale.order') return `/sales/orders/${id}`
+    if (model === 'account.move') return `/sales/invoices/${id}`
+    if (model === 'purchase.order') return `/purchases/orders/${id}`
+    if (model === 'purchase.request') return `/purchases/requests/${id}`
+    return ''
+  }
+
+  const dedupeSources = (links: AssistantSourceLink[]) => {
+    const seen = new Set<string>()
+    return links.filter((item) => {
+      const key = `${item.label}|${item.route}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }
+
+  const appendResultCards = (nextCards: AssistantResultCard[]) => {
+    if (!nextCards.length) return
+    setResultCards((prev) => [...nextCards, ...prev].slice(0, 5))
+  }
+
+  const insightToCard = (insight: AssistantInsight): AssistantResultCard => ({
+    id: `insight-${Date.now()}`,
+    title: insight.title,
+    summary: insight.summary,
+    confidence: insight.confidence,
+    generatedAt: insight.generatedAt,
+    explain: insight.explain,
+    rows: insight.rows,
+    sources: insight.sources.map((src: AssistantInsightSource) => ({
+      label: src.label,
+      route: src.route,
+    })),
+  })
 
   const applyUiActions = (actions: Array<{ type: string; payload: Record<string, unknown> }>) => {
     const routeNotes: string[] = []
+    const sourceLinks: AssistantSourceLink[] = []
     actions.forEach((action) => {
       const payload = action.payload || {}
       if (action.type === 'SHOW_TOAST') {
@@ -100,35 +182,35 @@ export function AvatarAssistant() {
       }
       if (action.type === 'OPEN_ROUTE') {
         const route = String(payload.route || '')
-        if (
-          route &&
-          (reportRouteSet.has(route) ||
-            route.startsWith('/customers') ||
-            route.startsWith('/sales/') ||
-            route.startsWith('/accounting/reports') ||
-            route.startsWith('/reports-studio'))
-        ) {
-          navigate(route)
+        if (route) {
+          safeNavigate(route)
           routeNotes.push(route)
-        } else {
-          toast.info('Assistant', `Blocked route: ${route}`)
+          sourceLinks.push({
+            label: String(payload.label || payload.title || route),
+            route,
+          })
         }
         return
       }
       if (action.type === 'OPEN_RECORD') {
         const route = String(payload.route || '')
         if (route) {
-          navigate(route)
+          safeNavigate(route)
           routeNotes.push(route)
+          sourceLinks.push({
+            label: String(payload.label || payload.title || 'Open record'),
+            route,
+          })
         }
       }
     })
     if (routeNotes.length > 0) {
       setHistory((prev) => [
         ...prev,
-        { role: 'assistant', text: `Navigating to: ${routeNotes.join(' -> ')}` },
+        { role: 'assistant', text: `กำลังเปิดหน้า: ${routeNotes.join(' -> ')}` },
       ])
     }
+    return dedupeSources(sourceLinks)
   }
 
   const onSend = async () => {
@@ -138,6 +220,47 @@ export function AvatarAssistant() {
     setHistory((prev) => [...prev, { role: 'user', text }])
     setInput('')
     try {
+      const isDataQuery = isAssistantDataQuery(text)
+      let localInsight: AssistantInsight | null = null
+      if (isDataQuery) {
+        try {
+          localInsight = await buildAssistantInsight(text)
+        } catch {
+          localInsight = null
+        }
+      }
+
+      if (localInsight) {
+        appendResultCards([insightToCard(localInsight)])
+        setHistory((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            text: localInsight.summary || 'สรุปผลลัพธ์ให้แล้ว สามารถกดเปิดดูข้อมูลต้นทางได้ทันที',
+          },
+        ])
+        setLastChat(null)
+        setPendingApprovalIds([])
+        setPendingRunIds([])
+        setPendingConfirm(null)
+        return
+      }
+
+      if (isDataQuery) {
+        setHistory((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            text: 'ยังไม่พบข้อมูลตามเงื่อนไข ลองระบุชื่อสินค้า/ลูกค้า หรือช่วงเวลาให้ชัดขึ้น เช่น "สรุปยอดซื้อรายลูกค้า เดือนนี้"',
+          },
+        ])
+        setLastChat(null)
+        setPendingApprovalIds([])
+        setPendingRunIds([])
+        setPendingConfirm(null)
+        return
+      }
+
       const res = await sendAssistantChat(text, {
         ui: { route: location.pathname },
         lang: assistantLang,
@@ -146,14 +269,22 @@ export function AvatarAssistant() {
         plan_only: true,
       })
       setLastChat(res)
-      setHistory((prev) => [...prev, { role: 'assistant', text: res.reply || 'Done.' }])
+      setHistory((prev) => [...prev, { role: 'assistant', text: res.reply || 'รับทราบ กำลังเตรียมขั้นตอนให้' }])
       if ((res.plan || []).length > 0) {
-        const planText = (res.plan || [])
-          .map((p, i) => `${i + 1}. ${p.tool}${p.requires_approval ? ' (approval)' : ''}`)
-          .join(' | ')
-        setHistory((prev) => [...prev, { role: 'assistant', text: `Draft workflow: ${planText}` }])
+        const planCount = (res.plan || []).length
+        const restricted = (res.plan || []).filter((p) => p.requires_approval).length
+        setHistory((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            text:
+              restricted > 0
+                ? `เตรียมแผนงาน ${planCount} ขั้นตอน (มี ${restricted} ขั้นตอนที่ต้องยืนยันก่อนทำงาน)`
+                : `เตรียมแผนงาน ${planCount} ขั้นตอนแล้ว`,
+          },
+        ])
       }
-      if ((res.permission_explanations || []).length > 0) {
+      if (showDebugBlocks && (res.permission_explanations || []).length > 0) {
         setHistory((prev) => [
           ...prev,
           {
@@ -166,6 +297,40 @@ export function AvatarAssistant() {
       const runnableSteps = (res.plan || []).filter((p) => !p.requires_approval).map((p) => p.id)
       setPendingApprovalIds(needApprove)
       setPendingRunIds(runnableSteps)
+      const responseSources = dedupeSources([
+        ...(Array.isArray((res as any).sources)
+          ? (res as any).sources
+              .map((src: any) => ({
+                label: String(src?.label || src?.title || src?.route || 'Source'),
+                route: String(src?.route || ''),
+              }))
+              .filter((src: AssistantSourceLink) => !!src.route)
+          : []),
+        ...(res.records || [])
+          .map((r) => ({
+            label: r.name ? `${r.model}: ${r.name}` : `${r.model} #${r.id}`,
+            route: mapRecordRoute(r.model, r.id),
+          }))
+          .filter((x) => !!x.route),
+      ])
+      if (responseSources.length > 0 || (res.records || []).length > 0) {
+        appendResultCards([
+          {
+            id: `records-${Date.now()}`,
+            title: 'ผลลัพธ์จาก Assistant',
+            summary:
+              (res.records || []).length > 0
+                ? `สร้าง/พบข้อมูล ${(res.records || []).length} รายการ`
+                : 'มีลิงก์สำหรับเปิด source',
+            rows: (res.records || []).map((r) => ({
+              label: r.name || `${r.model} #${r.id}`,
+              value: r.model,
+              route: mapRecordRoute(r.model, r.id),
+            })),
+            sources: responseSources,
+          },
+        ])
+      }
       if (res.confirmation_request) {
         setPendingConfirm({
           session_id: res.session_id,
@@ -186,11 +351,11 @@ export function AvatarAssistant() {
         })
         return
       }
-      setHistory((prev) => [...prev, { role: 'assistant', text: 'Workflow draft ready. Click "Run Workflow" to execute.' }])
+      setHistory((prev) => [...prev, { role: 'assistant', text: 'พร้อมทำงานแล้ว กด "เริ่มทำงาน" ได้เลย' }])
     } catch (err) {
       setHistory((prev) => [
         ...prev,
-        { role: 'assistant', text: `Error: ${String((err as Error)?.message || err)}` },
+        { role: 'assistant', text: 'ขออภัย ตอนนี้ประมวลผลไม่สำเร็จ ลองใหม่อีกครั้งได้เลย' },
       ])
     } finally {
       setLoading(false)
@@ -206,24 +371,42 @@ export function AvatarAssistant() {
       const denied = (res.results || []).filter((r) => r.status === 'denied')
       const errors = (res.results || []).filter((r) => r.status === 'error')
       if (denied.length > 0 || errors.length > 0) {
-        const deniedMsg = denied.map((d) => `${d.tool}: ${d.error || 'denied'}`).join(' | ')
-        const errorMsg = errors.map((d) => `${d.tool}: ${d.error || 'error'}`).join(' | ')
-        const permExplain = (res.permission_explanations || []).join(' | ')
         setHistory((prev) => [
           ...prev,
           {
             role: 'assistant',
-            text: `Execution finished with restrictions. ${deniedMsg} ${errorMsg} ${permExplain}`.trim(),
+            text: 'บางขั้นตอนถูกจำกัดสิทธิ์หรือผิดพลาด กรุณาตรวจสอบสิทธิ์ก่อนดำเนินการต่อ',
           },
         ])
       } else {
-        setHistory((prev) => [...prev, { role: 'assistant', text: 'Approved steps executed.' }])
+        setHistory((prev) => [...prev, { role: 'assistant', text: 'ยืนยันและดำเนินการเรียบร้อยแล้ว' }])
       }
-      applyUiActions(res.ui_actions || [])
+      const actionSources = applyUiActions(res.ui_actions || [])
+      const recordSources = (res.records || [])
+        .map((r) => ({
+          label: r.name || `${r.model} #${r.id}`,
+          route: mapRecordRoute(r.model, r.id),
+        }))
+        .filter((x) => !!x.route)
+      const mergedSources = dedupeSources([...(actionSources || []), ...recordSources])
+      if (mergedSources.length > 0 || (res.records || []).length > 0) {
+        appendResultCards([
+          {
+            id: `approve-${Date.now()}`,
+            title: 'ผลการอนุมัติและดำเนินการ',
+            summary: `ดำเนินการแล้ว ${(res.results || []).length} ขั้นตอน`,
+            rows: (res.results || []).map((r) => ({
+              label: r.tool,
+              value: r.status,
+            })),
+            sources: mergedSources,
+          },
+        ])
+      }
     } catch (err) {
       setHistory((prev) => [
         ...prev,
-        { role: 'assistant', text: `Approval failed: ${String((err as Error)?.message || err)}` },
+        { role: 'assistant', text: 'ไม่สามารถยืนยันขั้นตอนนี้ได้ในขณะนี้' },
       ])
     } finally {
       setLoading(false)
@@ -236,29 +419,46 @@ export function AvatarAssistant() {
     try {
       const res = await executeAssistantPlan(lastChat.session_id, pendingRunIds, lastChat.nonce)
       setPendingRunIds([])
-      applyUiActions(res.ui_actions || [])
+      const actionSources = applyUiActions(res.ui_actions || [])
       const denied = (res.results || []).filter((r) => r.status === 'denied')
       const errors = (res.results || []).filter((r) => r.status === 'error')
       const created = (res.records || []).map((r) => `${r.model}#${r.id}${r.name ? ` (${r.name})` : ''}`)
+      const recordSources = (res.records || [])
+        .map((r) => ({
+          label: r.name || `${r.model} #${r.id}`,
+          route: mapRecordRoute(r.model, r.id),
+        }))
+        .filter((x) => !!x.route)
+      const mergedSources = dedupeSources([...(actionSources || []), ...recordSources])
       if (denied.length > 0 || errors.length > 0) {
-        const msg = [
-          ...denied.map((d) => `${d.tool}: ${d.error || 'denied'}`),
-          ...errors.map((d) => `${d.tool}: ${d.error || 'error'}`),
-        ].join(' | ')
-        setHistory((prev) => [...prev, { role: 'assistant', text: `Workflow executed with restrictions: ${msg}` }])
+        setHistory((prev) => [...prev, { role: 'assistant', text: 'ทำงานบางส่วนสำเร็จ แต่มีบางขั้นตอนติดข้อจำกัด' }])
       } else {
         setHistory((prev) => [
           ...prev,
           {
             role: 'assistant',
-            text: created.length > 0 ? `Workflow completed: ${created.join(' | ')}` : 'Workflow completed.',
+            text: created.length > 0 ? `ทำงานสำเร็จ ${created.length} รายการ` : 'ทำงานสำเร็จ',
+          },
+        ])
+      }
+      if (mergedSources.length > 0 || created.length > 0) {
+        appendResultCards([
+          {
+            id: `run-${Date.now()}`,
+            title: 'ผลการทำงาน Workflow',
+            summary: created.length > 0 ? `สร้าง/อัปเดต ${created.length} รายการ` : 'ดำเนินการสำเร็จ',
+            rows: (res.results || []).map((r) => ({
+              label: r.tool,
+              value: r.status,
+            })),
+            sources: mergedSources,
           },
         ])
       }
     } catch (err) {
       setHistory((prev) => [
         ...prev,
-        { role: 'assistant', text: `Run workflow failed: ${String((err as Error)?.message || err)}` },
+        { role: 'assistant', text: 'ไม่สามารถเริ่มทำงานได้ในขณะนี้' },
       ])
     } finally {
       setLoading(false)
@@ -283,11 +483,22 @@ export function AvatarAssistant() {
       if (res.reply) {
         setHistory((prev) => [...prev, { role: 'assistant', text: res.reply as string }])
       }
-      applyUiActions(res.ui_actions || [])
+      const actionSources = applyUiActions(res.ui_actions || [])
+      if ((actionSources || []).length > 0) {
+        appendResultCards([
+          {
+            id: `confirm-${Date.now()}`,
+            title: 'ผลการยืนยันเอกสาร',
+            summary: confirmed ? 'ยืนยันและดำเนินการแล้ว' : 'ยกเลิกการดำเนินการ',
+            rows: [],
+            sources: actionSources || [],
+          },
+        ])
+      }
     } catch (err) {
       setHistory((prev) => [
         ...prev,
-        { role: 'assistant', text: `Confirm failed: ${String((err as Error)?.message || err)}` },
+        { role: 'assistant', text: 'ไม่สามารถยืนยันรายการได้ในขณะนี้' },
       ])
     } finally {
       setLoading(false)
@@ -307,9 +518,33 @@ export function AvatarAssistant() {
             </button>
           </div>
           <div className="card-body">
+            <div className="avatar-assistant-quick mb-2">
+              <button className="btn btn-sm btn-light" disabled={loading} onClick={() => setInput('ค้นลูกค้า')}>
+                ค้นลูกค้า
+              </button>
+              <button className="btn btn-sm btn-light" disabled={loading} onClick={() => setInput('ค้นสินค้า')}>
+                ค้นสินค้า
+              </button>
+              <button
+                className="btn btn-sm btn-light"
+                disabled={loading}
+                onClick={() => setInput('สรุปยอดซื้อรายลูกค้า เดือนนี้')}
+              >
+                สรุปยอดซื้อรายลูกค้า
+              </button>
+              <button
+                className="btn btn-sm btn-light"
+                disabled={loading}
+                onClick={() => setInput('สรุปยอดขายสินค้า "Demo Product" เดือนนี้')}
+              >
+                สรุปยอดขายสินค้า
+              </button>
+            </div>
             <div className="avatar-assistant-history mb-2">
               {history.length === 0 ? (
-                <div className="text-muted small">Ask me to create contact, product, quotation, or open reports.</div>
+                <div className="text-muted small">
+                  คุยกับฉันเพื่อค้นข้อมูล, สรุปรายงาน หรือสั่งงานเอกสาร พร้อมลิงก์ไปยังข้อมูลต้นทาง
+                </div>
               ) : (
                 history.map((item, idx) => (
                   <div key={`${item.role}-${idx}`} className={`avatar-assistant-msg ${item.role}`}>
@@ -318,17 +553,76 @@ export function AvatarAssistant() {
                 ))
               )}
             </div>
-            <div className="avatar-assistant-perm mb-2">
-              <div className="small text-muted mb-1">Your Odoo permissions</div>
-              <div className="d-flex flex-wrap gap-1">
-                {Object.entries(perms).map(([key, value]) => (
-                  <span key={key} className="badge text-bg-light border">
-                    {key}: R{value.read ? 'Y' : 'N'}/C{value.create ? 'Y' : 'N'}/W{value.write ? 'Y' : 'N'}
-                  </span>
-                ))}
+            {resultCards.length > 0 && (
+              <div className="avatar-results-box mb-2">
+                <div className="avatar-preview-title mb-1">Search / Summary Results</div>
+                <div className="avatar-results-list">
+                  {resultCards.map((card) => (
+                    <div key={card.id} className="avatar-result-card">
+                      <div className="d-flex align-items-center justify-content-between gap-2">
+                        <div className="fw-semibold small">{card.title}</div>
+                        {typeof card.confidence === 'number' ? (
+                          <span className="badge text-bg-light border">
+                            มั่นใจ {Math.round(card.confidence * 100)}%
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="small text-muted mb-1">{card.summary}</div>
+                      {card.explain ? <div className="small text-muted mb-1">วิธีค้นหา: {card.explain}</div> : null}
+                      {card.generatedAt ? (
+                        <div className="small text-muted mb-1">
+                          อัปเดต: {new Date(card.generatedAt).toLocaleString('th-TH')}
+                        </div>
+                      ) : null}
+                      {card.rows.length > 0 && (
+                        <div className="avatar-result-rows">
+                          {card.rows.map((row, idx) => (
+                            <div className="avatar-result-row" key={`${card.id}-row-${idx}`}>
+                              <div className="avatar-result-label">{row.label}</div>
+                              <div className="avatar-result-value">{row.value}</div>
+                              {row.route ? (
+                                <button
+                                  className="btn btn-link btn-sm p-0 text-decoration-none"
+                                  onClick={() => safeNavigate(row.route || '')}
+                                >
+                                  เปิด
+                                </button>
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {card.sources.length > 0 && (
+                        <div className="avatar-result-sources mt-1">
+                          {card.sources.map((src, idx) => (
+                            <button
+                              key={`${card.id}-src-${idx}`}
+                              className="btn btn-sm btn-outline-secondary"
+                              onClick={() => safeNavigate(src.route)}
+                            >
+                              {src.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-            {previewPlan.length > 0 && (
+            )}
+            {showDebugBlocks && (
+              <div className="avatar-assistant-perm mb-2">
+                <div className="small text-muted mb-1">Your Odoo permissions</div>
+                <div className="d-flex flex-wrap gap-1">
+                  {Object.entries(perms).map(([key, value]) => (
+                    <span key={key} className="badge text-bg-light border">
+                      {key}: R{value.read ? 'Y' : 'N'}/C{value.create ? 'Y' : 'N'}/W{value.write ? 'Y' : 'N'}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {showDebugBlocks && previewPlan.length > 0 && (
               <div className="avatar-preview-box mb-2">
                 <div className="avatar-preview-title">Workflow Preview</div>
                 <div className="avatar-preview-subtitle">ตรวจสอบก่อนกด Run Workflow</div>
@@ -479,7 +773,7 @@ export function AvatarAssistant() {
             <div className="d-flex gap-2">
               <input
                 className="form-control"
-                placeholder="Type your request..."
+                placeholder="พิมพ์คำสั่ง เช่น ค้นลูกค้า / สรุปยอดขายสินค้า..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -488,20 +782,20 @@ export function AvatarAssistant() {
                 disabled={loading}
               />
               <button className="btn btn-primary" onClick={() => void onSend()} disabled={loading}>
-                Send
+                ส่ง
               </button>
             </div>
             {pendingApprovalIds.length > 0 && (
               <div className="mt-2">
                 <button className="btn btn-warning btn-sm" onClick={() => void onApprove()} disabled={loading}>
-                  Approve Restricted ({pendingApprovalIds.length})
+                  ยืนยันก่อนทำงาน ({pendingApprovalIds.length})
                 </button>
               </div>
             )}
             {pendingRunIds.length > 0 && (
               <div className="mt-2">
                 <button className="btn btn-success btn-sm" onClick={() => void onRunWorkflow()} disabled={loading}>
-                  Run Workflow ({pendingRunIds.length})
+                  เริ่มทำงาน ({pendingRunIds.length})
                 </button>
               </div>
             )}
