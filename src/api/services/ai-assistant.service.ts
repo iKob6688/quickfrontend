@@ -105,7 +105,10 @@ async function postWithFallback<T>(apiPath: string, webPath: string, payload: Re
     const response = await apiClient.post(apiPath, makeRpc(payload))
     return unwrapResponse<T>(response)
   } catch {
-    const response = await apiClient.post(webPath, makeRpc(payload))
+    // IMPORTANT:
+    // webPath must bypass apiClient baseURL (/api), otherwise it becomes
+    // /api/web/adt/... and fails on production proxies.
+    const response = await apiClient.post(webPath, makeRpc(payload), { baseURL: '' })
     return unwrapResponse<T>(response)
   }
 }

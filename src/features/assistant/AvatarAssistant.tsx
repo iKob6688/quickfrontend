@@ -85,7 +85,16 @@ export function AvatarAssistant() {
         }
       } catch {
         if (mounted) {
-          setCaps(null)
+          // Keep assistant visible in degraded mode when capabilities endpoint fails.
+          setCaps({
+            enabled: false,
+            show_bot: true,
+            mode: 'plan_only',
+            features: {},
+            permissions: {},
+            tools: [],
+            reports: [],
+          })
           if (import.meta.env.DEV) {
             console.error('[AvatarAssistant] Failed to load capabilities')
           }
@@ -505,7 +514,7 @@ export function AvatarAssistant() {
     }
   }
 
-  if (!caps?.show_bot) return null
+  if (caps && !caps.show_bot) return null
 
   return (
     <div className="avatar-assistant-root">
