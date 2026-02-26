@@ -63,6 +63,28 @@ export interface ListPurchaseRequestsParams {
 // NOTE: backend reality (adt_th_api): purchase requests are exposed under /api/th/v1/purchases/requests/*
 const basePath = '/th/v1/purchases/requests'
 
+function normalizePurchaseRequestList(raw: unknown): PurchaseRequestListItem[] {
+  if (Array.isArray(raw)) return raw as PurchaseRequestListItem[]
+  if (!raw || typeof raw !== 'object') return []
+
+  const obj = raw as Record<string, unknown>
+  const candidates = [
+    obj.items,
+    obj.rows,
+    obj.records,
+    obj.data,
+    obj.results,
+    obj.purchase_requests,
+    obj.list,
+  ]
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate as PurchaseRequestListItem[]
+  }
+
+  return []
+}
+
 export async function listPurchaseRequests(params?: ListPurchaseRequestsParams) {
   const body = makeRpc({
     ...(params?.state && { state: params.state }),
@@ -74,7 +96,8 @@ export async function listPurchaseRequests(params?: ListPurchaseRequestsParams) 
     ...(params?.dateTo && { date_to: params.dateTo }),
   })
   const response = await apiClient.post(`${basePath}/list`, body)
-  return unwrapResponse<PurchaseRequestListItem[]>(response)
+  const data = unwrapResponse<unknown>(response)
+  return normalizePurchaseRequestList(data)
 }
 
 export async function getPurchaseRequest(id: number) {
@@ -133,4 +156,3 @@ export async function convertToPurchaseOrder(
   const response = await apiClient.post(`${basePath}/${id}/convert-to-po`, body)
   return unwrapResponse<{ purchaseRequestId: number; purchaseOrderId: number; purchaseOrderName?: string }>(response)
 }
-

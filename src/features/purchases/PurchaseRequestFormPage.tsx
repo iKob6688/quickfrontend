@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert } from 'react-bootstrap'
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { ProductCombobox } from '@/features/sales/ProductCombobox'
+import { clearDraft, loadDraft, loadRecentNotes, pushRecentNote, saveDraft } from '@/lib/formDrafts'
 import { toast } from '@/lib/toastStore'
 import {
   createPurchaseRequest,
@@ -32,6 +33,9 @@ const EMPTY_LINE: PurchaseRequestLine = {
   estimatedCost: 0,
 }
 
+const PURCHASE_REQUEST_DRAFT_KEY = 'qf:draft:purchase-request-form:create:v1'
+const PURCHASE_REQUEST_RECENT_NOTES_KEY = 'qf:recent-notes:purchase-request:v1'
+
 export function PurchaseRequestFormPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -41,6 +45,11 @@ export function PurchaseRequestFormPage() {
 
   const [errorText, setErrorText] = useState<string | null>(null)
   const [draft, setDraft] = useState<Partial<PurchaseRequestPayload>>({})
+  const [recentNotes, setRecentNotes] = useState<string[]>([])
+  const [draftPendingRestore, setDraftPendingRestore] = useState<Partial<PurchaseRequestPayload> | null>(null)
+  const [draftUpdatedAt, setDraftUpdatedAt] = useState<string | null>(null)
+  const [draftGateResolved, setDraftGateResolved] = useState(false)
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
 
   const requestQuery = useQuery({
     queryKey: ['purchaseRequest', requestId],
@@ -68,12 +77,45 @@ export function PurchaseRequestFormPage() {
     }
   }, [draft, isEdit, requestQuery.data])
 
+  useEffect(() => {
+    setRecentNotes(loadRecentNotes(PURCHASE_REQUEST_RECENT_NOTES_KEY))
+  }, [])
+
+  useEffect(() => {
+    if (isEdit) {
+      setDraftGateResolved(true)
+      return
+    }
+    const saved = loadDraft<Partial<PurchaseRequestPayload>>(PURCHASE_REQUEST_DRAFT_KEY)
+    if (saved?.data) {
+      setDraftPendingRestore(saved.data)
+      setDraftUpdatedAt(saved.updatedAt || null)
+    }
+    setDraftGateResolved(true)
+  }, [isEdit])
+
+  useEffect(() => {
+    if (isEdit) return
+    if (!draftGateResolved) return
+    if (draftPendingRestore) return
+    const timer = window.setTimeout(() => {
+      saveDraft(PURCHASE_REQUEST_DRAFT_KEY, draft)
+      setDraftSavedAt(new Date().toISOString())
+    }, 700)
+    return () => window.clearTimeout(timer)
+  }, [isEdit, draftGateResolved, draftPendingRestore, draft])
+
   const saveMutation = useMutation({
     mutationFn: async (payload: PurchaseRequestPayload) => {
       if (isEdit && requestId) return updatePurchaseRequest(requestId, payload)
       return createPurchaseRequest(payload)
     },
     onSuccess: async (res) => {
+      clearDraft(PURCHASE_REQUEST_DRAFT_KEY)
+      if ((formData.notes || '').trim()) {
+        pushRecentNote(PURCHASE_REQUEST_RECENT_NOTES_KEY, formData.notes || '')
+        setRecentNotes(loadRecentNotes(PURCHASE_REQUEST_RECENT_NOTES_KEY))
+      }
       await queryClient.invalidateQueries({ queryKey: ['purchaseRequests'] })
       await queryClient.invalidateQueries({ queryKey: ['purchaseRequest', res.id] })
       toast.success(isEdit ? 'บันทึกคำขอซื้อสำเร็จ' : 'สร้างคำขอซื้อสำเร็จ')
@@ -133,6 +175,10 @@ export function PurchaseRequestFormPage() {
     })
   }
 
+  const applyRecentNote = (note: string) => setDraft((prev) => ({ ...prev, notes: note }))
+  const appendRecentNote = (note: string) =>
+    setDraft((prev) => ({ ...prev, notes: (formData.notes || '').trim() ? `${formData.notes}\n${note}` : note }))
+
   return (
     <form onSubmit={onSubmit}>
       <PageHeader
@@ -141,6 +187,11 @@ export function PurchaseRequestFormPage() {
         breadcrumb={`รายจ่าย · คำขอซื้อ · ${isEdit ? 'แก้ไข' : 'สร้าง'}`}
         actions={
           <div className="d-flex gap-2">
+            {!isEdit && draftSavedAt ? (
+              <span className="small text-muted align-self-center">
+                autosaved {new Date(draftSavedAt).toLocaleTimeString('th-TH')}
+              </span>
+            ) : null}
             <Button size="sm" variant="ghost" onClick={() => navigate('/purchases/requests')}>
               ยกเลิก
             </Button>
@@ -161,6 +212,38 @@ export function PurchaseRequestFormPage() {
       {isEdit && requestQuery.isError ? (
         <Alert variant="danger" className="small">
           {requestQuery.error instanceof Error ? requestQuery.error.message : 'โหลดคำขอซื้อไม่สำเร็จ'}
+        </Alert>
+      ) : null}
+
+      {!isEdit && draftPendingRestore ? (
+        <Alert variant="warning" className="small">
+          <div className="fw-semibold mb-1">พบ draft คำขอซื้อที่บันทึกไว้</div>
+          <div className="mb-2">
+            เวลา: {draftUpdatedAt ? new Date(draftUpdatedAt).toLocaleString('th-TH') : 'ไม่ทราบเวลา'}
+          </div>
+          <div className="d-flex gap-2">
+            <Button
+              size="sm"
+              type="button"
+              onClick={() => {
+                setDraft((prev) => ({ ...prev, ...draftPendingRestore }))
+                setDraftPendingRestore(null)
+              }}
+            >
+              กู้ draft
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              type="button"
+              onClick={() => {
+                clearDraft(PURCHASE_REQUEST_DRAFT_KEY)
+                setDraftPendingRestore(null)
+              }}
+            >
+              ลบ draft
+            </Button>
+          </div>
         </Alert>
       ) : null}
 
@@ -196,6 +279,23 @@ export function PurchaseRequestFormPage() {
                   value={formData.notes || ''}
                   onChange={(e) => setDraft((p) => ({ ...p, notes: e.target.value }))}
                 />
+                {recentNotes.length > 0 ? (
+                  <div className="mt-2">
+                    <div className="small text-muted mb-1">หมายเหตุล่าสุด</div>
+                    <div className="d-flex flex-wrap gap-2">
+                      {recentNotes.slice(0, 4).map((note, idx) => (
+                        <div key={`${idx}-${note}`} className="d-inline-flex align-items-center gap-1">
+                          <Button size="sm" variant="secondary" type="button" onClick={() => applyRecentNote(note)}>
+                            ใช้ล่าสุด
+                          </Button>
+                          <Button size="sm" variant="ghost" type="button" onClick={() => appendRecentNote(note)} title={note}>
+                            +
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
           </Card>

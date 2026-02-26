@@ -1,4 +1,4 @@
-export type DocType = 'quotation' | 'receipt_full' | 'receipt_short' | 'trf_receipt'
+export type DocType = 'quotation' | 'invoice' | 'receipt_full' | 'receipt_short' | 'trf_receipt'
 
 export type Money = number
 
@@ -24,11 +24,23 @@ export type PartnerDTO = {
 export type DocumentMetaDTO = {
   number: string
   date: string // ISO date
+  dueDate?: string
   reference?: string
   salesperson?: string
   creditTerm?: string
   contact?: string
   project?: string
+  journal?: string
+  paymentMethod?: string
+  bankReference?: string
+  chequeNo?: string
+  notes?: string
+  linkedInvoices?: Array<{
+    number: string
+    reference?: string
+    date?: string
+    total?: Money
+  }>
 }
 
 export type ItemLineDTO = {
@@ -92,6 +104,10 @@ export type QuotationDTO = BaseDocumentDTO & {
   docType: 'quotation'
 }
 
+export type InvoiceDTO = BaseDocumentDTO & {
+  docType: 'invoice'
+}
+
 export type TRFReceiptDTO = Omit<BaseDocumentDTO, 'items'> & {
   docType: 'trf_receipt'
   fixedRows: TRFFixedRowsDTO
@@ -99,6 +115,4 @@ export type TRFReceiptDTO = Omit<BaseDocumentDTO, 'items'> & {
   payment?: ReceiptPaymentDTO
 }
 
-export type AnyDocumentDTO = QuotationDTO | ReceiptDTO | TRFReceiptDTO
-
-
+export type AnyDocumentDTO = QuotationDTO | InvoiceDTO | ReceiptDTO | TRFReceiptDTO

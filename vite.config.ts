@@ -16,7 +16,12 @@ export default defineConfig(({ mode }) => {
   //   - Local: http://localhost:8069
   //   - Remote: https://qacc.erpth.net
   //   - Remote with port: http://192.168.1.100:18069
-  const proxyTarget = env.VITE_PROXY_TARGET || 'http://localhost:8069'
+  const proxyTargetRaw = env.VITE_PROXY_TARGET || 'http://127.0.0.1:8069'
+  const proxyTarget = proxyTargetRaw.replace(/\/+$/, '')
+  // Local topology can vary. Keep /api and /web on root backend by default,
+  // and preserve /odoo proxy for deployments exposing web client under /odoo.
+  const apiProxyTarget = proxyTarget.replace(/\/odoo$/i, '')
+  const webProxyTarget = apiProxyTarget
 
   // Relative path is OK in production if using nginx proxy
   // Only warn if it's not /api (which is the standard proxy path)
@@ -35,14 +40,34 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         '/api': {
-          target: proxyTarget,
+          target: apiProxyTarget,
           changeOrigin: true,
           // Only proxy if target is not localhost (for remote backends)
-          ...(proxyTarget.includes('localhost') || proxyTarget.includes('127.0.0.1')
+          ...(apiProxyTarget.includes('localhost') || apiProxyTarget.includes('127.0.0.1')
             ? {}
             : {
                 secure: false, // Allow self-signed certs for remote dev
                 ws: true, // WebSocket support
+              }),
+        },
+        '/web': {
+          target: webProxyTarget,
+          changeOrigin: true,
+          ...(webProxyTarget.includes('localhost') || webProxyTarget.includes('127.0.0.1')
+            ? {}
+            : {
+                secure: false,
+                ws: true,
+              }),
+        },
+        '/odoo': {
+          target: /\/odoo$/i.test(proxyTarget) ? proxyTarget : `${apiProxyTarget}/odoo`,
+          changeOrigin: true,
+          ...((/\/odoo$/i.test(proxyTarget) ? proxyTarget : `${apiProxyTarget}/odoo`).includes('localhost') || (/\/odoo$/i.test(proxyTarget) ? proxyTarget : `${apiProxyTarget}/odoo`).includes('127.0.0.1')
+            ? {}
+            : {
+                secure: false,
+                ws: true,
               }),
         },
       },

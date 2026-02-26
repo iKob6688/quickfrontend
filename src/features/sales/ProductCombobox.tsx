@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Combobox, type ComboboxOption } from '@/components/ui/Combobox'
-import { getProduct, listProducts, type ProductSummary } from '@/api/services/products.service'
+import { createProduct, getProduct, listProducts, type ProductSummary } from '@/api/services/products.service'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { Modal } from 'react-bootstrap'
+import { toast } from '@/lib/toastStore'
 
 interface Props {
   id?: string
@@ -12,7 +16,12 @@ interface Props {
 }
 
 export function ProductCombobox({ id, valueId, onPick, disabled }: Props) {
+  const queryClient = useQueryClient()
   const [input, setInput] = useState('')
+  const [createOpen, setCreateOpen] = useState(false)
+  const [createName, setCreateName] = useState('')
+  const [createCode, setCreateCode] = useState('')
+  const [createPrice, setCreatePrice] = useState<string>('')
   const qTrim = input.trim()
   const qDebounced = useDebouncedValue(qTrim, 250)
   const limit = 20
@@ -70,6 +79,34 @@ export function ProductCombobox({ id, valueId, onPick, disabled }: Props) {
     }))
   }, [items])
 
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      const name = createName.trim() || qTrim
+      if (!name) throw new Error('กรุณากรอกชื่อสินค้า')
+      const listPrice = createPrice.trim() === '' ? undefined : Number(createPrice)
+      if (createPrice.trim() !== '' && !Number.isFinite(listPrice)) throw new Error('ราคาขายไม่ถูกต้อง')
+      return createProduct({
+        name,
+        defaultCode: createCode.trim() || undefined,
+        listPrice: typeof listPrice === 'number' ? listPrice : undefined,
+        saleOk: true,
+        purchaseOk: true,
+        active: true,
+      })
+    },
+    onSuccess: (product) => {
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['product', product.id] })
+      setCreateOpen(false)
+      setCreateName('')
+      setCreateCode('')
+      setCreatePrice('')
+      setInput(product.name)
+      onPick(product)
+      toast.success('สร้างสินค้าแล้ว', product.name)
+    },
+  })
+
   return (
     <div>
       <Combobox
@@ -95,11 +132,70 @@ export function ProductCombobox({ id, valueId, onPick, disabled }: Props) {
           }
         }}
       />
+      <div className="d-flex align-items-center justify-content-between gap-2 mt-2">
+        <div className="small text-muted">
+          ไม่พบสินค้า? สร้างใหม่ได้ทันทีโดยไม่ออกจากฟอร์ม
+        </div>
+        <Button
+          size="sm"
+          variant="ghost"
+          type="button"
+          onClick={() => {
+            setCreateName(qTrim)
+            setCreateOpen(true)
+          }}
+          disabled={disabled}
+        >
+          + สร้างสินค้า
+        </Button>
+      </div>
       {listQuery.isError ? (
         <div className="small text-danger mt-1">
           {listQuery.error instanceof Error ? listQuery.error.message : 'โหลดสินค้าไม่สำเร็จ'}
         </div>
       ) : null}
+
+      <Modal show={createOpen} onHide={() => !createMutation.isPending && setCreateOpen(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title className="fs-6">สร้างสินค้าใหม่</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="d-flex flex-column gap-3">
+            <div>
+              <label className="form-label small fw-semibold mb-1">ชื่อสินค้า *</label>
+              <Input value={createName} onChange={(e) => setCreateName(e.target.value)} placeholder="เช่น ค่าปิดงบ / บริการบัญชี" />
+            </div>
+            <div>
+              <label className="form-label small fw-semibold mb-1">รหัสสินค้า</label>
+              <Input value={createCode} onChange={(e) => setCreateCode(e.target.value)} placeholder="เช่น SRV-001" />
+            </div>
+            <div>
+              <label className="form-label small fw-semibold mb-1">ราคาขายตั้งต้น</label>
+              <Input
+                type="number"
+                value={createPrice}
+                onChange={(e) => setCreatePrice(e.target.value)}
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+              />
+            </div>
+            {createMutation.isError ? (
+              <div className="small text-danger">
+                {createMutation.error instanceof Error ? createMutation.error.message : 'สร้างสินค้าไม่สำเร็จ'}
+              </div>
+            ) : null}
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button size="sm" variant="ghost" onClick={() => setCreateOpen(false)} disabled={createMutation.isPending}>
+            ยกเลิก
+          </Button>
+          <Button size="sm" onClick={() => createMutation.mutate()} isLoading={createMutation.isPending}>
+            บันทึกและเลือกสินค้า
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   )
 }

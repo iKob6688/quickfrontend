@@ -8,7 +8,13 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { toast } from '@/lib/toastStore'
-import { createProduct, getProduct, updateProduct, type ProductUpsertPayload } from '@/api/services/products.service'
+import {
+  createProduct,
+  getProduct,
+  getProductAdminMeta,
+  updateProduct,
+  type ProductUpsertPayload,
+} from '@/api/services/products.service'
 
 const DEFAULT_FORM: ProductUpsertPayload = {
   name: '',
@@ -56,11 +62,23 @@ export function ProductFormPage() {
         purchaseOk: productQuery.data.purchaseOk ?? true,
         active: productQuery.data.active !== false,
         description: productQuery.data.description || '',
+        productType: productQuery.data.productType || 'consu',
+        categoryId: productQuery.data.categoryId ?? null,
+        incomeAccountId: productQuery.data.incomeAccountId ?? null,
+        expenseAccountId: productQuery.data.expenseAccountId ?? null,
         ...draft,
       }
     }
     return { ...DEFAULT_FORM, ...draft }
   }, [draft, isEdit, productQuery.data])
+
+  const productAdminMetaQuery = useQuery({
+    queryKey: ['products', 'admin-meta'],
+    queryFn: getProductAdminMeta,
+    staleTime: 60_000,
+    retry: 0,
+  })
+  const canManageAdminFields = !!productAdminMetaQuery.data?.permissions?.canManageAdminFields
 
   const saveMutation = useMutation({
     mutationFn: async (payload: ProductUpsertPayload) => {
@@ -202,6 +220,69 @@ export function ProductFormPage() {
                     onChange={(e) => setDraft((p) => ({ ...p, description: e.target.value }))}
                   />
                 </div>
+                {canManageAdminFields ? (
+                  <>
+                    <div className="col-md-4">
+                      <Label htmlFor="productType">ชนิดสินค้า</Label>
+                      <select
+                        id="productType"
+                        className="form-select"
+                        value={formData.productType || 'consu'}
+                        onChange={(e) => setDraft((p) => ({ ...p, productType: e.target.value as any }))}
+                      >
+                        {(productAdminMetaQuery.data?.productTypes || []).map((t) => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-md-8">
+                      <Label htmlFor="categoryId">Category</Label>
+                      <select
+                        id="categoryId"
+                        className="form-select"
+                        value={formData.categoryId ?? ''}
+                        onChange={(e) => setDraft((p) => ({ ...p, categoryId: e.target.value ? Number(e.target.value) : null }))}
+                      >
+                        <option value="">— เลือก Category —</option>
+                        {(productAdminMetaQuery.data?.categories || []).map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-md-6">
+                      <Label htmlFor="incomeAccountId">บัญชีรายได้ (Income Account)</Label>
+                      <select
+                        id="incomeAccountId"
+                        className="form-select"
+                        value={formData.incomeAccountId ?? ''}
+                        onChange={(e) => setDraft((p) => ({ ...p, incomeAccountId: e.target.value ? Number(e.target.value) : null }))}
+                      >
+                        <option value="">— ใช้ค่าจาก Category/Default —</option>
+                        {(productAdminMetaQuery.data?.accounts || []).map((a) => (
+                          <option key={`inc-${a.id}`} value={a.id}>
+                            [{a.code}] {a.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-md-6">
+                      <Label htmlFor="expenseAccountId">บัญชีค่าใช้จ่าย (Expense Account)</Label>
+                      <select
+                        id="expenseAccountId"
+                        className="form-select"
+                        value={formData.expenseAccountId ?? ''}
+                        onChange={(e) => setDraft((p) => ({ ...p, expenseAccountId: e.target.value ? Number(e.target.value) : null }))}
+                      >
+                        <option value="">— ใช้ค่าจาก Category/Default —</option>
+                        {(productAdminMetaQuery.data?.accounts || []).map((a) => (
+                          <option key={`exp-${a.id}`} value={a.id}>
+                            [{a.code}] {a.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                ) : null}
               </div>
             </Card>
           </div>
@@ -243,6 +324,19 @@ export function ProductFormPage() {
                 <label className="form-check-label" htmlFor="active">
                   ใช้งาน (Active)
                 </label>
+              </div>
+              <hr className="my-3" />
+              <div className="small">
+                <div className="fw-semibold mb-1">โหมด Admin สำหรับสินค้า</div>
+                {productAdminMetaQuery.isLoading ? (
+                  <div className="text-muted">กำลังโหลดสิทธิ์และ metadata...</div>
+                ) : canManageAdminFields ? (
+                  <div className="text-success">สามารถตั้งค่า ชนิดสินค้า / category / บัญชีสินค้า ได้</div>
+                ) : (
+                  <div className="text-muted">
+                    ผู้ใช้ปัจจุบันไม่มีสิทธิ์จัดการ field ขั้นสูง (ชนิดสินค้า / category / ผูกบัญชี)
+                  </div>
+                )}
               </div>
             </Card>
           </div>

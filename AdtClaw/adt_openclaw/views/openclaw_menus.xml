@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_openclaw_root" name="OpenClaw" sequence="15" groups="adt_openclaw.group_openclaw_user"/>
+    <menuitem id="menu_openclaw_instances" name="Instances" parent="menu_openclaw_root" action="action_openclaw_instance"/>
+    <menuitem id="menu_openclaw_sessions" name="Sessions" parent="menu_openclaw_root" action="action_openclaw_session"/>
+    <menuitem
+        id="menu_openclaw_admin_sessions"
+        name="Admin Sessions"
+        parent="menu_openclaw_root"
+        action="action_openclaw_admin_session"
+        groups="adt_openclaw.group_openclaw_admin"
+    />
+    <menuitem
+        id="menu_openclaw_audit"
+        name="Audit Logs"
+        parent="menu_openclaw_root"
+        action="action_openclaw_audit"
+        groups="adt_openclaw.group_openclaw_admin,adt_openclaw.group_openclaw_auditor"
+    />
+    <menuitem
+        id="menu_openclaw_settings"
+        name="Settings"
+        parent="menu_openclaw_root"
+        action="base_setup.action_general_configuration"
+        groups="base.group_system"
+        sequence="99"
+    />
+</odoo>
+

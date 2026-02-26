@@ -27,8 +27,8 @@ export function AppLogo({ size = 'md', tone = 'dark' }: AppLogoProps) {
             : 'text-sm font-semibold tracking-wide text-surfaceDark'
         }
       >
-        Quickfront
-        <span className="text-xs align-top text-accentGold">18</span>
+        CLT
+        <span className="text-xs align-top text-accentGold">Online</span>
       </span>
     </div>
   )

@@ -7,13 +7,8 @@ import {
   sendAssistantChat,
   type AssistantCapabilities,
   type AssistantChatResponse,
+  type AssistantTokenUsage,
 } from '@/api/services/ai-assistant.service'
-import {
-  buildAssistantInsight,
-  isAssistantDataQuery,
-  type AssistantInsight,
-  type AssistantInsightSource,
-} from '@/features/assistant/assistantInsights'
 import {
   getAssistantLanguage,
   getAssistantLanguageEventName,
@@ -42,6 +37,14 @@ type AssistantResultCard = {
   explain?: string
   rows: Array<{ label: string; value: string; route?: string }>
   sources: AssistantSourceLink[]
+}
+
+type UsageSummary = {
+  prompt: number
+  completion: number
+  total: number
+  calls: number
+  lastModel?: string
 }
 
 const AVATAR_SRC = '/avatar-assistant.png'
@@ -77,6 +80,12 @@ export function AvatarAssistant() {
   const [pendingRunIds, setPendingRunIds] = useState<string[]>([])
   const [assistantLang, setAssistantLang] = useState<AssistantLanguage>(() => getAssistantLanguage())
   const [resultCards, setResultCards] = useState<AssistantResultCard[]>([])
+  const [usageSummary, setUsageSummary] = useState<UsageSummary>({
+    prompt: 0,
+    completion: 0,
+    total: 0,
+    calls: 0,
+  })
   const [pendingConfirm, setPendingConfirm] = useState<{
     session_id: string
     nonce?: string
@@ -136,6 +145,41 @@ export function AvatarAssistant() {
   const perms = caps?.permissions || {}
   const previewPlan = lastChat?.plan || []
   const showDebugBlocks = import.meta.env.DEV
+
+  const parseTokenUsage = (usage: unknown): { prompt: number; completion: number; total: number; model?: string } | null => {
+    if (!usage || typeof usage !== 'object') return null
+    const u = usage as AssistantTokenUsage
+
+    const prompt = Number(u.prompt_tokens ?? u.input_tokens ?? 0) || 0
+    const completion = Number(u.completion_tokens ?? u.output_tokens ?? 0) || 0
+    const totalRaw = Number(u.total_tokens ?? 0) || 0
+    const total = totalRaw || (prompt + completion)
+
+    if (prompt <= 0 && completion <= 0 && total <= 0) return null
+    return {
+      prompt,
+      completion,
+      total,
+      model: typeof u.model === 'string' ? u.model : undefined,
+    }
+  }
+
+  const recordUsage = (stage: 'chat' | 'execute' | 'confirm', usage: unknown) => {
+    const parsed = parseTokenUsage(usage)
+    if (!parsed) return
+
+    setUsageSummary((prev) => ({
+      prompt: prev.prompt + parsed.prompt,
+      completion: prev.completion + parsed.completion,
+      total: prev.total + parsed.total,
+      calls: prev.calls + 1,
+      lastModel: parsed.model || prev.lastModel,
+    }))
+
+    const logLine = `[AI usage:${stage}] prompt=${parsed.prompt}, completion=${parsed.completion}, total=${parsed.total}${parsed.model ? `, model=${parsed.model}` : ''}`
+    console.info(logLine)
+    setHistory((prev) => [...prev, { role: 'assistant', text: `Token usage (${stage}): in ${parsed.prompt}, out ${parsed.completion}, total ${parsed.total}` }])
+  }
 
   const normalizeAssistantRoute = (rawRoute: unknown, payload?: Record<string, unknown>): string => {
     const direct = String(rawRoute || '').trim()
@@ -211,20 +255,6 @@ export function AvatarAssistant() {
     setResultCards((prev) => [...nextCards, ...prev].slice(0, 5))
   }
 
-  const insightToCard = (insight: AssistantInsight): AssistantResultCard => ({
-    id: `insight-${Date.now()}`,
-    title: insight.title,
-    summary: insight.summary,
-    confidence: insight.confidence,
-    generatedAt: insight.generatedAt,
-    explain: insight.explain,
-    rows: insight.rows,
-    sources: insight.sources.map((src: AssistantInsightSource) => ({
-      label: src.label,
-      route: src.route,
-    })),
-  })
-
   const applyUiActions = (actions: Array<{ type: string; payload: Record<string, unknown> }>) => {
     const routeNotes: string[] = []
     const sourceLinks: AssistantSourceLink[] = []
@@ -279,54 +309,13 @@ export function AvatarAssistant() {
     setHistory((prev) => [...prev, { role: 'user', text }])
     setInput('')
     try {
-      const isDataQuery = isAssistantDataQuery(text)
-      let localInsight: AssistantInsight | null = null
-      if (isDataQuery) {
-        try {
-          localInsight = await buildAssistantInsight(text)
-        } catch {
-          localInsight = null
-        }
-      }
-
-      if (localInsight) {
-        appendResultCards([insightToCard(localInsight)])
-        setHistory((prev) => [
-          ...prev,
-          {
-            role: 'assistant',
-            text: localInsight.summary || 'สรุปผลลัพธ์ให้แล้ว สามารถกดเปิดดูข้อมูลต้นทางได้ทันที',
-          },
-        ])
-        setLastChat(null)
-        setPendingApprovalIds([])
-        setPendingRunIds([])
-        setPendingConfirm(null)
-        return
-      }
-
-      if (isDataQuery) {
-        setHistory((prev) => [
-          ...prev,
-          {
-            role: 'assistant',
-            text: 'ยังไม่พบข้อมูลตามเงื่อนไข ลองระบุชื่อสินค้า/ลูกค้า หรือช่วงเวลาให้ชัดขึ้น เช่น "สรุปยอดซื้อรายลูกค้า เดือนนี้"',
-          },
-        ])
-        setLastChat(null)
-        setPendingApprovalIds([])
-        setPendingRunIds([])
-        setPendingConfirm(null)
-        return
-      }
-
       const res = await sendAssistantChat(text, {
         ui: { route: location.pathname },
         lang: assistantLang,
         language: assistantLang.startsWith('th') ? 'th' : 'en',
         reply_language: assistantLang.startsWith('th') ? 'th' : 'en',
-        plan_only: true,
       })
+      recordUsage('chat', res.usage)
       setLastChat(res)
       setHistory((prev) => [...prev, { role: 'assistant', text: res.reply || 'รับทราบ กำลังเตรียมขั้นตอนให้' }])
       if ((res.plan || []).length > 0) {
@@ -428,6 +417,7 @@ export function AvatarAssistant() {
     setLoading(true)
     try {
       const res = await executeAssistantPlan(lastChat.session_id, pendingApprovalIds, lastChat.nonce)
+      recordUsage('execute', res.usage)
       setPendingApprovalIds([])
       const denied = (res.results || []).filter((r) => r.status === 'denied')
       const errors = (res.results || []).filter((r) => r.status === 'error')
@@ -481,6 +471,7 @@ export function AvatarAssistant() {
     setLoading(true)
     try {
       const res = await executeAssistantPlan(lastChat.session_id, pendingRunIds, lastChat.nonce)
+      recordUsage('execute', res.usage)
       setPendingRunIds([])
       const actionSources = applyUiActions(res.ui_actions || [])
       const denied = (res.results || []).filter((r) => r.status === 'denied')
@@ -544,6 +535,7 @@ export function AvatarAssistant() {
         product_id: pendingConfirm.product_id,
         qty: pendingConfirm.qty,
       })
+      recordUsage('confirm', res.usage)
       setPendingConfirm(null)
       if (res.reply) {
         setHistory((prev) => [...prev, { role: 'assistant', text: res.reply as string }])
@@ -687,6 +679,12 @@ export function AvatarAssistant() {
                     </span>
                   ))}
                 </div>
+              </div>
+            )}
+            {usageSummary.calls > 0 && (
+              <div className="small text-muted mb-2">
+                Token usage: in {usageSummary.prompt.toLocaleString('en-US')} / out {usageSummary.completion.toLocaleString('en-US')} / total {usageSummary.total.toLocaleString('en-US')}
+                {usageSummary.lastModel ? ` (model: ${usageSummary.lastModel})` : ''}
               </div>
             )}
             {showDebugBlocks && previewPlan.length > 0 && (

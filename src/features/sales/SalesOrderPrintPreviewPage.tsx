@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Alert, Spinner } from 'react-bootstrap'
 import { Button } from '@/components/ui/Button'
 import { getSalesOrder } from '@/api/services/sales-orders.service'
+import { getPartner } from '@/api/services/partners.service'
 
 export function SalesOrderPrintPreviewPage() {
   const navigate = useNavigate()
@@ -15,6 +16,13 @@ export function SalesOrderPrintPreviewPage() {
     enabled: Number.isFinite(id) && id > 0,
     queryFn: () => getSalesOrder(id),
     staleTime: 30_000,
+  })
+
+  const partnerQuery = useQuery({
+    queryKey: ['partner', 'printPreview', query.data?.partnerId],
+    enabled: !!query.data?.partnerId,
+    queryFn: () => getPartner(query.data!.partnerId),
+    staleTime: 60_000,
   })
 
   if (!Number.isFinite(id) || id <= 0) {
@@ -45,6 +53,10 @@ export function SalesOrderPrintPreviewPage() {
 
   const order = query.data
   const documentLabel = order.orderType === 'sale' ? 'Sale Order' : 'ใบเสนอราคา'
+  const partner = partnerQuery.data
+  const partnerAddress = [partner?.street, partner?.street2, [partner?.city, partner?.zip].filter(Boolean).join(' '), partner?.countryName]
+    .filter(Boolean)
+    .join(' ')
 
   return (
     <div className="container py-4">
@@ -70,9 +82,28 @@ export function SalesOrderPrintPreviewPage() {
           </div>
         </div>
 
-        <div className="mb-3">
-          <div className="small text-muted">ลูกค้า</div>
-          <div className="fw-semibold">{order.partnerName || '-'}</div>
+        <div className="row g-3 mb-3">
+          <div className="col-md-7">
+            <div className="small text-muted">ลูกค้า</div>
+            <div className="fw-semibold">{order.partnerName || '-'}</div>
+            {partnerAddress ? <div className="small mt-1">{partnerAddress}</div> : null}
+            {(partner?.vat || partner?.taxId) ? (
+              <div className="small text-muted mt-1">Tax ID: {partner?.vat || partner?.taxId}</div>
+            ) : null}
+            {(partner?.phone || partner?.email) ? (
+              <div className="small text-muted mt-1">
+                {[partner?.phone, partner?.email].filter(Boolean).join(' · ')}
+              </div>
+            ) : null}
+          </div>
+          <div className="col-md-5">
+            {order.notes ? (
+              <div>
+                <div className="small text-muted">หมายเหตุ</div>
+                <div className="small" style={{ whiteSpace: 'pre-line' }}>{order.notes}</div>
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <table className="table table-bordered align-middle">
@@ -117,8 +148,11 @@ export function SalesOrderPrintPreviewPage() {
             </div>
           </div>
         </div>
+        <div className="mt-4 pt-3 border-top small text-muted d-flex justify-content-between">
+          <div>Ref: {order.number || `#${order.id}`}</div>
+          <div>Printed: {new Date().toLocaleString('th-TH')}</div>
+        </div>
       </div>
     </div>
   )
 }
-

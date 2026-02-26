@@ -99,6 +99,7 @@ export function PreviewPage() {
   const [dtoError, setDtoError] = useState<string | null>(null)
 
   const recordId = searchParams.get('recordId') || 'sample'
+  const isSampleRecord = !recordId || String(recordId).trim().toLowerCase() === 'sample'
   const showGuides = (searchParams.get('guides') || '1') === '1'
   const autoPdf = (searchParams.get('auto') || '').toLowerCase() === 'pdf'
   const showDebug = (searchParams.get('debug') || '0') === '1'
@@ -106,7 +107,7 @@ export function PreviewPage() {
   useEffect(() => {
     if (!tpl) return
     const provider =
-      settings.odooBaseUrl.trim().length > 0
+      settings.odooBaseUrl.trim().length > 0 || !isSampleRecord
         ? new HttpOdooProvider({ baseUrl: settings.odooBaseUrl, token: settings.apiToken })
         : new MockOdooProvider()
     setDtoError(null)
@@ -117,7 +118,7 @@ export function PreviewPage() {
         setDto(null)
         setDtoError(e instanceof Error ? e.message : String(e))
       })
-  }, [recordId, settings.apiToken, settings.odooBaseUrl, tpl])
+  }, [isSampleRecord, recordId, settings.apiToken, settings.odooBaseUrl, tpl])
 
   if (!tpl) {
     return (
@@ -193,6 +194,7 @@ export function PrintPage() {
   const tpl = useMemo(() => templates.find((t) => t.id === templateId), [templates, templateId])
 
   const recordId = searchParams.get('recordId') || 'sample'
+  const isSampleRecord = !recordId || String(recordId).trim().toLowerCase() === 'sample'
   const autoPrint = (searchParams.get('autoprint') || '1') !== '0'
   const [dto, setDto] = useState<AnyDocumentDTO | null>(null)
   const [dtoError, setDtoError] = useState<string | null>(null)
@@ -200,7 +202,7 @@ export function PrintPage() {
   useEffect(() => {
     if (!tpl) return
     const provider =
-      settings.odooBaseUrl.trim().length > 0
+      settings.odooBaseUrl.trim().length > 0 || !isSampleRecord
         ? new HttpOdooProvider({ baseUrl: settings.odooBaseUrl, token: settings.apiToken })
         : new MockOdooProvider()
     setDtoError(null)
@@ -211,7 +213,7 @@ export function PrintPage() {
         setDto(null)
         setDtoError(e instanceof Error ? e.message : String(e))
       })
-  }, [recordId, settings.apiToken, settings.odooBaseUrl, tpl])
+  }, [isSampleRecord, recordId, settings.apiToken, settings.odooBaseUrl, tpl])
 
   useEffect(() => {
     if (!dto) return
@@ -245,5 +247,4 @@ export function PrintPage() {
     </div>
   )
 }
-
 

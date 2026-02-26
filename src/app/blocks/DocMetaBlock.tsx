@@ -4,6 +4,7 @@ import type { BlockViewContext } from './shared'
 const labelMap: Record<string, string> = {
   number: 'Document No.',
   date: 'Date',
+  dueDate: 'Due Date',
   reference: 'Reference',
   salesperson: 'Salesperson',
   creditTerm: 'Credit Term',
@@ -15,8 +16,9 @@ export function DocMetaBlockView({ block, ctx }: { block: DocMetaBlock; ctx: Blo
   const d = ctx.dto.document
 
   // Quotation sample: right-side meta box with grid, plus a Salesman area.
-  if (ctx.dto.docType === 'quotation') {
+  if (ctx.dto.docType === 'quotation' || ctx.dto.docType === 'invoice') {
     const issueDate = d.date || '-'
+    const dueDate = d.dueDate || '-'
     const creditTerm = d.creditTerm || '-'
     const contactName = d.contact || '-'
     const projectName = d.project || '-'
@@ -32,6 +34,13 @@ export function DocMetaBlockView({ block, ctx }: { block: DocMetaBlock; ctx: Blo
                 <div className="text-[10px] text-slate-600">Issue Date</div>
               </div>
               <div className="font-medium">{issueDate}</div>
+            </div>
+            <div className="d-flex justify-content-between mt-2">
+              <div>
+                <div className="font-semibold">{ctx.dto.docType === 'invoice' ? 'วันครบกำหนด' : 'วันหมดอายุ'}</div>
+                <div className="text-[10px] text-slate-600">{ctx.dto.docType === 'invoice' ? 'Due Date' : 'Validity Date'}</div>
+              </div>
+              <div className="font-medium">{dueDate}</div>
             </div>
             <div className="d-flex justify-content-between mt-2">
               <div>
@@ -76,6 +85,8 @@ export function DocMetaBlockView({ block, ctx }: { block: DocMetaBlock; ctx: Blo
         ? d.number
         : f === 'date'
           ? d.date
+          : f === 'dueDate'
+            ? d.dueDate
           : f === 'reference'
             ? d.reference
             : f === 'salesperson'
@@ -104,5 +115,3 @@ export function DocMetaBlockView({ block, ctx }: { block: DocMetaBlock; ctx: Blo
     </div>
   )
 }
-
-

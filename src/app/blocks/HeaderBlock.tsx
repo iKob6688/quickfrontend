@@ -107,7 +107,7 @@ export function HeaderBlockView({ block, ctx }: { block: HeaderBlock; ctx: Block
       </div>
 
       {/* Right meta box (skip for quotation; for short, stack below) */}
-      {dto.docType === 'quotation' ? null : isReceiptLike ? (
+      {dto.docType === 'quotation' || dto.docType === 'invoice' ? null : isReceiptLike ? (
         <div className="justify-self-end">
           <div
             className="rounded-md border border-slate-300 bg-white px-3 py-2 text-[11px]"
@@ -121,5 +121,4 @@ export function HeaderBlockView({ block, ctx }: { block: HeaderBlock; ctx: Block
     </div>
   )
 }
-
 

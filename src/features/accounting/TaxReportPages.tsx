@@ -1,13 +1,96 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
+import * as XLSX from 'xlsx'
 
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { listTaxes } from '@/api/services/taxes.service'
-import { getVatReport, getWhtReport } from '@/api/services/accounting-reports.service'
+import { getVatReport, getWhtReport, openVatReportExport, openWhtReportExport } from '@/api/services/accounting-reports.service'
 import { toISODate, firstDayOfThisMonth, lastDayOfThisMonth, firstDayOfLastMonth, lastDayOfLastMonth, firstDayOfThisYear, lastDayOfThisYear } from '@/lib/datePresets'
+
+function saveWorkbook(filename: string, sheets: Array<{ name: string; rows: Record<string, unknown>[] }>) {
+  const wb = XLSX.utils.book_new()
+  for (const sheet of sheets) {
+    const ws = XLSX.utils.json_to_sheet(sheet.rows)
+    XLSX.utils.book_append_sheet(wb, ws, sheet.name.slice(0, 31))
+  }
+  XLSX.writeFile(wb, filename)
+}
+
+async function exportSimplePdf(filename: string, title: string, meta: string[], rows: Record<string, unknown>[]) {
+  const mod = (await import('html2pdf.js')) as any
+  const html2pdf = mod.default || mod
+  const container = document.createElement('div')
+  container.style.padding = '16px'
+  container.style.fontFamily = 'Arial, sans-serif'
+  container.innerHTML = `
+    <h2 style="margin:0 0 8px 0;">${title}</h2>
+    <div style="font-size:12px;color:#555;margin-bottom:12px;">${meta.join(' | ')}</div>
+    <table style="width:100%;border-collapse:collapse;font-size:11px;">
+      <thead>
+        <tr>${Object.keys(rows[0] || { no_data: 'ไม่มีข้อมูล' })
+          .map((k) => `<th style="border:1px solid #ccc;padding:6px;text-align:left;background:#f5f5f5">${k}</th>`)
+          .join('')}</tr>
+      </thead>
+      <tbody>
+        ${rows.length
+          ? rows
+              .map(
+                (r) =>
+                  `<tr>${Object.values(r)
+                    .map((v) => `<td style="border:1px solid #ddd;padding:6px;vertical-align:top">${String(v ?? '')}</td>`)
+                    .join('')}</tr>`,
+              )
+              .join('')
+          : `<tr><td style="border:1px solid #ddd;padding:6px;">ไม่มีข้อมูล</td></tr>`}
+      </tbody>
+    </table>
+  `
+  document.body.appendChild(container)
+  try {
+    await html2pdf()
+      .from(container)
+      .set({
+        margin: 8,
+        filename,
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+      })
+      .save()
+  } finally {
+    document.body.removeChild(container)
+  }
+}
+
+function formatTaxRowsForExport(report: any, type: 'vat' | 'wht'): Record<string, unknown>[] {
+  const rows = report?.data ?? report?.reportData?.data ?? report?.reportData?.rows ?? []
+  if (!Array.isArray(rows)) return []
+  if (type === 'vat') {
+    return rows.map((r: any, idx: number) => ({
+      ลำดับ: r.rowNumber ?? idx + 1,
+      เลขที่ใบกำกับ: r.taxInvoiceNumber ?? '',
+      วันที่: r.taxDate ?? '',
+      คู่ค้า: r.partner?.name ?? '',
+      VAT: r.partner?.vat ?? '',
+      ฐานภาษี: Number(r.taxBaseAmount ?? 0),
+      ภาษี: Number(r.taxAmount ?? 0),
+      รายละเอียด: r.name ?? '',
+    }))
+  }
+  return rows.map((r: any, idx: number) => ({
+    ลำดับ: idx + 1,
+    เลขที่หนังสือรับรอง: r.certificateNumber ?? '',
+    วันที่หนังสือรับรอง: r.certificateDate ?? '',
+    คู่ค้า: r.partner?.name ?? '',
+    VAT: r.partner?.vat ?? '',
+    ประเภทเงินได้: r.incomeType ?? r.incomeCode ?? '',
+    ฐานภาษี: Number(r.baseAmount ?? 0),
+    'อัตรา(%)': Number(r.whtPercent ?? 0),
+    'ภาษีหัก ณ ที่จ่าย': Number(r.whtAmount ?? 0),
+  }))
+}
 
 export function VatReportPage() {
   const navigate = useNavigate()
@@ -77,6 +160,51 @@ export function VatReportPage() {
     retry: 1,
   })
 
+  const handleExportVatXlsx = () => {
+    const report: any = reportQuery.data || {}
+    const rows = formatTaxRowsForExport(report, 'vat')
+    const totals = report?.totals ?? report?.reportData?.totals ?? {}
+    saveWorkbook(`vat-report-${taxType}-${dateFrom}-to-${dateTo}.xlsx`, [
+      { name: 'VAT', rows },
+      {
+        name: 'Summary',
+        rows: [
+          {
+            ประเภท: taxType,
+            เริ่ม: dateFrom,
+            สิ้นสุด: dateTo,
+            จำนวนรายการ: Number(totals.recordCount ?? rows.length ?? 0),
+            ฐานภาษีรวม: Number(totals.totalBase ?? 0),
+            ภาษีรวม: Number(totals.totalTax ?? 0),
+          },
+        ],
+      },
+    ])
+  }
+
+  const handleExportVatPdf = async () => {
+    const report: any = reportQuery.data || {}
+    const rows = formatTaxRowsForExport(report, 'vat')
+    await exportSimplePdf(
+      `vat-report-${taxType}-${dateFrom}-to-${dateTo}.pdf`,
+      `VAT Report (${taxType})`,
+      [`ช่วงวันที่ ${dateFrom} ถึง ${dateTo}`],
+      rows,
+    )
+  }
+
+  const handleBackendVatExport = async (format: 'pdf' | 'xlsx') => {
+    if (!taxId) return
+    await openVatReportExport({
+      taxId,
+      taxType,
+      dateFrom,
+      dateTo,
+      showCancel: true,
+      format,
+    })
+  }
+
   return (
     <div>
       <PageHeader
@@ -88,9 +216,24 @@ export function VatReportPage() {
             <Button size="sm" variant="secondary" onClick={() => navigate('/accounting/reports')}>
               กลับไปรายงานบัญชี
             </Button>
+            <Button size="sm" variant="secondary" onClick={() => navigate('/accounting/tax-settings')}>
+              VAT Settings Admin
+            </Button>
             <Button size="sm" variant="ghost" onClick={() => void reportQuery.refetch()}>
               <i className="bi bi-arrow-clockwise me-1" aria-hidden="true" />
               รีเฟรช
+            </Button>
+            <Button size="sm" variant="secondary" onClick={handleExportVatXlsx} disabled={reportQuery.isLoading || reportQuery.isError}>
+              Export XLSX (UI)
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => void handleExportVatPdf()} disabled={reportQuery.isLoading || reportQuery.isError}>
+              Export PDF (UI)
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => void handleBackendVatExport('xlsx')} disabled={reportQuery.isLoading || reportQuery.isError || taxId == null}>
+              Export XLSX (Backend)
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => void handleBackendVatExport('pdf')} disabled={reportQuery.isLoading || reportQuery.isError || taxId == null}>
+              Export PDF (Backend)
             </Button>
           </div>
         }
@@ -212,6 +355,49 @@ export function WhtReportPage() {
     retry: 1,
   })
 
+  const handleExportWhtXlsx = () => {
+    const report: any = reportQuery.data || {}
+    const rows = formatTaxRowsForExport(report, 'wht')
+    const totals = report?.totals ?? report?.reportData?.totals ?? {}
+    saveWorkbook(`wht-report-${whtType}-${dateFrom}-to-${dateTo}.xlsx`, [
+      { name: 'WHT', rows },
+      {
+        name: 'Summary',
+        rows: [
+          {
+            แบบ: whtType.toUpperCase(),
+            เริ่ม: dateFrom,
+            สิ้นสุด: dateTo,
+            จำนวนรายการ: Number(totals.recordCount ?? rows.length ?? 0),
+            ฐานภาษีรวม: Number(totals.totalBase ?? 0),
+            ภาษีหักรวม: Number(totals.totalWht ?? 0),
+          },
+        ],
+      },
+    ])
+  }
+
+  const handleExportWhtPdf = async () => {
+    const report: any = reportQuery.data || {}
+    const rows = formatTaxRowsForExport(report, 'wht')
+    await exportSimplePdf(
+      `wht-report-${whtType}-${dateFrom}-to-${dateTo}.pdf`,
+      `WHT Report (${whtType.toUpperCase()})`,
+      [`ช่วงวันที่ ${dateFrom} ถึง ${dateTo}`],
+      rows,
+    )
+  }
+
+  const handleBackendWhtExport = async (format: 'pdf' | 'xlsx' | 'txt') => {
+    await openWhtReportExport({
+      whtType,
+      dateFrom,
+      dateTo,
+      showCancel: true,
+      format,
+    })
+  }
+
   return (
     <div>
       <PageHeader
@@ -223,9 +409,27 @@ export function WhtReportPage() {
             <Button size="sm" variant="secondary" onClick={() => navigate('/accounting/reports')}>
               กลับไปรายงานบัญชี
             </Button>
+            <Button size="sm" variant="secondary" onClick={() => navigate('/accounting/tax-settings')}>
+              VAT Settings Admin
+            </Button>
             <Button size="sm" variant="ghost" onClick={() => void reportQuery.refetch()}>
               <i className="bi bi-arrow-clockwise me-1" aria-hidden="true" />
               รีเฟรช
+            </Button>
+            <Button size="sm" variant="secondary" onClick={handleExportWhtXlsx} disabled={reportQuery.isLoading || reportQuery.isError}>
+              Export XLSX (UI)
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => void handleExportWhtPdf()} disabled={reportQuery.isLoading || reportQuery.isError}>
+              Export PDF (UI)
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => void handleBackendWhtExport('xlsx')} disabled={reportQuery.isLoading || reportQuery.isError}>
+              Export XLSX (Backend)
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => void handleBackendWhtExport('pdf')} disabled={reportQuery.isLoading || reportQuery.isError}>
+              Export PDF (Backend)
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => void handleBackendWhtExport('txt')} disabled={reportQuery.isLoading || reportQuery.isError}>
+              Export TXT (Backend)
             </Button>
           </div>
         }
@@ -284,4 +488,3 @@ export function WhtReportPage() {
     </div>
   )
 }
-

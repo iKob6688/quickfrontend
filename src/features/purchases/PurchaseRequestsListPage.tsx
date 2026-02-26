@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/Input'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/Badge'
 import { useMemo, useState } from 'react'
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { listPurchaseRequests } from '@/api/services/purchase-requests.service'
 import { useNavigate } from 'react-router-dom'
 import { Spinner } from 'react-bootstrap'
@@ -41,6 +41,19 @@ export function PurchaseRequestsListPage() {
   const requests = useMemo(() => {
     return query.data?.pages.flatMap((p) => p) ?? []
   }, [query.data?.pages])
+  const countsQuery = useQuery({
+    queryKey: ['purchaseRequests-counts', qDebounced],
+    queryFn: () => listPurchaseRequests({ search: qDebounced || undefined, limit: 1000, offset: 0 }),
+    staleTime: 30_000,
+  })
+  const statusCounts = useMemo(() => {
+    const base = { all: 0, draft: 0, to_approve: 0, approved: 0, rejected: 0, done: 0, cancel: 0 } as Record<StatusTab, number>
+    for (const r of countsQuery.data ?? []) {
+      base.all += 1
+      base[r.state] += 1
+    }
+    return base
+  }, [countsQuery.data])
 
   // Transform API data to table rows
   const rows = useMemo(() => {
@@ -191,22 +204,29 @@ export function PurchaseRequestsListPage() {
           value={tab}
           onChange={setTab}
           items={[
-            { key: 'all', label: 'ทั้งหมด' },
-            { key: 'draft', label: 'ร่าง' },
-            { key: 'to_approve', label: 'รออนุมัติ' },
-            { key: 'approved', label: 'อนุมัติแล้ว' },
-            { key: 'done', label: 'เสร็จสิ้น' },
-            { key: 'rejected', label: 'ปฏิเสธ' },
-            { key: 'cancel', label: 'ยกเลิก' },
+            { key: 'all', label: 'ทั้งหมด', count: statusCounts.all },
+            { key: 'draft', label: 'ร่าง', count: statusCounts.draft },
+            { key: 'to_approve', label: 'รออนุมัติ', count: statusCounts.to_approve },
+            { key: 'approved', label: 'อนุมัติแล้ว', count: statusCounts.approved },
+            { key: 'done', label: 'เสร็จสิ้น', count: statusCounts.done },
+            { key: 'rejected', label: 'ปฏิเสธ', count: statusCounts.rejected },
+            { key: 'cancel', label: 'ยกเลิก', count: statusCounts.cancel },
           ]}
         />
-        <div className="w-100" style={{ maxWidth: '360px' }}>
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="ค้นหาเลขที่คำขอ / ผู้ขอซื้อ"
-            leftAdornment={<i className="bi bi-search"></i>}
-          />
+        <div className="d-flex gap-2 w-100 justify-content-sm-end" style={{ maxWidth: '560px' }}>
+          <div className="w-100" style={{ maxWidth: '360px' }}>
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="ค้นหาเลขที่คำขอ / ผู้ขอซื้อ"
+              leftAdornment={<i className="bi bi-search"></i>}
+            />
+          </div>
+          {(q || tab !== 'all') && (
+            <Button size="sm" variant="ghost" onClick={() => { setQ(''); setTab('all') }}>
+              ล้างตัวกรอง
+            </Button>
+          )}
         </div>
       </div>
 

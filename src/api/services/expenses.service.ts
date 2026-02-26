@@ -166,6 +166,28 @@ interface BackendExpenseDetailResponse {
   expense?: BackendExpenseDetail
 }
 
+function isFrontendExpenseLike(v: unknown): v is Expense {
+  return Boolean(v && typeof v === 'object' && 'id' in (v as any) && 'status' in (v as any) && 'lines' in (v as any))
+}
+
+function normalizeExpensePayload(data: unknown): Expense {
+  if (data && typeof data === 'object') {
+    const obj = data as any
+    if (obj.expense) return mapBackendExpenseDetailToFrontend(obj.expense as BackendExpenseDetail)
+    if (obj.item) {
+      const item = obj.item
+      if (isFrontendExpenseLike(item)) return item
+      return mapBackendExpenseDetailToFrontend(item as BackendExpenseDetail)
+    }
+    if (isFrontendExpenseLike(obj)) return obj
+    // Some endpoints may return backend detail directly without wrapper
+    if ('id' in obj && ('state' in obj || 'total_amount' in obj || 'unit_amount' in obj)) {
+      return mapBackendExpenseDetailToFrontend(obj as BackendExpenseDetail)
+    }
+  }
+  throw new Error('Unexpected expense response format')
+}
+
 function mapBackendExpenseDetailToFrontend(backend: BackendExpenseDetail): Expense {
   const status = (backend.state as Expense['status'] | undefined) ?? 'draft'
   const total = parseNumber(backend.total_amount)
@@ -234,40 +256,27 @@ function mapBackendExpenseDetailToFrontend(backend: BackendExpenseDetail): Expen
 export async function getExpense(id: number) {
   const body = makeRpc({ id })
   const response = await apiClient.post(`${basePath}/${id}`, body)
-  const data = unwrapResponse<BackendExpenseDetailResponse | Expense>(response)
-  
-  // Backend returns { expense: {...} } format
-  if (data && typeof data === 'object' && 'expense' in data) {
-    const backendExpense = (data as BackendExpenseDetailResponse).expense
-    if (!backendExpense) {
-      throw new Error('Expense not found in backend response')
-    }
-    return mapBackendExpenseDetailToFrontend(backendExpense)
-  }
-  
-  // If already in frontend format (unlikely but handle it)
-  if (data && typeof data === 'object' && 'lines' in data) {
-    return data as Expense
-  }
-  
-  throw new Error('Unexpected expense response format')
+  const data = unwrapResponse<BackendExpenseDetailResponse | Expense | BackendExpenseDetail>(response)
+  return normalizeExpensePayload(data)
 }
 
 export async function createExpense(payload: ExpensePayload) {
   const body = makeRpc(payload)
   const response = await apiClient.post(basePath, body)
-  return unwrapResponse<Expense>(response)
+  const data = unwrapResponse<Expense | BackendExpenseDetailResponse | BackendExpenseDetail | { item?: unknown }>(response)
+  return normalizeExpensePayload(data)
 }
 
 export async function updateExpense(id: number, payload: ExpensePayload) {
   const body = makeRpc({ id, ...payload })
   const response = await apiClient.put(`${basePath}/${id}`, body)
-  return unwrapResponse<Expense>(response)
+  const data = unwrapResponse<Expense | BackendExpenseDetailResponse | BackendExpenseDetail | { item?: unknown }>(response)
+  return normalizeExpensePayload(data)
 }
 
 export async function submitExpense(id: number) {
   const body = makeRpc({ id })
   const response = await apiClient.post(`${basePath}/${id}/submit`, body)
-  return unwrapResponse<Expense>(response)
+  const data = unwrapResponse<Expense | BackendExpenseDetailResponse | BackendExpenseDetail | { item?: unknown }>(response)
+  return normalizeExpensePayload(data)
 }
-

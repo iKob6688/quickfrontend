@@ -110,6 +110,72 @@ export class ApiError extends Error {
   }
 }
 
+function safeString(v: unknown): string {
+  return typeof v === 'string' ? v : ''
+}
+
+function looksLikeHtmlDocument(text: string): boolean {
+  const low = text.trim().toLowerCase()
+  return low.startsWith('<!doctype html') || low.startsWith('<html')
+}
+
+function detectHtmlStatusText(text: string): number | undefined {
+  const m = text.match(/<title>\s*(\d{3})\s+/i) || text.match(/<h1>\s*(\d{3})\s+/i)
+  return m ? Number(m[1]) : undefined
+}
+
+function buildTransportDiagnosticMessage(error: AxiosError<unknown>): string | null {
+  const status = error.response?.status
+  const rawPayload = error.response?.data
+  const configUrl = safeString(error.config?.url)
+  const baseURL = safeString(error.config?.baseURL)
+  const fullPath = `${baseURL || ''}${configUrl || ''}` || configUrl || 'unknown-url'
+
+  if (typeof rawPayload === 'string' && looksLikeHtmlDocument(rawPayload)) {
+    const htmlStatus = detectHtmlStatusText(rawPayload)
+    const resolvedStatus = status ?? htmlStatus
+    if (resolvedStatus === 404) {
+      return (
+        `ไม่พบ route ฝั่ง backend (404)\n` +
+        `Request: ${fullPath}\n` +
+        `สาเหตุที่พบบ่อย: route ยังไม่ถูกโหลดใน Odoo, proxy ชี้ผิด, หรือยิง path ผิด (เช่น /api ซ้ำ)\n` +
+        `ตรวจสอบ Network > Request URL และลอง curl endpoint เดียวกัน`
+      )
+    }
+    return (
+      `Backend ตอบกลับเป็นหน้า HTML แทน JSON\n` +
+      `Request: ${fullPath}\n` +
+      `มักเกิดจาก proxy/path ผิด หรือ route ไม่ใช่ Odoo JSON API`
+    )
+  }
+
+  if (!error.response) {
+    if (error.code === 'ERR_CANCELED') {
+      return `คำขอถูกยกเลิก (canceled) ระหว่างเรียก API: ${fullPath}`
+    }
+    if (error.code === 'ECONNABORTED') {
+      return `การเชื่อมต่อหมดเวลา (timeout) ระหว่างเรียก API: ${fullPath}`
+    }
+    if (error.code === 'ERR_NETWORK') {
+      return (
+        `เชื่อมต่อ API ไม่ได้ (Network/CORS/Proxy)\n` +
+        `Request: ${fullPath}\n` +
+        `ตรวจสอบ VITE_API_BASE_URL, Vite proxy, และว่า backend เปิดอยู่`
+      )
+    }
+  }
+
+  if (status === 404) {
+    return (
+      `ไม่พบ endpoint (404)\n` +
+      `Request: ${fullPath}\n` +
+      `ตรวจสอบ path, proxy, และ route ฝั่ง Odoo`
+    )
+  }
+
+  return null
+}
+
 function parseEnvelopeError(err: ApiErrorPayload | null | undefined) {
   if (!err) {
     return { message: 'Unexpected API response' }
@@ -204,6 +270,23 @@ export function toApiError(error: unknown): ApiError {
   const status = axiosError?.response?.status
   const rawPayload = axiosError?.response?.data
 
+  // Prefer transport diagnostics for HTML/error pages before trying envelope parsing.
+  // Otherwise HTML 404 from nginx/Odoo becomes generic "Invalid JSON response".
+  if (axiosError) {
+    const diagnosticMessage = buildTransportDiagnosticMessage(axiosError)
+    if (diagnosticMessage) {
+      return new ApiError(diagnosticMessage, {
+        status,
+        details: {
+          code: axiosError.code,
+          url: axiosError.config?.url,
+          baseURL: axiosError.config?.baseURL,
+          method: axiosError.config?.method,
+        },
+      })
+    }
+  }
+
   if (rawPayload) {
     const envelope = normalizeEnvelope<unknown>(rawPayload)
     if (!envelope.success && envelope.error) {
@@ -221,4 +304,3 @@ export function toApiError(error: unknown): ApiError {
     status ? { status } : undefined,
   )
 }
-

@@ -5,11 +5,13 @@ import { z } from 'zod'
 const defaultTemplateIdByDocTypeSchema = z
   .object({
     quotation: z.string().trim().default('quotation_default_v1'),
+    invoice: z.string().trim().default('invoice_default_v1'),
     receipt_full: z.string().trim().default('receipt_full_default_v1'),
     receipt_short: z.string().trim().default('receipt_short_default_v1'),
   })
   .default({
     quotation: 'quotation_default_v1',
+    invoice: 'invoice_default_v1',
     receipt_full: 'receipt_full_default_v1',
     receipt_short: 'receipt_short_default_v1',
   })
@@ -54,5 +56,4 @@ export const useSettingsStore = create<SettingsState>()(
     },
   ),
 )
-
 

@@ -112,11 +112,11 @@ export function AppLayout() {
                 
                 // Debug: Log scope checking in development
                 if (import.meta.env.DEV && item.scope) {
-                  const allowedScopes = import.meta.env.VITE_ALLOWED_SCOPES
+                  const allowedScopes = typeof window !== 'undefined' ? window.localStorage.getItem('qf18_allowed_scopes') : null
                   console.debug(`[AppLayout] Nav item "${item.label}": scope="${item.scope}", allowed=${allowed}`, {
                     path: item.path,
                     hasScope: allowed,
-                    VITE_ALLOWED_SCOPES: allowedScopes,
+                    runtimeAllowedScopes: allowedScopes,
                   })
                 }
                 
@@ -128,7 +128,7 @@ export function AppLayout() {
                       if (allowed) {
                         navigate(item.path)
                       } else {
-                        const message = `Navigation blocked for "${item.label}": scope "${item.scope}" not allowed. Check VITE_ALLOWED_SCOPES in .env`
+                        const message = `Navigation blocked for "${item.label}": scope "${item.scope}" not allowed by backend runtime scopes`
                         console.warn(`[AppLayout] ${message}`)
                         // Still allow navigation - backend will enforce scopes
                         // This prevents UI from being completely blocked
@@ -187,7 +187,7 @@ export function AppLayout() {
                     if (allowed) {
                       navigate(item.path)
                     } else {
-                      const message = `Navigation blocked for "${item.label}": scope "${item.scope}" not allowed. Check VITE_ALLOWED_SCOPES in .env`
+                      const message = `Navigation blocked for "${item.label}": scope "${item.scope}" not allowed by backend runtime scopes`
                       console.warn(`[AppLayout] ${message}`)
                       // Still allow navigation - backend will enforce scopes
                       // This prevents UI from being completely blocked

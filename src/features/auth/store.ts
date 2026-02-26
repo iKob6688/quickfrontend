@@ -14,6 +14,7 @@ import {
   clearInstanceId,
 } from '@/lib/instanceId'
 import { toApiError } from '@/api/response'
+import { setRuntimeAllowedScopes, clearRuntimeAllowedScopes } from '@/lib/scopes'
 
 interface AuthState {
   user: MeResponse | null
@@ -50,6 +51,9 @@ export const useAuthStore = create<AuthState>()(
 
           // Fetch full profile (with instancePublicId / company info)
           const me = await getMe()
+          const loginAllowedScopes = (loginResp as unknown as { allowed_scopes?: string[] | string }).allowed_scopes
+          const meAllowedScopes = (me as unknown as { allowed_scopes?: string[] | string }).allowed_scopes
+          setRuntimeAllowedScopes(loginAllowedScopes || meAllowedScopes || null)
           const resolvedInstanceId =
             resolveInstanceId(me) ?? getInstanceId()
 
@@ -81,6 +85,7 @@ export const useAuthStore = create<AuthState>()(
         } finally {
           clearAuthStorage()
           clearInstanceId()
+          clearRuntimeAllowedScopes()
           await clearOfflineData()
           set({
             user: null,
@@ -107,6 +112,8 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true })
         try {
           const me = await getMe()
+          const meAllowedScopes = (me as unknown as { allowed_scopes?: string[] | string }).allowed_scopes
+          setRuntimeAllowedScopes(meAllowedScopes || null)
           const resolvedInstanceId =
             resolveInstanceId(me) ?? getInstanceId()
           setInstanceId(resolvedInstanceId)
@@ -120,6 +127,7 @@ export const useAuthStore = create<AuthState>()(
         } catch (err) {
           clearAuthStorage()
           clearInstanceId()
+          clearRuntimeAllowedScopes()
           set({
             user: null,
             accessToken: null,
@@ -134,4 +142,3 @@ export const useAuthStore = create<AuthState>()(
     { name: 'auth-store' },
   ),
 )
-

@@ -3,10 +3,8 @@ import { unwrapResponse } from '@/api/response'
 import { makeRpc } from '@/api/services/rpc'
 import {
   createInvoice,
-  fetchInvoicePdf,
   getInvoice,
   listInvoices,
-  openInvoicePdf,
   postInvoice,
   updateInvoice,
   type Invoice,
@@ -49,6 +47,8 @@ export interface SalesOrder extends SalesOrderPayload {
   total: number
   createdAt: string
   updatedAt: string
+  deliveries?: Array<{ id: number; name?: string; state?: string; scheduled_date?: string | null }>
+  invoices?: Array<{ id: number; name?: string; state?: string; amount_total?: number }>
 }
 
 export interface SalesOrderListItem {
@@ -62,6 +62,8 @@ export interface SalesOrderListItem {
   status: SalesOrderStatus
   orderType: SalesOrderType
   currency: string
+  notes?: string
+  jobCategory?: 'accounting' | 'closing' | 'registration' | 'other'
 }
 
 export interface ListSalesOrdersParams {
@@ -126,6 +128,8 @@ interface BackendSalesOrder {
   updatedAt?: string
   create_date?: string
   write_date?: string
+  deliveries?: Array<{ id: number; name?: string; state?: string; scheduled_date?: string | null }>
+  invoices?: Array<{ id: number; name?: string; state?: string; amount_total?: number }>
   [key: string]: unknown
 }
 
@@ -213,6 +217,16 @@ function mapBackendOrderToListItem(backend: BackendSalesOrder): SalesOrderListIt
   const status = mapStatus(backend.status ?? backend.state)
   const orderType = mapOrderType(backend.orderType ?? backend.type, status)
   const partner = extractPartner(backend)
+  const notes = typeof backend.notes === 'string' ? backend.notes : undefined
+  const text = `${notes ?? ''}`.toLowerCase()
+  const jobCategory: SalesOrderListItem['jobCategory'] =
+    /ปิดงบ|financial statement|close company|fs\b/.test(text)
+      ? 'closing'
+      : /จดทะเบียน|registration|boi|fbl|visa|work permit|license/.test(text)
+        ? 'registration'
+        : /บัญชี|account|bookkeep|outsourcing/.test(text)
+          ? 'accounting'
+          : 'other'
 
   return {
     id: backend.id,
@@ -225,6 +239,8 @@ function mapBackendOrderToListItem(backend: BackendSalesOrder): SalesOrderListIt
     status,
     orderType,
     currency: String(backend.currency ?? 'THB'),
+    notes,
+    jobCategory,
   }
 }
 
@@ -259,6 +275,8 @@ function mapBackendOrderToDetail(backend: BackendSalesOrder): SalesOrder {
     total: toNumber(backend.amount_total),
     createdAt: String(backend.createdAt ?? backend.create_date ?? backend.orderDate ?? backend.date_order ?? ''),
     updatedAt: String(backend.updatedAt ?? backend.write_date ?? backend.orderDate ?? backend.date_order ?? ''),
+    deliveries: Array.isArray(backend.deliveries) ? backend.deliveries : [],
+    invoices: Array.isArray(backend.invoices) ? backend.invoices : [],
   }
 }
 
@@ -468,6 +486,35 @@ export async function confirmSalesOrder(id: number) {
   }
 }
 
+export interface DeliverSalesOrderResponse {
+  order: SalesOrder
+  delivered?: boolean
+  message?: string
+}
+
+export async function deliverSalesOrder(id: number) {
+  const response = await apiClient.post(`${basePath}/${id}/deliver`, makeRpc({ id }))
+  const data = unwrapResponse<{ order?: BackendSalesOrder } & Record<string, unknown>>(response)
+  return {
+    ...data,
+    order: mapBackendOrderToDetail((data as any).order ?? (data as any)),
+  } as DeliverSalesOrderResponse
+}
+
+export interface CreateInvoiceFromSalesOrderResponse {
+  invoiceId: number
+  invoiceNumber?: string
+  invoiceState?: string
+  created?: boolean
+  sourceOrderId?: number
+  sourceOrderNumber?: string
+}
+
+export async function createInvoiceFromSalesOrder(id: number) {
+  const response = await apiClient.post(`${basePath}/${id}/create-invoice`, makeRpc({ id }))
+  return unwrapResponse<CreateInvoiceFromSalesOrderResponse>(response)
+}
+
 async function fetchPdfFromEndpoints(endpoints: string[]) {
   for (const url of endpoints) {
     try {
@@ -494,21 +541,14 @@ export async function fetchSalesOrderPdf(id: number) {
 
   const directBlob = await fetchPdfFromEndpoints(endpoints)
   if (directBlob) return directBlob
-
-  // Invoice-compat mode: when sales order endpoints map to invoice backend.
-  return fetchInvoicePdf(id)
+  throw new Error('Sales order / quotation PDF endpoint not available')
 }
 
 export async function openSalesOrderPdf(id: number) {
-  try {
-    const blob = await fetchSalesOrderPdf(id)
-    const url = URL.createObjectURL(blob)
-    window.open(url, '_blank', 'noopener,noreferrer')
-    setTimeout(() => URL.revokeObjectURL(url), 60_000)
-  } catch {
-    // Final fallback: try legacy invoice open helper.
-    await openInvoicePdf(id)
-  }
+  const blob = await fetchSalesOrderPdf(id)
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank', 'noopener,noreferrer')
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }
 
 export interface SendSalesOrderEmailPayload {

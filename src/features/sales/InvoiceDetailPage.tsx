@@ -5,16 +5,18 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { Spinner, Alert, OverlayTrigger, Tooltip, Modal, ButtonGroup, Button as BootstrapButton } from 'react-bootstrap'
+import { Spinner, Alert, OverlayTrigger, Tooltip, Modal, ButtonGroup, Button as BootstrapButton, Form } from 'react-bootstrap'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { RegisterPaymentModal } from '@/features/sales/RegisterPaymentModal'
 import { AmendInvoiceModal } from '@/features/sales/AmendInvoiceModal'
+import { PromptPayQrModal } from '@/features/sales/PromptPayQrModal'
 import { useEffect, useState } from 'react'
 import { toast } from '@/lib/toastStore'
 import { useSettingsStore as useStudioSettingsStore } from '@/app/core/storage/settingsStore'
 
 const FALLBACK_RS_TPL_TAX_FULL = 'receipt_full_default_v1'
 const FALLBACK_RS_TPL_TAX_SHORT = 'receipt_short_default_v1'
+const FALLBACK_RS_TPL_INVOICE = 'invoice_default_v1'
 
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -22,12 +24,15 @@ export function InvoiceDetailPage() {
   const queryClient = useQueryClient()
   const [paymentOpen, setPaymentOpen] = useState(false)
   const [amendOpen, setAmendOpen] = useState(false)
+  const [promptPayOpen, setPromptPayOpen] = useState(false)
   const [printMenuOpen, setPrintMenuOpen] = useState(false)
+  const [selectedReceiptPaymentId, setSelectedReceiptPaymentId] = useState<number | null>(null)
   const studioSettings = useStudioSettingsStore((s) => s.settings)
 
   const invoiceId = id ? Number.parseInt(id, 10) : null
   const rsTplFull = studioSettings.defaultTemplateIdByDocType?.receipt_full || FALLBACK_RS_TPL_TAX_FULL
   const rsTplShort = studioSettings.defaultTemplateIdByDocType?.receipt_short || FALLBACK_RS_TPL_TAX_SHORT
+  const rsTplInvoice = (studioSettings.defaultTemplateIdByDocType as any)?.invoice || FALLBACK_RS_TPL_INVOICE
 
   // When defaults are changed in another tab (e.g., Reports Studio editor),
   // Zustand in this tab won't update automatically. Rehydrate on focus/open.
@@ -63,6 +68,15 @@ export function InvoiceDetailPage() {
     enabled: !!invoiceId,
   })
 
+  useEffect(() => {
+    if (!invoice?.payments?.length) {
+      setSelectedReceiptPaymentId(null)
+      return
+    }
+    const ids = new Set(invoice.payments.map((p) => p.id))
+    setSelectedReceiptPaymentId((prev) => (prev && ids.has(prev) ? prev : invoice.payments![invoice.payments!.length - 1]!.id))
+  }, [invoice?.payments])
+
   const postMutation = useMutation({
     mutationFn: () => postInvoice(invoiceId!),
     onSuccess: () => {
@@ -75,18 +89,26 @@ export function InvoiceDetailPage() {
     },
   })
 
+  const latestPaymentId = selectedReceiptPaymentId
+
   const openReportsStudioPrint = (templateId: string) => {
-    if (!invoiceId) return
+    if (!latestPaymentId) {
+      toast.error('ยังพิมพ์ใบเสร็จไม่ได้', 'ต้องมีรายการรับชำระเงินก่อน เพื่อใช้ข้อมูลจริงจาก payment')
+      return
+    }
     toast.info('เปิดหน้าพิมพ์ (Reports Studio)', `Template: ${templateId}`)
-    const url = `/reports-studio/print/${templateId}?recordId=${encodeURIComponent(String(invoiceId))}`
+    const url = `/reports-studio/print/${templateId}?recordId=${encodeURIComponent(String(latestPaymentId))}`
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   const openReportsStudioPdf = (templateId: string) => {
-    if (!invoiceId) return
+    if (!latestPaymentId) {
+      toast.error('ยังสร้าง PDF ใบเสร็จไม่ได้', 'ต้องมีรายการรับชำระเงินก่อน เพื่อใช้ข้อมูลจริงจาก payment')
+      return
+    }
     toast.info('เปิด PDF (Reports Studio)', `Template: ${templateId}`)
     // Open preview and auto-trigger PDF generation there (mobile friendly: opens new tab).
-    const url = `/reports-studio/preview/${templateId}?recordId=${encodeURIComponent(String(invoiceId))}&auto=pdf`
+    const url = `/reports-studio/preview/${templateId}?recordId=${encodeURIComponent(String(latestPaymentId))}&auto=pdf`
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 
@@ -343,7 +365,17 @@ export function InvoiceDetailPage() {
                 onClick={() => postMutation.mutate()}
                 isLoading={postMutation.isPending}
               >
-                ยืนยันใบแจ้งหนี้
+                Confirm → Invoice
+              </Button>
+            )}
+            {invoice.status === 'posted' && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setPromptPayOpen(true)}
+                disabled={Math.max(0, amountDue) <= 0}
+              >
+                PromptPay QR
               </Button>
             )}
             {invoice.status === 'posted' && (
@@ -352,7 +384,16 @@ export function InvoiceDetailPage() {
                 onClick={() => setPaymentOpen(true)}
                 isLoading={paymentMutation.isPending}
               >
-                รับชำระเงิน
+                Confirm → Payment
+              </Button>
+            )}
+            {payments.length > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setPrintMenuOpen(true)}
+              >
+                Confirm → Receipt
               </Button>
             )}
             {/* Professional + reliable on mobile: split button + action-sheet modal (avoids dropdown stacking issues) */}
@@ -374,6 +415,22 @@ export function InvoiceDetailPage() {
         </div>
       </Card>
 
+      <Card className="p-3 mb-4">
+        <div className="small text-muted mb-2">สถานะกระบวนการเอกสาร</div>
+        <div className="d-flex flex-wrap gap-2 align-items-center">
+          <Badge tone="green">ใบแจ้งหนี้</Badge>
+          <span className="text-muted small">→</span>
+          <Badge tone={invoice.status === 'draft' ? 'gray' : 'green'}>ยืนยันใบแจ้งหนี้</Badge>
+          <span className="text-muted small">→</span>
+          <Badge tone={amountPaid > 0 ? 'green' : 'gray'}>Payment</Badge>
+          <span className="text-muted small">→</span>
+          <Badge tone={payments.length > 0 ? 'green' : 'gray'}>Receipt</Badge>
+          {payments.length > 1 ? (
+            <span className="small text-muted">({payments.length} payments / รองรับแบ่งชำระ)</span>
+          ) : null}
+        </div>
+      </Card>
+
       <Modal
         show={printMenuOpen}
         onHide={() => setPrintMenuOpen(false)}
@@ -387,11 +444,60 @@ export function InvoiceDetailPage() {
           <div className="text-muted small mb-3">
             เลือกรูปแบบการพิมพ์ (เปิดแท็บใหม่ รองรับมือถือ)
           </div>
+          <div className="mb-2 fw-semibold">Invoice (จากเอกสารจริง)</div>
+          <div className="d-grid gap-2 mb-3">
+            <BootstrapButton
+              variant="outline-secondary"
+              onClick={() => {
+                setPrintMenuOpen(false)
+                const url = `/reports-studio/print/${rsTplInvoice}?recordId=${encodeURIComponent(String(invoice.id))}`
+                window.open(url, '_blank', 'noopener,noreferrer')
+              }}
+            >
+              พิมพ์ (Reports Studio Invoice)
+            </BootstrapButton>
+            <BootstrapButton
+              variant="outline-secondary"
+              onClick={() => {
+                setPrintMenuOpen(false)
+                const url = `/reports-studio/preview/${rsTplInvoice}?recordId=${encodeURIComponent(String(invoice.id))}&auto=pdf`
+                window.open(url, '_blank', 'noopener,noreferrer')
+              }}
+            >
+              PDF (Reports Studio Invoice)
+            </BootstrapButton>
+          </div>
+
+          {payments.length > 0 ? (
+            <Form.Group className="mb-3">
+              <Form.Label className="small fw-semibold mb-1">เลือก Payment สำหรับใบเสร็จ</Form.Label>
+              <Form.Select
+                value={selectedReceiptPaymentId ?? ''}
+                onChange={(e) => setSelectedReceiptPaymentId(e.target.value ? Number(e.target.value) : null)}
+              >
+                {payments.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    #{p.id} · {new Date(p.date).toLocaleDateString('th-TH')} · {p.amount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}
+                    {p.reference ? ` · ${p.reference}` : ''}
+                  </option>
+                ))}
+              </Form.Select>
+              <div className="small text-muted mt-1">
+                Template ใบเสร็จจะดึงข้อมูลจาก payment ที่เลือก (ใช้ข้อมูลจริงจาก `account.payment`)
+              </div>
+            </Form.Group>
+          ) : null}
+          {!latestPaymentId ? (
+            <Alert variant="warning" className="small py-2">
+              ยังไม่มีรายการรับชำระเงิน จึงใช้ Reports Studio สำหรับใบเสร็จไม่ได้ (ป้องกันการดึงข้อมูลไม่ตรงเอกสาร)
+            </Alert>
+          ) : null}
 
           <div className="mb-2 fw-semibold">ใบกำกับภาษี (เต็ม)</div>
           <div className="d-grid gap-2 mb-3">
             <BootstrapButton
               variant="outline-secondary"
+              disabled={!latestPaymentId}
               onClick={() => {
                 setPrintMenuOpen(false)
                 openReportsStudioPrint(rsTplFull)
@@ -401,6 +507,7 @@ export function InvoiceDetailPage() {
             </BootstrapButton>
             <BootstrapButton
               variant="outline-secondary"
+              disabled={!latestPaymentId}
               onClick={() => {
                 setPrintMenuOpen(false)
                 openReportsStudioPdf(rsTplFull)
@@ -423,6 +530,7 @@ export function InvoiceDetailPage() {
           <div className="d-grid gap-2 mb-3">
             <BootstrapButton
               variant="outline-secondary"
+              disabled={!latestPaymentId}
               onClick={() => {
                 setPrintMenuOpen(false)
                 openReportsStudioPrint(rsTplShort)
@@ -432,6 +540,7 @@ export function InvoiceDetailPage() {
             </BootstrapButton>
             <BootstrapButton
               variant="outline-secondary"
+              disabled={!latestPaymentId}
               onClick={() => {
                 setPrintMenuOpen(false)
                 openReportsStudioPdf(rsTplShort)
@@ -684,10 +793,18 @@ export function InvoiceDetailPage() {
         open={paymentOpen}
         onClose={() => setPaymentOpen(false)}
         currency={invoice.currency}
-        defaultAmount={total}
+        defaultAmount={Math.max(0, amountDue)}
         onSubmit={async (payload) => {
           await paymentMutation.mutateAsync(payload)
         }}
+      />
+
+      <PromptPayQrModal
+        open={promptPayOpen}
+        onClose={() => setPromptPayOpen(false)}
+        defaultAmount={Math.max(0, amountDue)}
+        reference={invoice.number || `INV-${invoice.id}`}
+        customerName={invoice.customerName}
       />
 
       <AmendInvoiceModal
@@ -702,4 +819,3 @@ export function InvoiceDetailPage() {
     </div>
   )
 }
-

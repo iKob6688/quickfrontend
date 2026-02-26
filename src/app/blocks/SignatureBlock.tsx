@@ -3,7 +3,7 @@ import type { BlockViewContext } from './shared'
 
 export function SignatureBlockView({ block, ctx }: { block: SignatureBlock; ctx: BlockViewContext }) {
   // Quotation / Tax invoice full: 3-column signature + stamp box like sample
-  if (ctx.dto.docType === 'quotation' || ctx.dto.docType === 'receipt_full') {
+  if (ctx.dto.docType === 'quotation' || ctx.dto.docType === 'invoice' || ctx.dto.docType === 'receipt_full') {
     const bottomEnabled = block.props.bottomBarEnabled ?? true
     const bottomColor = block.props.bottomBarColor ?? '#111111'
     const bottomHeight = block.props.bottomBarHeightPx ?? 10
@@ -44,5 +44,4 @@ export function SignatureBlockView({ block, ctx }: { block: SignatureBlock; ctx:
     </div>
   )
 }
-
 

@@ -14,12 +14,16 @@ import { Label } from '@/components/ui/Label'
 import { Spinner, Card as BootstrapCard } from 'react-bootstrap'
 import { useEffect, useState, useMemo } from 'react'
 import { extractFieldErrors, type FieldErrors } from '@/lib/formErrors'
+import { clearDraft, loadDraft, loadRecentNotes, pushRecentNote, saveDraft } from '@/lib/formDrafts'
 import { toast } from '@/lib/toastStore'
 import { listPartners, getPartner } from '@/api/services/partners.service'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { Combobox, type ComboboxOption } from '@/components/ui/Combobox'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { ProductCombobox } from '@/features/sales/ProductCombobox'
+
+const PURCHASE_ORDER_DRAFT_KEY = 'qf:draft:purchase-order-form:create:v1'
+const PURCHASE_ORDER_RECENT_NOTES_KEY = 'qf:recent-notes:purchase-order:v1'
 
 export function PurchaseOrderFormPage() {
   const { id } = useParams<{ id: string }>()
@@ -135,10 +139,48 @@ export function PurchaseOrderFormPage() {
   }, [isEdit, selectedVendorQuery.data, existingOrder, vendorSearch])
 
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [recentNotes, setRecentNotes] = useState<string[]>([])
+  const [draftPendingRestore, setDraftPendingRestore] = useState<PurchaseOrderPayload | null>(null)
+  const [draftUpdatedAt, setDraftUpdatedAt] = useState<string | null>(null)
+  const [draftGateResolved, setDraftGateResolved] = useState(false)
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
+
+  useEffect(() => {
+    setRecentNotes(loadRecentNotes(PURCHASE_ORDER_RECENT_NOTES_KEY))
+  }, [])
+
+  useEffect(() => {
+    if (isEdit) {
+      setDraftGateResolved(true)
+      return
+    }
+    const saved = loadDraft<PurchaseOrderPayload>(PURCHASE_ORDER_DRAFT_KEY)
+    if (saved?.data) {
+      setDraftPendingRestore(saved.data)
+      setDraftUpdatedAt(saved.updatedAt || null)
+    }
+    setDraftGateResolved(true)
+  }, [isEdit])
+
+  useEffect(() => {
+    if (isEdit) return
+    if (!draftGateResolved) return
+    if (draftPendingRestore) return
+    const timer = window.setTimeout(() => {
+      saveDraft(PURCHASE_ORDER_DRAFT_KEY, formData)
+      setDraftSavedAt(new Date().toISOString())
+    }, 700)
+    return () => window.clearTimeout(timer)
+  }, [isEdit, draftGateResolved, draftPendingRestore, formData])
 
   const createMutation = useMutation({
     mutationFn: (payload: PurchaseOrderPayload) => createPurchaseOrder(payload),
     onSuccess: (data) => {
+      clearDraft(PURCHASE_ORDER_DRAFT_KEY)
+      if ((formData.notes || '').trim()) {
+        pushRecentNote(PURCHASE_ORDER_RECENT_NOTES_KEY, formData.notes || '')
+        setRecentNotes(loadRecentNotes(PURCHASE_ORDER_RECENT_NOTES_KEY))
+      }
       queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] })
       toast.success('สร้างใบสั่งซื้อสำเร็จ')
       navigate(`/purchases/orders/${data.id}`)
@@ -153,6 +195,10 @@ export function PurchaseOrderFormPage() {
   const updateMutation = useMutation({
     mutationFn: (payload: PurchaseOrderPayload) => updatePurchaseOrder(orderId!, payload),
     onSuccess: () => {
+      if ((formData.notes || '').trim()) {
+        pushRecentNote(PURCHASE_ORDER_RECENT_NOTES_KEY, formData.notes || '')
+        setRecentNotes(loadRecentNotes(PURCHASE_ORDER_RECENT_NOTES_KEY))
+      }
       queryClient.invalidateQueries({ queryKey: ['purchaseOrder', orderId] })
       queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] })
       toast.success('อัปเดตใบสั่งซื้อสำเร็จ')
@@ -329,6 +375,9 @@ export function PurchaseOrderFormPage() {
   ]
 
   const totalAmount = (formData.lines || []).reduce((sum, line) => sum + (line.total || 0), 0)
+  const applyRecentNote = (note: string) => setFormData((prev) => ({ ...prev, notes: note }))
+  const appendRecentNote = (note: string) =>
+    setFormData((prev) => ({ ...prev, notes: (prev.notes || '').trim() ? `${prev.notes}\n${note}` : note }))
 
   if (isEdit && isLoadingOrder) {
     return (
@@ -348,6 +397,11 @@ export function PurchaseOrderFormPage() {
         breadcrumb="รายจ่าย · ใบสั่งซื้อ"
         actions={
           <div className="d-flex align-items-center gap-2">
+            {!isEdit && draftSavedAt ? (
+              <span className="small text-muted">
+                autosaved {new Date(draftSavedAt).toLocaleTimeString('th-TH')}
+              </span>
+            ) : null}
             <Button
               size="sm"
               variant="secondary"
@@ -371,6 +425,38 @@ export function PurchaseOrderFormPage() {
           </div>
         }
       />
+
+      {!isEdit && draftPendingRestore ? (
+        <div className="alert alert-warning small">
+          <div className="fw-semibold mb-1">พบ draft ใบสั่งซื้อที่บันทึกไว้</div>
+          <div className="mb-2">
+            เวลา: {draftUpdatedAt ? new Date(draftUpdatedAt).toLocaleString('th-TH') : 'ไม่ทราบเวลา'}
+          </div>
+          <div className="d-flex gap-2">
+            <Button
+              size="sm"
+              type="button"
+              onClick={() => {
+                setFormData(draftPendingRestore)
+                setDraftPendingRestore(null)
+              }}
+            >
+              กู้ draft
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              type="button"
+              onClick={() => {
+                clearDraft(PURCHASE_ORDER_DRAFT_KEY)
+                setDraftPendingRestore(null)
+              }}
+            >
+              ลบ draft
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="row g-3 mb-4">
         <div className="col-md-8">
@@ -421,6 +507,14 @@ export function PurchaseOrderFormPage() {
                         {selectedVendorQuery.data.displayName || selectedVendorQuery.data.name}
                       </span>{' '}
                       (ID: {formData.vendorId})
+                      <div className="d-flex gap-2 mt-2">
+                        <Button size="sm" variant="ghost" type="button" onClick={() => navigate(`/customers/${formData.vendorId}`)}>
+                          เปิดรายละเอียดผู้ขาย
+                        </Button>
+                        <Button size="sm" variant="ghost" type="button" onClick={() => navigate(`/customers/${formData.vendorId}/edit`)}>
+                          แก้ไขผู้ขาย
+                        </Button>
+                      </div>
                     </div>
                   ) : isEdit && existingOrder?.vendorName ? (
                     <div className="small text-muted mt-2">
@@ -485,6 +579,23 @@ export function PurchaseOrderFormPage() {
                     onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
                     placeholder="หมายเหตุเพิ่มเติม..."
                   />
+                  {recentNotes.length > 0 ? (
+                    <div className="mt-2">
+                      <div className="small text-muted mb-1">หมายเหตุล่าสุด</div>
+                      <div className="d-flex flex-wrap gap-2">
+                        {recentNotes.slice(0, 4).map((note, idx) => (
+                          <div key={`${idx}-${note}`} className="d-inline-flex align-items-center gap-1">
+                            <Button size="sm" variant="secondary" type="button" onClick={() => applyRecentNote(note)}>
+                              ใช้ล่าสุด
+                            </Button>
+                            <Button size="sm" variant="ghost" type="button" onClick={() => appendRecentNote(note)} title={note}>
+                              +
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </BootstrapCard.Body>

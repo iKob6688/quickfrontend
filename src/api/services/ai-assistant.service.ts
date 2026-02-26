@@ -1,5 +1,5 @@
 import { apiClient } from '@/api/client'
-import { unwrapResponse } from '@/api/response'
+import { ApiError, toApiError, unwrapResponse } from '@/api/response'
 import { makeRpc } from '@/api/services/rpc'
 
 export type AssistantMode = 'approve_required' | 'auto_safe' | 'plan_only'
@@ -49,10 +49,20 @@ export interface AssistantRecordRef {
   name?: string
 }
 
+export interface AssistantTokenUsage {
+  prompt_tokens?: number
+  completion_tokens?: number
+  total_tokens?: number
+  input_tokens?: number
+  output_tokens?: number
+  model?: string
+}
+
 export interface AssistantChatResponse {
   session_id: string
   nonce?: string
   reply: string
+  usage?: AssistantTokenUsage | Record<string, unknown>
   permission_explanations?: string[]
   confirmation_request?: {
     doc_type: 'quotation' | 'invoice' | string
@@ -74,6 +84,7 @@ export interface AssistantExecuteResponse {
   session_id: string
   reply?: string
   confirmed?: boolean
+  usage?: AssistantTokenUsage | Record<string, unknown>
   permission_explanations?: string[]
   results: Array<{
     plan_id: string
@@ -103,24 +114,40 @@ export interface AssistantTaskItem {
 async function postWithFallback<T>(apiPath: string, webPath: string, payload: Record<string, unknown>) {
   const rpcPayload = makeRpc(payload)
   const candidates: Array<{ url: string; baseURL?: string }> = [
+    // Contract route via /api proxy.
     { url: apiPath },
-    { url: `/api${apiPath}`, baseURL: '' },
-    // IMPORTANT:
-    // webPath must bypass apiClient baseURL (/api), otherwise it becomes
-    // /api/web/adt/... and fails on production proxies.
-    { url: webPath, baseURL: '' },
-    { url: apiPath, baseURL: '' },
+    // Internal route via /api proxy (some deployments).
+    { url: webPath },
+    // Direct same-origin route (avoid being prefixed by apiClient baseURL=/api)
+    { url: webPath, baseURL: window.location.origin },
   ]
   let lastError: unknown = null
   for (const candidate of candidates) {
     try {
-      const response = await apiClient.post(candidate.url, rpcPayload, candidate.baseURL ? { baseURL: candidate.baseURL } : undefined)
+      const response = await apiClient.post(
+        candidate.url,
+        rpcPayload,
+        candidate.baseURL ? { baseURL: candidate.baseURL } : undefined,
+      )
       return unwrapResponse<T>(response)
     } catch (err) {
+      const apiErr = toApiError(err)
+      // Do not bypass permission/auth/company denial by silently falling back to another route.
+      if (
+        apiErr.status === 401 ||
+        apiErr.status === 403 ||
+        apiErr.code === 'scope_forbidden' ||
+        apiErr.code === 'company_forbidden' ||
+        apiErr.code === 'unauthorized'
+      ) {
+        throw apiErr
+      }
       lastError = err
     }
   }
-  throw lastError instanceof Error ? lastError : new Error('Assistant request failed')
+  throw lastError instanceof Error
+    ? lastError
+    : new ApiError(`Assistant internal route failed: ${webPath}`)
 }
 
 export async function getAssistantCapabilities(lang?: string) {

@@ -297,6 +297,25 @@ export interface WhtReportParams {
   format?: 'json' | 'pdf' | 'xlsx' | 'text'
 }
 
+async function fetchTaxExportBlob(path: string, params: Record<string, unknown>) {
+  const response = await apiClient.get(path, {
+    params,
+    responseType: 'arraybuffer',
+    headers: { Accept: 'application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,application/json' },
+  })
+  const contentType = String(response.headers?.['content-type'] ?? '')
+  return {
+    blob: new Blob([response.data], { type: contentType || 'application/octet-stream' }),
+    contentType,
+  }
+}
+
+function openBlobInNewTab(blob: Blob) {
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank', 'noopener,noreferrer')
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}
+
 export async function getVatReport(params: VatReportParams) {
   return postWithProdFallback<GenericReportResponse>(
     '/th/v1/tax-reports/vat',
@@ -324,4 +343,29 @@ export async function getWhtReport(params: WhtReportParams) {
       ...(params.format ? { format: params.format } : {}),
     },
   )
+}
+
+export async function openVatReportExport(params: VatReportParams & { format: 'pdf' | 'xlsx' }) {
+  const { blob } = await fetchTaxExportBlob('/th/v1/tax-reports/vat/export', {
+    ...(params.companyId !== undefined ? { company_id: params.companyId } : {}),
+    tax_id: params.taxId,
+    tax_type: params.taxType,
+    date_from: params.dateFrom,
+    date_to: params.dateTo,
+    show_cancel: params.showCancel ?? true,
+    format: params.format,
+  })
+  openBlobInNewTab(blob)
+}
+
+export async function openWhtReportExport(params: WhtReportParams & { format: 'pdf' | 'xlsx' | 'text' | 'txt' }) {
+  const { blob } = await fetchTaxExportBlob('/th/v1/tax-reports/wht/export', {
+    ...(params.companyId !== undefined ? { company_id: params.companyId } : {}),
+    wht_type: params.whtType,
+    date_from: params.dateFrom,
+    date_to: params.dateTo,
+    show_cancel: params.showCancel ?? true,
+    format: params.format,
+  })
+  openBlobInNewTab(blob)
 }

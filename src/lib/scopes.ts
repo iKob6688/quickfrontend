@@ -7,12 +7,16 @@ const SCOPE_ALIAS: Record<string, string[]> = {
   expense: ['expenses'],
 }
 
+const RUNTIME_SCOPE_KEY = 'qf18_allowed_scopes'
+
 function normalizeScope(scope: string): string {
   return scope.trim().toLowerCase()
 }
 
 function getNormalizedAllowedScopeSet(): Set<string> | null {
-  const allowedScopes = import.meta.env.VITE_ALLOWED_SCOPES
+  // Source of truth should come from backend runtime payload, not hardcoded .env.
+  const allowedScopes =
+    typeof window !== 'undefined' ? window.localStorage.getItem(RUNTIME_SCOPE_KEY) || '' : ''
   if (!allowedScopes || !allowedScopes.trim()) return null
 
   const normalized = normalizeScope(allowedScopes)
@@ -26,6 +30,27 @@ function getNormalizedAllowedScopeSet(): Set<string> | null {
       .map((s: string) => normalizeScope(s))
       .filter(Boolean),
   )
+}
+
+export function setRuntimeAllowedScopes(scopes: string[] | string | null | undefined) {
+  if (typeof window === 'undefined') return
+
+  if (!scopes) {
+    window.localStorage.removeItem(RUNTIME_SCOPE_KEY)
+    return
+  }
+
+  const value = Array.isArray(scopes) ? scopes.join(',') : String(scopes)
+  if (!value.trim()) {
+    window.localStorage.removeItem(RUNTIME_SCOPE_KEY)
+    return
+  }
+  window.localStorage.setItem(RUNTIME_SCOPE_KEY, value)
+}
+
+export function clearRuntimeAllowedScopes() {
+  if (typeof window === 'undefined') return
+  window.localStorage.removeItem(RUNTIME_SCOPE_KEY)
 }
 
 /**
@@ -51,7 +76,8 @@ export function hasScope(scope: string): boolean {
  * @returns Array of allowed scope strings
  */
 export function getAllowedScopes(): string[] {
-  const allowedScopes = import.meta.env.VITE_ALLOWED_SCOPES
+  const allowedScopes =
+    typeof window !== 'undefined' ? window.localStorage.getItem(RUNTIME_SCOPE_KEY) : null
   if (!allowedScopes) return []
 
   return allowedScopes
@@ -61,7 +87,7 @@ export function getAllowedScopes(): string[] {
 }
 
 export function isScopesConfigured(): boolean {
-  return Boolean(import.meta.env.VITE_ALLOWED_SCOPES)
+  return Boolean(typeof window !== 'undefined' && window.localStorage.getItem(RUNTIME_SCOPE_KEY))
 }
 
 /**

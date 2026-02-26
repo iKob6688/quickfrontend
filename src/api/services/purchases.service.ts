@@ -6,6 +6,8 @@ export interface PurchaseOrderLine {
   productId: number | null
   description: string
   quantity: number
+  qtyReceived?: number
+  qtyInvoiced?: number
   unitPrice: number
   taxIds: number[] // Array of tax IDs
   subtotal: number // Calculated by Odoo
@@ -33,6 +35,8 @@ export interface PurchaseOrder extends PurchaseOrderPayload {
   total: number
   createdAt: string // ISO 8601
   updatedAt: string // ISO 8601
+  receipts?: Array<{ id: number; name?: string; state?: string; scheduled_date?: string | null }>
+  vendorBills?: Array<{ id: number; name?: string; state?: string; amount_total?: number }>
 }
 
 export interface PurchaseOrderListItem {
@@ -122,6 +126,8 @@ interface BackendPurchaseOrder {
     total?: number
     [key: string]: unknown
   }>
+  receipts?: Array<{ id: number; name?: string; state?: string; scheduled_date?: string | null }>
+  vendorBills?: Array<{ id: number; name?: string; state?: string; amount_total?: number }>
   [key: string]: unknown // Allow additional fields
 }
 
@@ -348,6 +354,8 @@ function mapBackendOrderToFrontend(backend: BackendPurchaseOrder): PurchaseOrder
     productId: line.productId ?? line.product_id ?? null,
     description: line.description ?? line.name ?? '',
     quantity: line.quantity ?? 0,
+    qtyReceived: (line as any).qty_received ?? 0,
+    qtyInvoiced: (line as any).qty_invoiced ?? 0,
     unitPrice: line.unitPrice ?? line.price_unit ?? 0,
     taxIds: line.taxIds ?? line.tax_ids ?? [],
     subtotal: line.subtotal ?? line.price_subtotal ?? 0,
@@ -371,7 +379,35 @@ function mapBackendOrderToFrontend(backend: BackendPurchaseOrder): PurchaseOrder
     notes: backend.notes || undefined,
     createdAt: orderDate, // Use orderDate as fallback
     updatedAt: orderDate, // Use orderDate as fallback
+    receipts: Array.isArray(backend.receipts) ? backend.receipts : [],
+    vendorBills: Array.isArray(backend.vendorBills) ? backend.vendorBills : [],
   }
+}
+
+function unwrapPurchaseOrderPayload(raw: unknown): PurchaseOrder {
+  const candidate =
+    raw && typeof raw === 'object' && 'order' in (raw as Record<string, unknown>)
+      ? (raw as { order?: unknown }).order
+      : raw
+
+  if (!candidate || typeof candidate !== 'object') {
+    throw new Error('Invalid purchase order response format')
+  }
+  return mapBackendOrderToFrontend(candidate as BackendPurchaseOrder)
+}
+
+export interface PurchaseOrderReceiveResponse {
+  order: PurchaseOrder
+  received?: boolean
+  message?: string
+}
+
+export interface PurchaseOrderCreateVendorBillResponse {
+  order: PurchaseOrder
+  billId?: number
+  billNumber?: string
+  billState?: string
+  created?: boolean
 }
 
 export async function getPurchaseOrder(id: number) {
@@ -426,24 +462,41 @@ export async function getPurchaseOrder(id: number) {
 export async function createPurchaseOrder(payload: PurchaseOrderPayload) {
   const body = makeRpc(payload)
   const response = await apiClient.post(basePath, body)
-  return unwrapResponse<PurchaseOrder>(response)
+  return unwrapPurchaseOrderPayload(unwrapResponse<unknown>(response))
 }
 
 export async function updatePurchaseOrder(id: number, payload: PurchaseOrderPayload) {
   const body = makeRpc({ id, ...payload })
   const response = await apiClient.put(`${basePath}/${id}`, body)
-  return unwrapResponse<PurchaseOrder>(response)
+  return unwrapPurchaseOrderPayload(unwrapResponse<unknown>(response))
 }
 
 export async function confirmPurchaseOrder(id: number) {
   const body = makeRpc({ id })
   const response = await apiClient.post(`${basePath}/${id}/confirm`, body)
-  return unwrapResponse<PurchaseOrder>(response)
+  return unwrapPurchaseOrderPayload(unwrapResponse<unknown>(response))
 }
 
 export async function cancelPurchaseOrder(id: number, reason?: string) {
   const body = makeRpc({ id, ...(reason && { reason }) })
   const response = await apiClient.post(`${basePath}/${id}/cancel`, body)
-  return unwrapResponse<PurchaseOrder>(response)
+  return unwrapPurchaseOrderPayload(unwrapResponse<unknown>(response))
 }
 
+export async function receivePurchaseOrder(id: number) {
+  const response = await apiClient.post(`${basePath}/${id}/receive`, makeRpc({ id }))
+  const data = unwrapResponse<{ order?: BackendPurchaseOrder } & Record<string, unknown>>(response)
+  return {
+    ...data,
+    order: mapBackendOrderToFrontend((data as any).order ?? (data as any)),
+  } as PurchaseOrderReceiveResponse
+}
+
+export async function createVendorBillFromPurchaseOrder(id: number) {
+  const response = await apiClient.post(`${basePath}/${id}/create-vendor-bill`, makeRpc({ id }))
+  const data = unwrapResponse<{ order?: BackendPurchaseOrder } & Record<string, unknown>>(response)
+  return {
+    ...data,
+    order: mapBackendOrderToFrontend((data as any).order ?? (data as any)),
+  } as PurchaseOrderCreateVendorBillResponse
+}

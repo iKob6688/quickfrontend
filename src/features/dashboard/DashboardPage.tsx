@@ -249,12 +249,30 @@ export function DashboardPage() {
     let partialTotal = 0
 
     invoices.forEach((inv) => {
-      if (inv.status === 'paid') {
+      const total = Number(inv.total || 0)
+      const amountPaid = Number(inv.amountPaid || 0)
+      const amountDue = Number(inv.amountDue || 0)
+      const paymentState = inv.paymentState
+
+      // Keep the same logic as InvoicesListPage so dashboard and list stay in sync.
+      const isPaid =
+        inv.status === 'paid' ||
+        paymentState === 'paid' ||
+        (inv.status === 'posted' && total > 0 && amountDue === 0 && amountPaid > 0)
+
+      const isPartial =
+        !isPaid &&
+        inv.status === 'posted' &&
+        (paymentState === 'partial' ||
+          paymentState === 'in_payment' ||
+          (amountPaid > 0 && amountDue > 0))
+
+      if (isPaid) {
         paidCount++
-        paidTotal += inv.total
-      } else if (inv.status === 'posted') {
-        // For posted invoices, we can't determine partial payment without amountPaid/amountDue
-        // So we'll only count fully paid ones for now
+        paidTotal += total
+      } else if (isPartial) {
+        partialCount++
+        partialTotal += amountPaid > 0 ? amountPaid : Math.max(0, total - amountDue)
       }
     })
 

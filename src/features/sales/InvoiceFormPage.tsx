@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/Label'
 import { Spinner, Alert } from 'react-bootstrap'
 import { useEffect, useMemo, useState } from 'react'
 import { extractFieldErrors, type FieldErrors } from '@/lib/formErrors'
+import { clearDraft, loadDraft, loadRecentNotes, pushRecentNote, saveDraft } from '@/lib/formDrafts'
 import { toast } from '@/lib/toastStore'
 import { listPartners, getPartner } from '@/api/services/partners.service'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
@@ -25,6 +26,9 @@ function normalizeNotesForTextarea(raw?: string | null): string {
   }
   return raw
 }
+
+const INVOICE_DRAFT_KEY = 'qf:draft:invoice-form:create:v1'
+const INVOICE_RECENT_NOTES_KEY = 'qf:recent-notes:invoice:v1'
 
 export function InvoiceFormPage() {
   const { id } = useParams<{ id: string }>()
@@ -126,6 +130,11 @@ export function InvoiceFormPage() {
   const createMutation = useMutation({
     mutationFn: (payload: InvoicePayload) => createInvoice(payload),
     onSuccess: (data) => {
+      clearDraft(INVOICE_DRAFT_KEY)
+      if (formData.notes?.trim()) {
+        pushRecentNote(INVOICE_RECENT_NOTES_KEY, formData.notes)
+        setRecentNotes(loadRecentNotes(INVOICE_RECENT_NOTES_KEY))
+      }
       queryClient.invalidateQueries({ queryKey: ['invoices'] })
       toast.success('สร้างใบแจ้งหนี้สำเร็จ', data.number ? `เลขที่: ${data.number}` : undefined)
       navigate(`/sales/invoices/${data.id}`)
@@ -140,6 +149,10 @@ export function InvoiceFormPage() {
   const updateMutation = useMutation({
     mutationFn: (payload: InvoicePayload) => updateInvoice(invoiceId!, payload),
     onSuccess: () => {
+      if (formData.notes?.trim()) {
+        pushRecentNote(INVOICE_RECENT_NOTES_KEY, formData.notes)
+        setRecentNotes(loadRecentNotes(INVOICE_RECENT_NOTES_KEY))
+      }
       queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
       queryClient.invalidateQueries({ queryKey: ['invoices'] })
       toast.success('บันทึกสำเร็จ')
@@ -153,6 +166,43 @@ export function InvoiceFormPage() {
   })
 
   const [fieldErrors, setFieldErrors] = useState<FieldErrors | null>(null)
+  const [recentNotes, setRecentNotes] = useState<string[]>([])
+  const [draftPendingRestore, setDraftPendingRestore] = useState<InvoicePayload | null>(null)
+  const [draftUpdatedAt, setDraftUpdatedAt] = useState<string | null>(null)
+  const [draftGateResolved, setDraftGateResolved] = useState(false)
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
+
+  useEffect(() => {
+    setRecentNotes(loadRecentNotes(INVOICE_RECENT_NOTES_KEY))
+  }, [])
+
+  useEffect(() => {
+    if (isEdit) {
+      setDraftGateResolved(true)
+      return
+    }
+    const draft = loadDraft<InvoicePayload>(INVOICE_DRAFT_KEY)
+    if (draft?.data) {
+      setDraftPendingRestore(draft.data)
+      setDraftUpdatedAt(draft.updatedAt || null)
+    }
+    setDraftGateResolved(true)
+  }, [isEdit])
+
+  useEffect(() => {
+    if (isEdit) return
+    if (!draftGateResolved) return
+    if (draftPendingRestore) return
+    const timer = window.setTimeout(() => {
+      saveDraft(INVOICE_DRAFT_KEY, formData)
+      setDraftSavedAt(new Date().toISOString())
+    }, 700)
+    return () => window.clearTimeout(timer)
+  }, [isEdit, draftGateResolved, draftPendingRestore, formData])
+
+  const applyRecentNote = (note: string) => setFormData((prev) => ({ ...prev, notes: note }))
+  const appendRecentNote = (note: string) =>
+    setFormData((prev) => ({ ...prev, notes: prev.notes?.trim() ? `${prev.notes}\n${note}` : note }))
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -181,6 +231,11 @@ export function InvoiceFormPage() {
         breadcrumb="รายรับ · ใบแจ้งหนี้"
         actions={
           <div className="d-flex align-items-center gap-2">
+            {!isEdit && draftSavedAt ? (
+              <span className="small text-muted">
+                autosaved {new Date(draftSavedAt).toLocaleTimeString('th-TH')}
+              </span>
+            ) : null}
             <Button
               size="sm"
               variant="secondary"
@@ -195,6 +250,39 @@ export function InvoiceFormPage() {
       <form onSubmit={handleSubmit}>
         <div className="row g-4">
           <div className="col-lg-8">
+            {!isEdit && draftPendingRestore ? (
+              <Alert variant="warning" className="small">
+                <div className="fw-semibold mb-1">พบ draft ที่บันทึกไว้</div>
+                <div className="mb-2">
+                  เวลา: {draftUpdatedAt ? new Date(draftUpdatedAt).toLocaleString('th-TH') : 'ไม่ทราบเวลา'}
+                </div>
+                <div className="d-flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => {
+                      setFormData(draftPendingRestore)
+                      setDraftPendingRestore(null)
+                      toast.info('กู้ draft สำเร็จ')
+                    }}
+                  >
+                    กู้ draft
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      clearDraft(INVOICE_DRAFT_KEY)
+                      setDraftPendingRestore(null)
+                      setDraftUpdatedAt(null)
+                    }}
+                  >
+                    ลบ draft
+                  </Button>
+                </div>
+              </Alert>
+            ) : null}
             <Card>
               <h5 className="h6 fw-semibold mb-3">ข้อมูลหลัก</h5>
               <div className="row g-3">
@@ -237,6 +325,14 @@ export function InvoiceFormPage() {
                         {selectedCustomerQuery.data.displayName}
                       </span>{' '}
                       (ID: {formData.customerId})
+                      <div className="d-flex gap-2 mt-2">
+                        <Button size="sm" variant="ghost" type="button" onClick={() => navigate(`/customers/${formData.customerId}`)}>
+                          เปิดรายละเอียดลูกค้า
+                        </Button>
+                        <Button size="sm" variant="ghost" type="button" onClick={() => navigate(`/customers/${formData.customerId}/edit`)}>
+                          แก้ไขลูกค้า
+                        </Button>
+                      </div>
                     </div>
                   ) : null}
 
@@ -315,6 +411,33 @@ export function InvoiceFormPage() {
                     }
                     placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)"
                   />
+                  {recentNotes.length > 0 ? (
+                    <div className="mt-2">
+                      <div className="small text-muted mb-1">หมายเหตุที่ใช้ล่าสุด</div>
+                      <div className="d-flex flex-wrap gap-2">
+                        {recentNotes.slice(0, 4).map((note, idx) => (
+                          <div key={`${idx}-${note.slice(0, 12)}`} className="d-flex gap-1">
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-secondary"
+                              onClick={() => applyRecentNote(note)}
+                              title={note}
+                            >
+                              ใช้ล่าสุด {idx + 1}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-secondary"
+                              onClick={() => appendRecentNote(note)}
+                              title={note}
+                            >
+                              +
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </Card>

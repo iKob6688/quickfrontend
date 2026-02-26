@@ -22,6 +22,15 @@ export interface ProductDetail extends ProductSummary {
   description?: string | null
   saleOk?: boolean
   purchaseOk?: boolean
+  productType?: 'consu' | 'service' | 'product' | string
+  categoryId?: number | null
+  categoryName?: string | null
+  incomeAccountId?: number | null
+  incomeAccountCode?: string | null
+  incomeAccountName?: string | null
+  expenseAccountId?: number | null
+  expenseAccountCode?: string | null
+  expenseAccountName?: string | null
 }
 
 export interface ProductListParams {
@@ -49,6 +58,17 @@ export interface ProductUpsertPayload {
   purchaseOk?: boolean
   active?: boolean
   description?: string | null
+  productType?: 'consu' | 'service' | 'product' | string
+  categoryId?: number | null
+  incomeAccountId?: number | null
+  expenseAccountId?: number | null
+}
+
+export interface ProductAdminMetaResponse {
+  permissions: { canManageAdminFields: boolean }
+  productTypes: Array<{ id: string; name: string }>
+  categories: Array<{ id: number; name: string }>
+  accounts: Array<{ id: number; code: string; name: string; displayName?: string; accountType?: string | null }>
 }
 
 const basePath = '/th/v1/products'
@@ -141,6 +161,15 @@ export async function getProduct(id: number) {
     description: data?.description ?? null,
     saleOk: Boolean(data?.saleOk ?? data?.sale_ok ?? true),
     purchaseOk: Boolean(data?.purchaseOk ?? data?.purchase_ok ?? false),
+    productType: String((data as any)?.productType ?? (data as any)?.product_type ?? 'consu'),
+    categoryId: toNumberOrNull((data as any)?.categoryId ?? (data as any)?.category_id),
+    categoryName: ((data as any)?.categoryName ?? (data as any)?.category_name ?? null) as string | null,
+    incomeAccountId: toNumberOrNull((data as any)?.incomeAccountId ?? (data as any)?.income_account_id),
+    incomeAccountCode: ((data as any)?.incomeAccountCode ?? (data as any)?.income_account_code ?? null) as string | null,
+    incomeAccountName: ((data as any)?.incomeAccountName ?? (data as any)?.income_account_name ?? null) as string | null,
+    expenseAccountId: toNumberOrNull((data as any)?.expenseAccountId ?? (data as any)?.expense_account_id),
+    expenseAccountCode: ((data as any)?.expenseAccountCode ?? (data as any)?.expense_account_code ?? null) as string | null,
+    expenseAccountName: ((data as any)?.expenseAccountName ?? (data as any)?.expense_account_name ?? null) as string | null,
   }
 }
 
@@ -156,6 +185,10 @@ export async function createProduct(payload: ProductUpsertPayload) {
       purchaseOk: payload.purchaseOk,
       active: payload.active,
       description: payload.description,
+      productType: payload.productType,
+      categoryId: payload.categoryId,
+      incomeAccountId: payload.incomeAccountId,
+      expenseAccountId: payload.expenseAccountId,
     }),
   )
   const data = unwrapResponse<BackendProductSummary>(response)
@@ -174,8 +207,17 @@ export async function updateProduct(id: number, payload: Partial<ProductUpsertPa
       purchaseOk: payload.purchaseOk,
       active: payload.active,
       description: payload.description,
+      productType: payload.productType,
+      categoryId: payload.categoryId,
+      incomeAccountId: payload.incomeAccountId,
+      expenseAccountId: payload.expenseAccountId,
     }),
   )
   const data = unwrapResponse<BackendProductSummary>(response)
   return mapProductSummary(data)
+}
+
+export async function getProductAdminMeta() {
+  const response = await apiClient.post(`${basePath}/admin/meta`, makeRpc({}))
+  return unwrapResponse<ProductAdminMetaResponse>(response)
 }

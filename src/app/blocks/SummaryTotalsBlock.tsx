@@ -29,7 +29,7 @@ export function SummaryTotalsBlockView({ block, ctx }: { block: SummaryTotalsBlo
   ]
 
   // Quotation/Tax Invoice full: boxed right totals with bold total row
-  const isInvoiceLike = ctx.dto.docType === 'quotation' || ctx.dto.docType === 'receipt_full'
+  const isInvoiceLike = ctx.dto.docType === 'quotation' || ctx.dto.docType === 'invoice' || ctx.dto.docType === 'receipt_full'
   if (isInvoiceLike) {
     const totalBg = ctx.theme.totalsBarBgColor || '#111111'
     const totalText = ctx.theme.totalsBarTextColor || '#ffffff'
@@ -100,5 +100,4 @@ export function SummaryTotalsBlockView({ block, ctx }: { block: SummaryTotalsBlo
     </div>
   )
 }
-
 

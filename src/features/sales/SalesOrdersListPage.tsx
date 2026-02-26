@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { Spinner } from 'react-bootstrap'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
@@ -19,6 +19,7 @@ export function SalesOrdersListPage() {
   const typeParam = searchParams.get('type')
   const forcedOrderType = typeParam === 'sale' ? 'sale' : typeParam === 'quotation' ? 'quotation' : undefined
   const [tab, setTab] = useState<StatusTab>('all')
+  const [jobFilter, setJobFilter] = useState<'all' | 'accounting' | 'closing' | 'registration' | 'other'>('all')
   const [q, setQ] = useState('')
   const qDebounced = useDebouncedValue(q, 300)
   const limit = 30
@@ -42,10 +43,42 @@ export function SalesOrdersListPage() {
   })
 
   const orders = useMemo(() => query.data?.pages.flatMap((p) => p) ?? [], [query.data?.pages])
+  const countsQuery = useQuery({
+    queryKey: ['salesOrders-counts', forcedOrderType, qDebounced],
+    queryFn: () =>
+      listSalesOrders({
+        orderType: forcedOrderType,
+        search: qDebounced || undefined,
+        limit: 1000,
+        offset: 0,
+      }),
+    staleTime: 30_000,
+  })
+
+  const statusCounts = useMemo(() => {
+    const base = { all: 0, draft: 0, sent: 0, sale: 0, done: 0, cancel: 0 } as Record<StatusTab, number>
+    for (const row of countsQuery.data ?? []) {
+      base.all += 1
+      base[row.status] += 1
+    }
+    return base
+  }, [countsQuery.data])
+
+  const filteredOrders = useMemo(() => {
+    if (jobFilter === 'all') return orders
+    return orders.filter((order) => {
+      if (order.jobCategory && order.jobCategory === jobFilter) return true
+      const text = `${order.number} ${order.partnerName} ${order.notes ?? ''}`.toLowerCase()
+      if (jobFilter === 'closing') return /ปิดงบ|financial statement|close company|fs\b/.test(text)
+      if (jobFilter === 'registration') return /จดทะเบียน|registration|boi|fbl|visa|work permit|license/.test(text)
+      if (jobFilter === 'accounting') return /บัญชี|account|bookkeep|outsourcing/.test(text)
+      return !/ปิดงบ|financial statement|close company|fs\b|จดทะเบียน|registration|boi|fbl|visa|work permit|license|บัญชี|account|bookkeep|outsourcing/.test(text)
+    })
+  }, [orders, jobFilter])
 
   const rows = useMemo(
     () =>
-      orders.map((order) => ({
+      filteredOrders.map((order) => ({
         id: order.id,
         number: order.number,
         orderType: order.orderType,
@@ -60,7 +93,7 @@ export function SalesOrdersListPage() {
         total: order.total,
         status: order.status,
       })),
-    [orders],
+    [filteredOrders],
   )
 
   const columns: Column<(typeof rows)[number]>[] = [
@@ -161,21 +194,36 @@ export function SalesOrdersListPage() {
           value={tab}
           onChange={(next) => setTab(next as StatusTab)}
           items={[
-            { key: 'all', label: 'ทั้งหมด' },
-            { key: 'draft', label: 'ร่าง' },
-            { key: 'sent', label: 'ส่งแล้ว' },
-            { key: 'sale', label: 'ยืนยันแล้ว' },
-            { key: 'done', label: 'เสร็จสิ้น' },
-            { key: 'cancel', label: 'ยกเลิก' },
+            { key: 'all', label: 'ทั้งหมด', count: statusCounts.all },
+            { key: 'draft', label: 'ร่าง', count: statusCounts.draft },
+            { key: 'sent', label: 'ส่งแล้ว', count: statusCounts.sent },
+            { key: 'sale', label: 'ยืนยันแล้ว', count: statusCounts.sale },
+            { key: 'done', label: 'เสร็จสิ้น', count: statusCounts.done },
+            { key: 'cancel', label: 'ยกเลิก', count: statusCounts.cancel },
           ]}
         />
-        <div className="w-100" style={{ maxWidth: 360 }}>
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="ค้นหาเลขที่เอกสาร / ลูกค้า"
-            leftAdornment={<i className="bi bi-search"></i>}
-          />
+        <div className="d-flex flex-column flex-sm-row gap-2 w-100 justify-content-sm-end" style={{ maxWidth: 720 }}>
+          <select
+            className="form-select"
+            style={{ maxWidth: 240 }}
+            value={jobFilter}
+            onChange={(e) => setJobFilter(e.target.value as typeof jobFilter)}
+            aria-label="ตัวกรองประเภทงาน"
+          >
+            <option value="all">งานทั้งหมด</option>
+            <option value="closing">ปิดงบ / งบการเงิน</option>
+            <option value="accounting">ทำบัญชี / Accounting</option>
+            <option value="registration">จดทะเบียน / License / VISA</option>
+            <option value="other">อื่นๆ</option>
+          </select>
+          <div className="w-100" style={{ maxWidth: 420 }}>
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="ค้นหาเลขที่เอกสาร / ลูกค้า"
+              leftAdornment={<i className="bi bi-search"></i>}
+            />
+          </div>
         </div>
       </div>
 
@@ -208,13 +256,31 @@ export function SalesOrdersListPage() {
             empty={
               <div>
                 <p className="h6 fw-semibold mb-2">ยังไม่มีข้อมูล</p>
-                <p className="small text-muted mb-0">{qDebounced ? 'ไม่พบข้อมูลที่ค้นหา' : 'ยังไม่มีใบเสนอราคา/Sale Order ในระบบ'}</p>
+                <p className="small text-muted mb-0">
+                  {qDebounced || jobFilter !== 'all' ? 'ไม่พบข้อมูลตามตัวกรองที่เลือก' : 'ยังไม่มีใบเสนอราคา/Sale Order ในระบบ'}
+                </p>
               </div>
             }
           />
 
           <div className="d-flex justify-content-between align-items-center">
-            <div className="small text-muted">แสดงแล้ว {rows.length} รายการ</div>
+            <div className="small text-muted">
+              แสดงแล้ว {rows.length} รายการ
+              {jobFilter !== 'all' && (
+                <span className="ms-2">
+                  • ตัวกรองงาน:{' '}
+                  <span className="fw-semibold">
+                    {jobFilter === 'closing'
+                      ? 'ปิดงบ / งบการเงิน'
+                      : jobFilter === 'accounting'
+                        ? 'ทำบัญชี / Accounting'
+                        : jobFilter === 'registration'
+                          ? 'จดทะเบียน / License / VISA'
+                          : 'อื่นๆ'}
+                  </span>
+                </span>
+              )}
+            </div>
             {query.hasNextPage ? (
               <Button
                 size="sm"

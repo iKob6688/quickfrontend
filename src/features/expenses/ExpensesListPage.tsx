@@ -49,6 +49,25 @@ export function ExpensesListPage() {
   const expenses = useMemo(() => {
     return query.data?.pages.flatMap((p) => p) ?? []
   }, [query.data?.pages])
+  const countsQuery = useQuery({
+    queryKey: ['expenses-counts', qDebounced],
+    queryFn: () =>
+      listExpenses({
+        search: qDebounced || undefined,
+        limit: 1000,
+        offset: 0,
+      }),
+    staleTime: 30_000,
+    enabled: apiCheckQuery.data?.available !== false,
+  })
+  const statusCounts = useMemo(() => {
+    const base = { all: 0, draft: 0, reported: 0, approved: 0, posted: 0, done: 0, refused: 0 } as Record<StatusTab, number>
+    for (const e of countsQuery.data ?? []) {
+      base.all += 1
+      base[e.status] += 1
+    }
+    return base
+  }, [countsQuery.data])
 
   // Transform API data to table rows
   const rows = useMemo(() => {
@@ -169,22 +188,29 @@ export function ExpensesListPage() {
           value={tab}
           onChange={setTab}
           items={[
-            { key: 'all', label: 'ทั้งหมด' },
-            { key: 'draft', label: 'ร่าง' },
-            { key: 'reported', label: 'รายงานแล้ว' },
-            { key: 'approved', label: 'อนุมัติแล้ว' },
-            { key: 'posted', label: 'ลงบัญชีแล้ว' },
-            { key: 'done', label: 'เสร็จสิ้น' },
-            { key: 'refused', label: 'ปฏิเสธ' },
+            { key: 'all', label: 'ทั้งหมด', count: statusCounts.all },
+            { key: 'draft', label: 'ร่าง', count: statusCounts.draft },
+            { key: 'reported', label: 'รายงานแล้ว', count: statusCounts.reported },
+            { key: 'approved', label: 'อนุมัติแล้ว', count: statusCounts.approved },
+            { key: 'posted', label: 'ลงบัญชีแล้ว', count: statusCounts.posted },
+            { key: 'done', label: 'เสร็จสิ้น', count: statusCounts.done },
+            { key: 'refused', label: 'ปฏิเสธ', count: statusCounts.refused },
           ]}
         />
-        <div className="w-100" style={{ maxWidth: '360px' }}>
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="ค้นหาเลขที่เอกสาร / พนักงาน"
-            leftAdornment={<i className="bi bi-search"></i>}
-          />
+        <div className="d-flex gap-2 w-100 justify-content-sm-end" style={{ maxWidth: '560px' }}>
+          <div className="w-100" style={{ maxWidth: '360px' }}>
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="ค้นหาเลขที่เอกสาร / พนักงาน"
+              leftAdornment={<i className="bi bi-search"></i>}
+            />
+          </div>
+          {(q || tab !== 'all') && (
+            <Button size="sm" variant="ghost" onClick={() => { setQ(''); setTab('all') }}>
+              ล้างตัวกรอง
+            </Button>
+          )}
         </div>
       </div>
 
@@ -279,4 +305,3 @@ export function ExpensesListPage() {
     </div>
   )
 }
-

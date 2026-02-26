@@ -3,7 +3,7 @@ import type { BlockViewContext } from './shared'
 
 export function AmountInWordsBlockView({ block, ctx }: { block: AmountInWordsBlock; ctx: BlockViewContext }) {
   // Quotation / Tax invoice full: light bar like sample
-  if (ctx.dto.docType === 'quotation' || ctx.dto.docType === 'receipt_full') {
+  if (ctx.dto.docType === 'quotation' || ctx.dto.docType === 'invoice' || ctx.dto.docType === 'receipt_full') {
     return (
       <div className="border border-slate-900 bg-slate-100 px-2 py-2 text-[11px]">
         <div className="d-flex gap-2">
@@ -21,5 +21,4 @@ export function AmountInWordsBlockView({ block, ctx }: { block: AmountInWordsBlo
     </div>
   )
 }
-
 

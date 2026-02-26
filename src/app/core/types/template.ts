@@ -81,6 +81,7 @@ export type DocMetaBlock = BlockBase<
     fields: Array<
       | 'number'
       | 'date'
+      | 'dueDate'
       | 'reference'
       | 'salesperson'
       | 'creditTerm'
@@ -184,5 +185,4 @@ export type TemplateV1 = {
   blocks: AnyBlock[]
   updatedAt: string
 }
-
 

@@ -95,6 +95,26 @@ export class MockOdooProvider implements OdooProvider {
           totals,
         }
       }
+      case 'invoice': {
+        const items = sampleItems(6)
+        const totals = calcTotals(items)
+        return {
+          docType,
+          company: sampleCompany(),
+          partner: samplePartnerFull(),
+          document: {
+            number: 'INV-2025-0001',
+            date: '2025-12-20',
+            reference: 'SO-2025-0001',
+            salesperson: 'Somchai',
+            creditTerm: '30 Days',
+            contact: 'Kob',
+            project: 'SME MOVE - Relocation',
+          },
+          items,
+          totals,
+        }
+      }
       case 'receipt_full': {
         const items = sampleItems(5)
         const totals = calcTotals(items)
@@ -161,5 +181,4 @@ export class MockOdooProvider implements OdooProvider {
     }
   }
 }
-
 

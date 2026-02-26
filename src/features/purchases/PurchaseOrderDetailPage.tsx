@@ -4,6 +4,8 @@ import {
   getPurchaseOrder,
   confirmPurchaseOrder,
   cancelPurchaseOrder,
+  receivePurchaseOrder,
+  createVendorBillFromPurchaseOrder,
 } from '@/api/services/purchases.service'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
@@ -55,6 +57,36 @@ export function PurchaseOrderDetailPage() {
     },
     onError: (err) => {
       toast.error('ยกเลิกใบสั่งซื้อไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+    },
+  })
+
+  const receiveMutation = useMutation({
+    mutationFn: () => receivePurchaseOrder(orderId!),
+    onSuccess: async (res) => {
+      await queryClient.invalidateQueries({ queryKey: ['purchaseOrder', orderId] })
+      await queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] })
+      toast.success(res.received ? 'รับสินค้าเข้าคลังสำเร็จ' : 'ไม่มีรายการรับของค้าง', res.message)
+    },
+    onError: (err) => {
+      toast.error('รับสินค้าไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+    },
+  })
+
+  const vendorBillMutation = useMutation({
+    mutationFn: () => createVendorBillFromPurchaseOrder(orderId!),
+    onSuccess: async (res) => {
+      await queryClient.invalidateQueries({ queryKey: ['purchaseOrder', orderId] })
+      await queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] })
+      toast.success(res.created ? 'สร้าง Vendor Bill สำเร็จ' : 'พบ Vendor Bill เดิมแล้ว', res.billNumber || (res.billId ? `#${res.billId}` : undefined))
+      if (res.billId) {
+        const open = window.confirm(`เปิดเอกสาร Vendor Bill #${res.billId} ในหน้า React ตอนนี้หรือไม่?`)
+        if (open) {
+          navigate(`/purchases/bills/${res.billId}`)
+        }
+      }
+    },
+    onError: (err) => {
+      toast.error('สร้าง Vendor Bill ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
     },
   })
 
@@ -121,6 +153,15 @@ export function PurchaseOrderDetailPage() {
   const canEdit = order.status === 'draft'
   const canConfirm = order.status === 'draft' || order.status === 'sent'
   const canCancel = order.status !== 'cancel' && order.status !== 'done'
+  const totalOrderedQty = (order.lines || []).reduce((sum, l) => sum + Number(l.quantity || 0), 0)
+  const totalReceivedQty = (order.lines || []).reduce((sum, l) => sum + Number(l.qtyReceived || 0), 0)
+  const totalInvoicedQty = (order.lines || []).reduce((sum, l) => sum + Number(l.qtyInvoiced || 0), 0)
+  const fullyReceived = totalOrderedQty > 0 && totalReceivedQty >= totalOrderedQty
+  const anyReceived = totalReceivedQty > 0
+  const fullyInvoiced = totalOrderedQty > 0 && totalInvoicedQty >= totalOrderedQty
+  const hasVendorBills = (order.vendorBills?.length || 0) > 0
+  const canReceiveGoods = order.status === 'purchase' && !fullyReceived
+  const canCreateVendorBill = (order.status === 'purchase' || order.status === 'done') && (anyReceived || order.status === 'done')
 
   const lineRows = (order.lines || []).map((line, idx) => ({
     id: idx,
@@ -222,7 +263,27 @@ export function PurchaseOrderDetailPage() {
                 onClick={() => confirmMutation.mutate()}
                 disabled={confirmMutation.isPending}
               >
-                {confirmMutation.isPending ? 'กำลังยืนยัน...' : 'ยืนยันใบสั่งซื้อ'}
+                {confirmMutation.isPending ? 'กำลังยืนยัน...' : 'Confirm → Purchase Order'}
+              </Button>
+            )}
+            {canReceiveGoods && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => receiveMutation.mutate()}
+                disabled={receiveMutation.isPending}
+              >
+                {receiveMutation.isPending ? 'กำลังรับของ...' : 'Confirm → Receive Goods'}
+              </Button>
+            )}
+            {canCreateVendorBill && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => vendorBillMutation.mutate()}
+                disabled={vendorBillMutation.isPending}
+              >
+                {vendorBillMutation.isPending ? 'กำลังสร้าง...' : 'Confirm → Vendor Bill'}
               </Button>
             )}
             {canCancel && (
@@ -245,6 +306,25 @@ export function PurchaseOrderDetailPage() {
 
       <div className="row g-3 mb-4">
         <div className="col-md-8">
+          <BootstrapCard className="mb-3">
+            <BootstrapCard.Body>
+              <div className="small text-muted mb-2">สถานะกระบวนการเอกสาร</div>
+              <div className="d-flex flex-wrap gap-2 align-items-center">
+                <Badge tone="green">Purchase Order</Badge>
+                <span className="text-muted small">→</span>
+                <Badge tone={order.status === 'purchase' || order.status === 'done' ? 'green' : 'gray'}>Confirm PO</Badge>
+                <span className="text-muted small">→</span>
+                <Badge tone={fullyReceived ? 'green' : anyReceived ? 'amber' : 'gray'}>
+                  Receive Goods
+                </Badge>
+                <span className="text-muted small">→</span>
+                <Badge tone={hasVendorBills || fullyInvoiced ? 'green' : 'gray'}>Vendor Bill</Badge>
+                <span className="small text-muted">
+                  (รับแล้ว {totalReceivedQty.toLocaleString('th-TH')}/{totalOrderedQty.toLocaleString('th-TH')} · ตั้งบิล {totalInvoicedQty.toLocaleString('th-TH')}/{totalOrderedQty.toLocaleString('th-TH')})
+                </span>
+              </div>
+            </BootstrapCard.Body>
+          </BootstrapCard>
           <BootstrapCard>
             <BootstrapCard.Header>
               <h5 className="mb-0">รายละเอียดใบสั่งซื้อ</h5>
@@ -293,6 +373,44 @@ export function PurchaseOrderDetailPage() {
                   <div className="col-12">
                     <label className="form-label text-muted small">หมายเหตุ</label>
                     <div className="text-muted">{order.notes}</div>
+                  </div>
+                )}
+                {(order.receipts?.length || 0) > 0 && (
+                  <div className="col-12">
+                    <label className="form-label text-muted small">ใบรับสินค้า</label>
+                    <div className="small d-flex flex-wrap gap-2">
+                      {order.receipts!.map((r) => (
+                        <button
+                          key={r.id}
+                          type="button"
+                          className="badge text-bg-light border"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => navigate(`/purchases/receipts/${r.id}`)}
+                          title="เปิดเอกสารรับสินค้า"
+                        >
+                          {r.name || `Receipt #${r.id}`} ({r.state || '—'})
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(order.vendorBills?.length || 0) > 0 && (
+                  <div className="col-12">
+                    <label className="form-label text-muted small">Vendor Bills</label>
+                    <div className="small d-flex flex-wrap gap-2">
+                      {order.vendorBills!.map((b) => (
+                        <button
+                          key={b.id}
+                          type="button"
+                          className="badge text-bg-light border"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => navigate(`/purchases/bills/${b.id}`)}
+                          title="เปิด Vendor Bill"
+                        >
+                          {b.name || `Bill #${b.id}`} ({b.state || '—'})
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -382,4 +500,3 @@ export function PurchaseOrderDetailPage() {
     </div>
   )
 }
-

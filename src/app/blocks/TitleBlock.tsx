@@ -6,7 +6,7 @@ export function TitleBlockView({ block, ctx }: { block: TitleBlock; ctx: BlockVi
   const docNo = ctx.dto.document.number
 
   // Quotation sample: title + original + doc no are right-aligned in a boxed area.
-  if (ctx.dto.docType === 'quotation') {
+  if (ctx.dto.docType === 'quotation' || ctx.dto.docType === 'invoice') {
     return (
       <div className="flex justify-end">
         <div className="w-[360px] overflow-hidden rounded border border-slate-900">
@@ -47,5 +47,4 @@ export function TitleBlockView({ block, ctx }: { block: TitleBlock; ctx: BlockVi
     </div>
   )
 }
-
 

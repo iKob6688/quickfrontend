@@ -90,6 +90,61 @@ export const DEFAULT_TEMPLATES: TemplateV1[] = [
   }),
 
   mkDefaultTemplate({
+    id: 'invoice_default_v1',
+    name: 'Invoice (Default v1)',
+    docType: 'invoice',
+    theme: { ...baseTheme, headerBarColor: '#111111', tableHeaderBgColor: '#111111' },
+    page: basePage,
+    blocks: [
+      {
+        id: nanoid(),
+        type: 'header',
+        props: { showLogo: true, showTaxId: true, showContactLines: true },
+      },
+      {
+        id: nanoid(),
+        type: 'title',
+        props: {
+          titleEn: 'INVOICE',
+          titleTh: 'ใบแจ้งหนี้',
+          subtitleRight: 'ต้นฉบับ / Original',
+          showOriginalBadge: true,
+        },
+      },
+      {
+        id: nanoid(),
+        type: 'customerInfo',
+        props: { showAddress: true, showTaxId: true, showTel: false, label: 'Customer / ลูกค้า' },
+      },
+      {
+        id: nanoid(),
+        type: 'docMeta',
+        props: { fields: ['number', 'date', 'salesperson', 'creditTerm', 'contact', 'reference'] },
+      },
+      {
+        id: nanoid(),
+        type: 'itemsTable',
+        props: { compact: false, showUnit: true, showDiscount: true, currency: 'THB' },
+      },
+      {
+        id: nanoid(),
+        type: 'summaryTotals',
+        props: { showVat: true, showDiscount: true },
+      },
+      {
+        id: nanoid(),
+        type: 'amountInWords',
+        props: { label: 'จำนวนเงิน (ตัวอักษร) / Amount' },
+      },
+      {
+        id: nanoid(),
+        type: 'signature',
+        props: { leftLabel: 'ผู้รับ / Customer Signature', rightLabel: 'ผู้มีอำนาจลงนาม / Authorized Signature' },
+      },
+    ],
+  }),
+
+  mkDefaultTemplate({
     id: 'receipt_full_default_v1',
     name: 'Tax Invoice (Full) (Default v1)',
     docType: 'receipt_full',
@@ -152,5 +207,4 @@ export const DEFAULT_TEMPLATES: TemplateV1[] = [
     ],
   }),
 ]
-
 

@@ -4,6 +4,7 @@ const color = z.string().regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, 'Invalid co
 
 export const docTypeSchema = z.enum([
   'quotation',
+  'invoice',
   'receipt_full',
   'receipt_short',
   'trf_receipt',
@@ -73,6 +74,7 @@ const docMetaBlockSchema = baseBlockSchema.extend({
       z.enum([
         'number',
         'date',
+        'dueDate',
         'reference',
         'salesperson',
         'creditTerm',
@@ -204,5 +206,3 @@ export const templateV1Schema = z.object({
 
 export type TemplateV1Input = z.input<typeof templateV1Schema>
 export type TemplateV1Parsed = z.output<typeof templateV1Schema>
-
-

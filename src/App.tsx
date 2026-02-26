@@ -11,12 +11,15 @@ import { SalesOrdersListPage } from '@/features/sales/SalesOrdersListPage'
 import { SalesOrderDetailPage } from '@/features/sales/SalesOrderDetailPage'
 import { SalesOrderFormPage } from '@/features/sales/SalesOrderFormPage'
 import { SalesOrderPrintPreviewPage } from '@/features/sales/SalesOrderPrintPreviewPage'
+import { SalesDeliveryDetailPage } from '@/features/sales/SalesDeliveryDetailPage'
 import { PurchaseOrdersListPage } from '@/features/purchases/PurchaseOrdersListPage'
 import { PurchaseOrderDetailPage } from '@/features/purchases/PurchaseOrderDetailPage'
 import { PurchaseOrderFormPage } from '@/features/purchases/PurchaseOrderFormPage'
 import { PurchaseRequestsListPage } from '@/features/purchases/PurchaseRequestsListPage'
 import { PurchaseRequestFormPage } from '@/features/purchases/PurchaseRequestFormPage'
 import { PurchaseRequestDetailPage } from '@/features/purchases/PurchaseRequestDetailPage'
+import { PurchaseVendorBillDetailPage } from '@/features/purchases/PurchaseVendorBillDetailPage'
+import { PurchaseReceiptDetailPage } from '@/features/purchases/PurchaseReceiptDetailPage'
 import { ExpensesListPage } from '@/features/expenses/ExpensesListPage'
 import { ExpenseDetailPage } from '@/features/expenses/ExpenseDetailPage'
 import { CustomersListPage } from '@/features/customers/CustomersListPage'
@@ -36,6 +39,8 @@ import { BookReportPage } from '@/features/accounting/BookReportPage'
 import { VatReportPage, WhtReportPage } from '@/features/accounting/TaxReportPages'
 import { GeneralLedgerAccountDrilldownPage } from '@/features/accounting/GeneralLedgerAccountDrilldownPage'
 import { MoveLineDetailPage } from '@/features/accounting/MoveLineDetailPage'
+import { AccountingAdminPage } from '@/features/accounting/AccountingAdminPage'
+import { VatSettingsAdminPage } from '@/features/accounting/VatSettingsAdminPage'
 import { BackendConnectionPage } from '@/features/backend-connection/BackendConnectionPage'
 import { ExcelImportPage } from '@/features/excel-import/ExcelImportPage'
 import { AgentDashboardPage } from '@/features/agent/AgentDashboardPage'
@@ -94,10 +99,13 @@ function AppRoutes() {
           <Route path="/sales/orders/new" element={<SalesOrderFormPage />} />
           <Route path="/sales/orders/:id" element={<SalesOrderDetailPage />} />
           <Route path="/sales/orders/:id/edit" element={<SalesOrderFormPage />} />
+          <Route path="/sales/deliveries/:id" element={<SalesDeliveryDetailPage />} />
           <Route path="/purchases/orders" element={<PurchaseOrdersListPage />} />
           <Route path="/purchases/orders/new" element={<PurchaseOrderFormPage />} />
           <Route path="/purchases/orders/:id" element={<PurchaseOrderDetailPage />} />
           <Route path="/purchases/orders/:id/edit" element={<PurchaseOrderFormPage />} />
+          <Route path="/purchases/receipts/:id" element={<PurchaseReceiptDetailPage />} />
+          <Route path="/purchases/bills/:id" element={<PurchaseVendorBillDetailPage />} />
           <Route path="/purchases/requests" element={<PurchaseRequestsListPage />} />
           <Route path="/purchases/requests/new" element={<PurchaseRequestFormPage />} />
           <Route path="/purchases/requests/:id" element={<PurchaseRequestDetailPage />} />
@@ -117,8 +125,10 @@ function AppRoutes() {
           <Route path="/accounting/reports/bank-book" element={<BookReportPage mode="bank" />} />
           <Route path="/accounting/reports/vat" element={<VatReportPage />} />
           <Route path="/accounting/reports/wht" element={<WhtReportPage />} />
+          <Route path="/accounting/tax-settings" element={<VatSettingsAdminPage />} />
           <Route path="/accounting/reports/general-ledger/account/:accountId" element={<GeneralLedgerAccountDrilldownPage />} />
           <Route path="/accounting/reports/move-lines/:moveLineId" element={<MoveLineDetailPage />} />
+          <Route path="/accounting/admin" element={<AccountingAdminPage />} />
           {/* Backward-compatible alias */}
           <Route path="/accounting/overview" element={<Navigate to="/accounting/reports" replace />} />
           <Route

@@ -6,7 +6,7 @@ export function CustomerInfoBlockView({ block, ctx }: { block: CustomerInfoBlock
   const label = block.props.label || 'Customer'
 
   // Quotation/Tax invoice: boxed layout with bilingual labels
-  if (ctx.dto.docType === 'quotation' || ctx.dto.docType === 'receipt_full') {
+  if (ctx.dto.docType === 'quotation' || ctx.dto.docType === 'invoice' || ctx.dto.docType === 'receipt_full') {
     const address = block.props.showAddress && p.addressLines?.length ? p.addressLines.join(' ') : ''
     return (
       <div className="overflow-hidden rounded border border-slate-900 bg-white text-[11px]">
@@ -55,5 +55,4 @@ export function CustomerInfoBlockView({ block, ctx }: { block: CustomerInfoBlock
     </div>
   )
 }
-
 

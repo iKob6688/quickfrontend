@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/Input'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/Badge'
 import { useMemo, useState } from 'react'
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { listInvoices } from '@/api/services/invoices.service'
 import { useNavigate } from 'react-router-dom'
 import { Spinner } from 'react-bootstrap'
@@ -41,6 +41,19 @@ export function InvoicesListPage() {
   const invoices = useMemo(() => {
     return query.data?.pages.flatMap((p) => p) ?? []
   }, [query.data?.pages])
+  const countsQuery = useQuery({
+    queryKey: ['invoices-counts', qDebounced],
+    queryFn: () => listInvoices({ search: qDebounced || undefined, limit: 1000, offset: 0 }),
+    staleTime: 30_000,
+  })
+  const statusCounts = useMemo(() => {
+    const base = { all: 0, draft: 0, posted: 0, paid: 0, cancelled: 0 } as Record<StatusTab, number>
+    for (const inv of countsQuery.data ?? []) {
+      base.all += 1
+      base[inv.status] += 1
+    }
+    return base
+  }, [countsQuery.data])
 
   // Transform API data to table rows
   const rows = useMemo(() => {
@@ -204,20 +217,27 @@ export function InvoicesListPage() {
           value={tab}
           onChange={setTab}
           items={[
-            { key: 'all', label: 'ทั้งหมด' },
-            { key: 'draft', label: 'ร่าง' },
-            { key: 'posted', label: 'ยืนยันแล้ว' },
-            { key: 'paid', label: 'รับชำระแล้ว' },
-            { key: 'cancelled', label: 'ยกเลิก' },
+            { key: 'all', label: 'ทั้งหมด', count: statusCounts.all },
+            { key: 'draft', label: 'ร่าง', count: statusCounts.draft },
+            { key: 'posted', label: 'ยืนยันแล้ว', count: statusCounts.posted },
+            { key: 'paid', label: 'รับชำระแล้ว', count: statusCounts.paid },
+            { key: 'cancelled', label: 'ยกเลิก', count: statusCounts.cancelled },
           ]}
         />
-        <div className="w-100" style={{ maxWidth: '360px' }}>
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="ค้นหาเลขที่เอกสาร / ลูกค้า"
-            leftAdornment={<i className="bi bi-search"></i>}
-          />
+        <div className="d-flex gap-2 w-100 justify-content-sm-end" style={{ maxWidth: '560px' }}>
+          <div className="w-100" style={{ maxWidth: '360px' }}>
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="ค้นหาเลขที่เอกสาร / ลูกค้า"
+              leftAdornment={<i className="bi bi-search"></i>}
+            />
+          </div>
+          {(q || tab !== 'all') && (
+            <Button size="sm" variant="ghost" onClick={() => { setQ(''); setTab('all') }}>
+              ล้างตัวกรอง
+            </Button>
+          )}
         </div>
       </div>
 
@@ -287,4 +307,3 @@ export function InvoicesListPage() {
     </div>
   )
 }
-

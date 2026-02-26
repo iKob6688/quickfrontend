@@ -100,7 +100,7 @@ export function PurchaseRequestDetailPage() {
             </Button>
             {req.state === 'draft' ? (
               <Button size="sm" onClick={() => submitMutation.mutate()} isLoading={submitMutation.isPending}>
-                ส่งอนุมัติ
+                Confirm → ส่งอนุมัติ
               </Button>
             ) : null}
             {req.state !== 'cancel' && req.state !== 'done' ? (
@@ -113,6 +113,20 @@ export function PurchaseRequestDetailPage() {
       />
 
       <Card className="p-4 mb-4">
+        <div className="small text-muted mb-2">สถานะกระบวนการเอกสาร</div>
+        <div className="d-flex flex-wrap gap-2 align-items-center mb-3">
+          <Badge tone="green">Purchase Request</Badge>
+          <span className="text-muted small">→</span>
+          <Badge tone={req.state === 'to_approve' || req.state === 'approved' || req.state === 'done' ? 'amber' : 'gray'}>
+            Submit for Approval
+          </Badge>
+          <span className="text-muted small">→</span>
+          <Badge tone={req.state === 'approved' || req.state === 'done' ? 'green' : req.state === 'rejected' ? 'red' : 'gray'}>
+            Approval
+          </Badge>
+          <span className="text-muted small">→</span>
+          <Badge tone={req.state === 'done' ? 'blue' : 'gray'}>Create PO</Badge>
+        </div>
         <div className="d-flex align-items-center justify-content-between">
           <div>
             <div className="small text-muted">ผู้ขอซื้อ</div>

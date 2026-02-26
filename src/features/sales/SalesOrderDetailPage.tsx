@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Dropdown, Form, Modal, Spinner } from 'react-bootstrap'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { DataTable, type Column } from '@/components/ui/DataTable'
-import { getSalesOrder, sendSalesOrderEmail } from '@/api/services/sales-orders.service'
+import { confirmSalesOrder, createInvoiceFromSalesOrder, deliverSalesOrder, getSalesOrder, sendSalesOrderEmail } from '@/api/services/sales-orders.service'
 import { getPartner, listPartners } from '@/api/services/partners.service'
 import { useSettingsStore as useStudioSettingsStore } from '@/app/core/storage/settingsStore'
 import { useTemplateStore } from '@/app/core/storage/templateStore'
@@ -17,6 +17,7 @@ export function SalesOrderDetailPage() {
   const navigate = useNavigate()
   const params = useParams()
   const id = useMemo(() => Number(params.id), [params.id])
+  const queryClient = useQueryClient()
   const [emailModalOpen, setEmailModalOpen] = useState(false)
   const [emailSearch, setEmailSearch] = useState('')
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null)
@@ -114,6 +115,46 @@ export function SalesOrderDetailPage() {
     },
   })
 
+  const confirmMutation = useMutation({
+    mutationFn: () => confirmSalesOrder(id),
+    onSuccess: async (so) => {
+      await queryClient.invalidateQueries({ queryKey: ['salesOrder', id] })
+      await queryClient.invalidateQueries({ queryKey: ['salesOrders'] })
+      toast.success('ยืนยันเอกสารสำเร็จ', so.orderType === 'sale' ? 'แปลงเป็น Sale Order แล้ว' : undefined)
+    },
+    onError: (err) => {
+      toast.error('ยืนยันเอกสารไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+    },
+  })
+
+  const createInvoiceMutation = useMutation({
+    mutationFn: () => createInvoiceFromSalesOrder(id),
+    onSuccess: async (res) => {
+      await queryClient.invalidateQueries({ queryKey: ['salesOrder', id] })
+      await queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      toast.success(
+        res.created ? 'สร้างใบแจ้งหนี้สำเร็จ' : 'พบใบแจ้งหนี้เดิมแล้ว',
+        res.invoiceNumber || (res.invoiceId ? `#${res.invoiceId}` : undefined),
+      )
+      if (res.invoiceId) navigate(`/sales/invoices/${res.invoiceId}`)
+    },
+    onError: (err) => {
+      toast.error('สร้างใบแจ้งหนี้ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+    },
+  })
+
+  const deliverMutation = useMutation({
+    mutationFn: () => deliverSalesOrder(id),
+    onSuccess: async (res) => {
+      await queryClient.invalidateQueries({ queryKey: ['salesOrder', id] })
+      await queryClient.invalidateQueries({ queryKey: ['salesOrders'] })
+      toast.success(res.delivered ? 'จัดส่งสินค้า/บริการสำเร็จ' : 'ไม่มีรายการจัดส่งค้าง', res.message)
+    },
+    onError: (err) => {
+      toast.error('จัดส่งไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+    },
+  })
+
   if (!Number.isFinite(id) || id <= 0) {
     return <Alert variant="danger" className="small mb-0">URL ไม่ถูกต้อง</Alert>
   }
@@ -181,12 +222,27 @@ export function SalesOrderDetailPage() {
                 )}
               </Dropdown.Menu>
             </Dropdown>
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={!query.data}
-              onClick={() => setEmailModalOpen(true)}
-            >
+            {query.data?.orderType === 'quotation' && ['draft', 'sent'].includes(query.data.status) ? (
+              <Button
+                size="sm"
+                onClick={() => confirmMutation.mutate()}
+                isLoading={confirmMutation.isPending}
+                disabled={!query.data}
+              >
+                Confirm → Sale Order
+              </Button>
+            ) : null}
+            {query.data?.orderType === 'sale' && ['sale', 'done'].includes(query.data.status) ? (
+              <Button
+                size="sm"
+                onClick={() => createInvoiceMutation.mutate()}
+                isLoading={createInvoiceMutation.isPending}
+                disabled={!query.data}
+              >
+                Confirm → Invoice
+              </Button>
+            ) : null}
+            <Button size="sm" variant="ghost" disabled={!query.data} onClick={() => setEmailModalOpen(true)}>
               Send → Email
             </Button>
             <Button size="sm" variant="ghost" onClick={() => navigate('/sales/orders')}>
@@ -211,6 +267,62 @@ export function SalesOrderDetailPage() {
       ) : !query.data ? null : (
         <div className="row g-4">
           <div className="col-lg-8">
+            {(() => {
+              const deliveries = query.data.deliveries || []
+              const invoices = query.data.invoices || []
+              const hasDelivery = deliveries.length > 0
+              const allDelivered = hasDelivery && deliveries.every((d) => d.state === 'done')
+              const hasInvoice = invoices.length > 0
+              return (
+            <Card className="p-3 mb-3">
+              <div className="small text-muted mb-2">สถานะกระบวนการเอกสาร</div>
+              <div className="d-flex flex-wrap gap-2 align-items-center">
+                <Badge tone="green">Quotation</Badge>
+                <span className="text-muted small">→</span>
+                <Badge tone={query.data.orderType === 'sale' ? 'green' : 'gray'}>Sale Order</Badge>
+                <span className="text-muted small">→</span>
+                <Badge tone={allDelivered ? 'green' : hasDelivery ? 'amber' : 'gray'}>Deliver Goods</Badge>
+                <span className="text-muted small">→</span>
+                <Badge tone={hasInvoice ? 'green' : query.data.orderType === 'sale' && (query.data.status === 'sale' || query.data.status === 'done') ? 'blue' : 'gray'}>
+                  Invoice
+                </Badge>
+                <span className="small text-muted"> (payment/receipt ทำต่อในหน้า Invoice)</span>
+              </div>
+              {deliveries.length > 0 ? (
+                <div className="small text-muted mt-2 d-flex flex-wrap align-items-center gap-2">
+                  <span>Delivery:</span>
+                  {deliveries.map((d) => (
+                    <button
+                      key={d.id}
+                      type="button"
+                      className="badge text-bg-light border"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => navigate(`/sales/deliveries/${d.id}`)}
+                      title="เปิดเอกสารจัดส่ง"
+                    >
+                      {d.name || `#${d.id}`} ({d.state || '-'})
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {invoices.length > 0 ? (
+                <div className="small text-muted mt-1 d-flex flex-wrap align-items-center gap-2">
+                  <span>Invoice:</span>
+                  {invoices.map((i) => (
+                    <button
+                      key={i.id}
+                      type="button"
+                      className="btn btn-link btn-sm p-0 text-decoration-none"
+                      onClick={() => navigate(`/sales/invoices/${i.id}`)}
+                    >
+                      {i.name || `#${i.id}`} ({i.state || '-'})
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </Card>
+              )
+            })()}
             <Card className="p-4">
               <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
                 <div>
@@ -249,6 +361,30 @@ export function SalesOrderDetailPage() {
               <div className="h5 fw-bold font-monospace mb-0">
                 {query.data.total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
+              {query.data.orderType === 'sale' && (query.data.status === 'sale' || query.data.status === 'done') ? (
+                <div className="mt-3 d-grid gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => deliverMutation.mutate()}
+                    isLoading={deliverMutation.isPending}
+                  >
+                    Confirm → Deliver Goods
+                  </Button>
+                  <Button size="sm" onClick={() => createInvoiceMutation.mutate()} isLoading={createInvoiceMutation.isPending}>
+                    Confirm → Invoice
+                  </Button>
+                  {(query.data.invoices?.length || 0) > 0 ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => navigate(`/sales/invoices/${query.data.invoices![query.data.invoices!.length - 1]!.id}`)}
+                    >
+                      เปิดใบแจ้งหนี้ล่าสุด
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
             </Card>
           </div>
         </div>

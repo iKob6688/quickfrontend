@@ -87,6 +87,22 @@ const cards: ReportCard[] = [
     ready: true,
   },
   {
+    title: 'COA / Journals Admin',
+    subtitle: 'จัดการผังบัญชีและสมุดรายวัน (admin-only)',
+    icon: 'bi-sliders2',
+    tone: 'slate',
+    path: '/accounting/admin',
+    ready: true,
+  },
+  {
+    title: 'VAT Settings Admin',
+    subtitle: 'จัดการ VAT และการผูกบัญชีภาษี (admin-only)',
+    icon: 'bi-gear-wide-connected',
+    tone: 'blue',
+    path: '/accounting/tax-settings',
+    ready: true,
+  },
+  {
     title: 'รายงาน VAT',
     subtitle: 'ภาษีขาย/ภาษีซื้อ พร้อมสรุปยอด',
     icon: 'bi-receipt-cutoff',
@@ -141,6 +157,12 @@ export function AccountingReportsPage() {
             <Button size="sm" variant="secondary" onClick={() => navigate('/expenses')}>
               ไปหน้ารายจ่าย
             </Button>
+            <Button size="sm" variant="secondary" onClick={() => navigate('/accounting/admin')}>
+              COA / Journals Admin
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => navigate('/accounting/tax-settings')}>
+              VAT Settings Admin
+            </Button>
           </div>
         }
       />
@@ -192,5 +214,3 @@ export function AccountingReportsPage() {
     </div>
   )
 }
-
-

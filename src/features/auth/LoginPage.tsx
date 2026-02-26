@@ -22,6 +22,7 @@ export function LoginPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    if (isLoading) return
     try {
       await login({ login: username, password })
       const redirectTo =
@@ -49,7 +50,7 @@ export function LoginPage() {
                 <BrandIcon variant="gold" size={30} />
                 <div style={{ lineHeight: 1.15 }}>
                   <div className="small fw-semibold text-uppercase" style={{ letterSpacing: '0.18em' }}>
-                    Quickfront18
+                    CLT ONLINE
                   </div>
                   <div className="small text-muted">Odoo 18 Celestial Interface</div>
                 </div>
@@ -111,7 +112,9 @@ export function LoginPage() {
               </div>
 
               {error ? (
-                <div className="alert alert-danger small py-2 mb-3">{error}</div>
+                <div className="alert alert-danger small py-2 mb-3" style={{ whiteSpace: 'pre-line' }}>
+                  {error}
+                </div>
               ) : null}
 
               <Button
@@ -133,5 +136,3 @@ export function LoginPage() {
     </div>
   )
 }
-
-

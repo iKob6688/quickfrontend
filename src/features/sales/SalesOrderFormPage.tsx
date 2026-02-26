@@ -11,6 +11,7 @@ import { Combobox, type ComboboxOption } from '@/components/ui/Combobox'
 import { ProductCombobox } from '@/features/sales/ProductCombobox'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { extractFieldErrors, type FieldErrors } from '@/lib/formErrors'
+import { clearDraft, loadDraft, loadRecentNotes, pushRecentNote, saveDraft } from '@/lib/formDrafts'
 import { toast } from '@/lib/toastStore'
 import { listPartners, getPartner } from '@/api/services/partners.service'
 import {
@@ -21,6 +22,9 @@ import {
   type SalesOrderPayload,
   type SalesOrderType,
 } from '@/api/services/sales-orders.service'
+
+const SALES_ORDER_DRAFT_KEY = 'qf:draft:sales-order-form:create:v1'
+const SALES_ORDER_RECENT_NOTES_KEY = 'qf:recent-notes:sales-order:v1'
 
 export function SalesOrderFormPage() {
   const { id } = useParams<{ id: string }>()
@@ -109,10 +113,59 @@ export function SalesOrderFormPage() {
   }, [selectedPartnerQuery.data, partnerSearch])
 
   const [fieldErrors, setFieldErrors] = useState<FieldErrors | null>(null)
+  const [recentNotes, setRecentNotes] = useState<string[]>([])
+  const [draftPendingRestore, setDraftPendingRestore] = useState<SalesOrderPayload | null>(null)
+  const [draftUpdatedAt, setDraftUpdatedAt] = useState<string | null>(null)
+  const [draftGateResolved, setDraftGateResolved] = useState(false)
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
+
+  useEffect(() => {
+    setRecentNotes(loadRecentNotes(SALES_ORDER_RECENT_NOTES_KEY))
+  }, [])
+
+  useEffect(() => {
+    if (isEdit) {
+      setDraftGateResolved(true)
+      return
+    }
+    const draft = loadDraft<SalesOrderPayload>(SALES_ORDER_DRAFT_KEY)
+    if (draft?.data) {
+      setDraftPendingRestore(draft.data)
+      setDraftUpdatedAt(draft.updatedAt || null)
+    }
+    setDraftGateResolved(true)
+  }, [isEdit])
+
+  useEffect(() => {
+    if (isEdit) return
+    if (!draftGateResolved) return
+    if (draftPendingRestore) return
+    const timer = window.setTimeout(() => {
+      saveDraft(SALES_ORDER_DRAFT_KEY, formData)
+      setDraftSavedAt(new Date().toISOString())
+    }, 700)
+    return () => window.clearTimeout(timer)
+  }, [isEdit, draftGateResolved, draftPendingRestore, formData])
+
+  const applyRecentNote = (note: string) => {
+    setFormData((prev) => ({ ...prev, notes: note }))
+  }
+
+  const appendRecentNote = (note: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      notes: prev.notes?.trim() ? `${prev.notes}\n${note}` : note,
+    }))
+  }
 
   const createMutation = useMutation({
     mutationFn: (payload: SalesOrderPayload) => createSalesOrder(payload),
     onSuccess: (data) => {
+      clearDraft(SALES_ORDER_DRAFT_KEY)
+      if (formData.notes?.trim()) {
+        pushRecentNote(SALES_ORDER_RECENT_NOTES_KEY, formData.notes)
+        setRecentNotes(loadRecentNotes(SALES_ORDER_RECENT_NOTES_KEY))
+      }
       queryClient.invalidateQueries({ queryKey: ['salesOrders'] })
       toast.success('สร้างเอกสารขายสำเร็จ', data.number ? `เลขที่: ${data.number}` : undefined)
       navigate(`/sales/orders/${data.id}`)
@@ -127,6 +180,10 @@ export function SalesOrderFormPage() {
   const updateMutation = useMutation({
     mutationFn: (payload: SalesOrderPayload) => updateSalesOrder(orderId!, payload),
     onSuccess: () => {
+      if (formData.notes?.trim()) {
+        pushRecentNote(SALES_ORDER_RECENT_NOTES_KEY, formData.notes)
+        setRecentNotes(loadRecentNotes(SALES_ORDER_RECENT_NOTES_KEY))
+      }
       queryClient.invalidateQueries({ queryKey: ['salesOrder', orderId] })
       queryClient.invalidateQueries({ queryKey: ['salesOrders'] })
       toast.success('บันทึกเอกสารขายสำเร็จ')
@@ -233,6 +290,11 @@ export function SalesOrderFormPage() {
         breadcrumb="รายรับ · ใบเสนอราคา · Sale Order"
         actions={
           <div className="d-flex align-items-center gap-2 qf-so-actions">
+            {!isEdit && draftSavedAt ? (
+              <span className="small text-muted">
+                autosaved {new Date(draftSavedAt).toLocaleTimeString('th-TH')}
+              </span>
+            ) : null}
             <Button size="sm" variant="ghost" onClick={() => navigate('/products')}>
               เมนูสินค้า
             </Button>
@@ -248,6 +310,39 @@ export function SalesOrderFormPage() {
 
       <div className="row g-4">
         <div className="col-lg-8">
+          {!isEdit && draftPendingRestore ? (
+            <Alert variant="warning" className="small">
+              <div className="fw-semibold mb-1">พบ draft ที่บันทึกไว้</div>
+              <div className="mb-2">
+                เวลา: {draftUpdatedAt ? new Date(draftUpdatedAt).toLocaleString('th-TH') : 'ไม่ทราบเวลา'}
+              </div>
+              <div className="d-flex gap-2">
+                <Button
+                  size="sm"
+                  type="button"
+                  onClick={() => {
+                    setFormData(draftPendingRestore)
+                    setDraftPendingRestore(null)
+                    toast.info('กู้ draft สำเร็จ')
+                  }}
+                >
+                  กู้ draft
+                </Button>
+                <Button
+                  size="sm"
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    clearDraft(SALES_ORDER_DRAFT_KEY)
+                    setDraftPendingRestore(null)
+                    setDraftUpdatedAt(null)
+                  }}
+                >
+                  ลบ draft
+                </Button>
+              </div>
+            </Alert>
+          ) : null}
           <Card>
             <h5 className="h6 fw-semibold mb-3">ข้อมูลหลัก</h5>
             <div className="row g-3">
@@ -309,6 +404,14 @@ export function SalesOrderFormPage() {
                 {selectedPartnerQuery.data ? (
                   <div className="small text-muted mt-2">
                     เลือกแล้ว: <span className="fw-semibold">{selectedPartnerQuery.data.displayName}</span> (ID: {formData.partnerId})
+                    <div className="d-flex gap-2 mt-2">
+                      <Button size="sm" variant="ghost" type="button" onClick={() => navigate(`/customers/${formData.partnerId}`)}>
+                        เปิดรายละเอียดลูกค้า
+                      </Button>
+                      <Button size="sm" variant="ghost" type="button" onClick={() => navigate(`/customers/${formData.partnerId}/edit`)}>
+                        แก้ไขลูกค้า
+                      </Button>
+                    </div>
                   </div>
                 ) : null}
                 {fieldErrors?.partnerId ? <small className="text-danger">{fieldErrors.partnerId}</small> : null}
@@ -474,6 +577,33 @@ export function SalesOrderFormPage() {
               onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
               placeholder="เพิ่มหมายเหตุสำหรับลูกค้า"
             />
+            {recentNotes.length > 0 ? (
+              <div className="mt-2">
+                <div className="small text-muted mb-1">หมายเหตุที่ใช้ล่าสุด</div>
+                <div className="d-flex flex-wrap gap-2">
+                  {recentNotes.slice(0, 4).map((note, idx) => (
+                    <div key={`${idx}-${note.slice(0, 12)}`} className="d-flex gap-1">
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-secondary"
+                        onClick={() => applyRecentNote(note)}
+                        title={note}
+                      >
+                        ใช้ล่าสุด {idx + 1}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-secondary"
+                        onClick={() => appendRecentNote(note)}
+                        title={note}
+                      >
+                        +
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             <div className="small text-muted mt-3">
               หาก backend ยังไม่รองรับ endpoint <code>/sales/orders</code> ระบบจะแจ้ง error เพื่อให้ตรวจสอบโมดูล <code>adt_th_api</code>
