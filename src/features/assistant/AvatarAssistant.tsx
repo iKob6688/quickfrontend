@@ -7,6 +7,7 @@ import {
   sendAssistantChat,
   type AssistantCapabilities,
   type AssistantChatResponse,
+  type AssistantExecuteResponse,
   type AssistantTokenUsage,
 } from '@/api/services/ai-assistant.service'
 import {
@@ -14,6 +15,7 @@ import {
   getAssistantLanguageEventName,
   type AssistantLanguage,
 } from '@/lib/assistantLanguage'
+import { getInstanceId } from '@/lib/instanceId'
 import { toast } from '@/lib/toastStore'
 import { toApiError } from '@/api/response'
 import './avatar-assistant.css'
@@ -25,7 +27,7 @@ type ChatItem = {
 
 type AssistantSourceLink = {
   label: string
-  route: string
+  route?: string
 }
 
 type AssistantResultCard = {
@@ -45,6 +47,39 @@ type UsageSummary = {
   total: number
   calls: number
   lastModel?: string
+}
+
+type AssistantTraceMeta = {
+  mode?: string
+  traceId?: string
+  warnings: string[]
+  sources: Array<{ label: string; route?: string }>
+  safety?: { db_only_enforced?: boolean; company_id?: number; approval_required_count?: number }
+  toolProposals?: Array<{
+    id?: string
+    tool?: string
+    category?: string
+    allowed?: boolean
+    requires_approval?: boolean
+    auto_safe?: boolean
+    policy?: { deny_reason?: string | false }
+  }>
+}
+
+const RISKY_APPROVAL_CATEGORIES = new Set(['write_posting'])
+
+const isRiskyToolName = (tool?: string): boolean => {
+  const t = String(tool || '').toLowerCase()
+  return (
+    t.includes('confirm_') ||
+    t.startsWith('confirm') ||
+    t.includes('validate_') ||
+    t.startsWith('validate') ||
+    t.includes('post_') ||
+    t.startsWith('post') ||
+    t.includes('payment') ||
+    t.includes('register_')
+  )
 }
 
 const AVATAR_SRC = '/avatar-assistant.png'
@@ -86,6 +121,13 @@ export function AvatarAssistant() {
     total: 0,
     calls: 0,
   })
+  const [traceMeta, setTraceMeta] = useState<AssistantTraceMeta>({
+    warnings: [],
+    sources: [],
+  })
+  const [traceDrawerOpen, setTraceDrawerOpen] = useState(false)
+  const [lastUserPrompt, setLastUserPrompt] = useState('')
+  const [assistantContextKey, setAssistantContextKey] = useState<string>(() => getInstanceId() || 'no-instance')
   const [pendingConfirm, setPendingConfirm] = useState<{
     session_id: string
     nonce?: string
@@ -141,10 +183,81 @@ export function AvatarAssistant() {
     return () => window.removeEventListener(eventName, onLangChange as EventListener)
   }, [])
 
+  useEffect(() => {
+    const readKey = () => getInstanceId() || 'no-instance'
+    const maybeReset = () => {
+      const next = readKey()
+      setAssistantContextKey((prev) => {
+        if (prev === next) return prev
+        setHistory([])
+        setLastChat(null)
+        setPendingApprovalIds([])
+        setPendingRunIds([])
+        setResultCards([])
+        setPendingConfirm(null)
+        setTraceMeta({ warnings: [], sources: [] })
+        setTraceDrawerOpen(false)
+        if (open) {
+          setHistory([{ role: 'assistant', text: 'Context reset เนื่องจากเปลี่ยนบริษัท/instance' }])
+        }
+        return next
+      })
+    }
+    maybeReset()
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key || e.key === 'qf18_instance_public_id') maybeReset()
+    }
+    const timer = window.setInterval(maybeReset, 2000)
+    window.addEventListener('storage', onStorage)
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      window.clearInterval(timer)
+    }
+  }, [open, location.pathname])
+
   const reportRouteSet = useMemo(() => new Set((caps?.reports || []).map((r) => r.route)), [caps?.reports])
   const perms = caps?.permissions || {}
   const previewPlan = lastChat?.plan || []
-  const showDebugBlocks = import.meta.env.DEV
+  const showDebugBlocks = false
+  const showTechnicalBlocks = showDebugBlocks
+  const approvalGroups = useMemo(() => {
+    if (!pendingApprovalIds.length) return [] as Array<{ key: string; label: string; count: number }>
+    const byId = new Map(
+      (traceMeta.toolProposals || [])
+        .filter((p) => p?.id)
+        .map((p) => [String(p.id), p]),
+    )
+    const counts = new Map<string, number>()
+    const classify = (tool?: string, category?: string) => {
+      const t = String(tool || '').toLowerCase()
+      const c = String(category || '').toLowerCase()
+      if (t.includes('payment')) return ['payment', 'Payment']
+      if (c === 'write_posting' || t.startsWith('post_')) return ['posting', 'Posting']
+      if (c === 'write_draft' || t.includes('create_') || t.includes('_draft')) return ['draft', 'Draft create']
+      if (t.includes('confirm') || t.includes('validate') || t.includes('deliver') || t.includes('receive')) {
+        return ['status', 'Status change']
+      }
+      if (c === 'ui') return ['ui', 'UI action']
+      return ['other', 'Other']
+    }
+    pendingApprovalIds.forEach((id) => {
+      const p = byId.get(id)
+      const [key] = classify(p?.tool, p?.category)
+      counts.set(key, (counts.get(key) || 0) + 1)
+    })
+    const labelByKey: Record<string, string> = {
+      draft: 'Draft create',
+      status: 'Status change',
+      payment: 'Payment',
+      posting: 'Posting',
+      ui: 'UI action',
+      other: 'Other',
+    }
+    const order = ['draft', 'status', 'payment', 'posting', 'ui', 'other']
+    return order
+      .filter((k) => (counts.get(k) || 0) > 0)
+      .map((k) => ({ key: k, label: labelByKey[k] || k, count: counts.get(k) || 0 }))
+  }, [pendingApprovalIds, traceMeta.toolProposals])
 
   const parseTokenUsage = (usage: unknown): { prompt: number; completion: number; total: number; model?: string } | null => {
     if (!usage || typeof usage !== 'object') return null
@@ -176,9 +289,11 @@ export function AvatarAssistant() {
       lastModel: parsed.model || prev.lastModel,
     }))
 
-    const logLine = `[AI usage:${stage}] prompt=${parsed.prompt}, completion=${parsed.completion}, total=${parsed.total}${parsed.model ? `, model=${parsed.model}` : ''}`
-    console.info(logLine)
-    setHistory((prev) => [...prev, { role: 'assistant', text: `Token usage (${stage}): in ${parsed.prompt}, out ${parsed.completion}, total ${parsed.total}` }])
+    if (showTechnicalBlocks) {
+      const logLine = `[AI usage:${stage}] prompt=${parsed.prompt}, completion=${parsed.completion}, total=${parsed.total}${parsed.model ? `, model=${parsed.model}` : ''}`
+      console.info(logLine)
+      setHistory((prev) => [...prev, { role: 'assistant', text: `Token usage (${stage}): in ${parsed.prompt}, out ${parsed.completion}, total ${parsed.total}` }])
+    }
   }
 
   const normalizeAssistantRoute = (rawRoute: unknown, payload?: Record<string, unknown>): string => {
@@ -255,6 +370,49 @@ export function AvatarAssistant() {
     setResultCards((prev) => [...nextCards, ...prev].slice(0, 5))
   }
 
+  const updateTraceMeta = (res: Partial<AssistantChatResponse & AssistantExecuteResponse>) => {
+    const sources = Array.isArray((res as any)?.sources)
+      ? ((res as any).sources as any[])
+          .map((src) => ({
+            label: String(src?.label || src?.title || src?.route || 'Source'),
+            route: src?.route ? String(src.route) : undefined,
+          }))
+          .filter((src) => !!src.label)
+      : []
+    setTraceMeta({
+      mode: typeof (res as any)?.mode === 'string' ? String((res as any).mode) : undefined,
+      traceId: typeof (res as any)?.trace_id === 'string' ? String((res as any).trace_id) : undefined,
+      warnings: Array.isArray((res as any)?.warnings) ? ((res as any).warnings as unknown[]).map(String) : [],
+      sources: dedupeSources(sources.filter((s) => !!s.label)),
+      safety:
+        (res as any)?.safety && typeof (res as any).safety === 'object'
+          ? ((res as any).safety as any)
+          : undefined,
+      toolProposals: Array.isArray((res as any)?.tool_proposals)
+        ? ((res as any).tool_proposals as any[]).map((p) => ({
+            id: p?.id ? String(p.id) : undefined,
+            tool: p?.tool ? String(p.tool) : undefined,
+            category: p?.category ? String(p.category) : undefined,
+            allowed: typeof p?.allowed === 'boolean' ? p.allowed : undefined,
+            requires_approval: typeof p?.requires_approval === 'boolean' ? p.requires_approval : undefined,
+            auto_safe: typeof p?.auto_safe === 'boolean' ? p.auto_safe : undefined,
+            policy: p?.policy && typeof p.policy === 'object' ? { deny_reason: (p.policy as any).deny_reason || false } : undefined,
+          }))
+        : [],
+    })
+  }
+
+  const clearAssistantContext = (message?: string) => {
+    setHistory(message ? [{ role: 'assistant', text: message }] : [])
+    setLastChat(null)
+    setPendingApprovalIds([])
+    setPendingRunIds([])
+    setPendingConfirm(null)
+    setResultCards([])
+    setTraceMeta({ warnings: [], sources: [] })
+    setTraceDrawerOpen(false)
+  }
+
   const applyUiActions = (actions: Array<{ type: string; payload: Record<string, unknown> }>) => {
     const routeNotes: string[] = []
     const sourceLinks: AssistantSourceLink[] = []
@@ -305,6 +463,7 @@ export function AvatarAssistant() {
   const onSend = async () => {
     const text = input.trim()
     if (!text || loading) return
+    setLastUserPrompt(text)
     setLoading(true)
     setHistory((prev) => [...prev, { role: 'user', text }])
     setInput('')
@@ -316,6 +475,7 @@ export function AvatarAssistant() {
         reply_language: assistantLang.startsWith('th') ? 'th' : 'en',
       })
       recordUsage('chat', res.usage)
+      updateTraceMeta(res)
       setLastChat(res)
       setHistory((prev) => [...prev, { role: 'assistant', text: res.reply || 'รับทราบ กำลังเตรียมขั้นตอนให้' }])
       if ((res.plan || []).length > 0) {
@@ -341,10 +501,38 @@ export function AvatarAssistant() {
           },
         ])
       }
-      const needApprove = (res.plan || []).filter((p) => p.requires_approval).map((p) => p.id)
-      const runnableSteps = (res.plan || []).filter((p) => !p.requires_approval).map((p) => p.id)
+      const proposalById = new Map(
+        (Array.isArray((res as any).tool_proposals) ? ((res as any).tool_proposals as any[]) : [])
+          .filter((p) => p?.id)
+          .map((p) => [String(p.id), p]),
+      )
+      const needApproveSet = new Set<string>((res.plan || []).filter((p) => p.requires_approval).map((p) => p.id))
+      const runnableCandidates = (res.plan || []).filter((p) => !needApproveSet.has(p.id))
+      let promotedByFrontend = 0
+      runnableCandidates.forEach((step) => {
+        const proposal = proposalById.get(String(step.id))
+        const category = String(proposal?.category || '').toLowerCase()
+        const shouldForceApprove = RISKY_APPROVAL_CATEGORIES.has(category) || isRiskyToolName(step.tool)
+        if (shouldForceApprove) {
+          needApproveSet.add(step.id)
+          promotedByFrontend += 1
+        }
+      })
+      const needApprove = Array.from(needApproveSet)
+      const runnableSteps = (res.plan || [])
+        .map((p) => p.id)
+        .filter((id) => !needApproveSet.has(id))
       setPendingApprovalIds(needApprove)
       setPendingRunIds(runnableSteps)
+      if (promotedByFrontend > 0) {
+        setHistory((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            text: `ย้าย ${promotedByFrontend} ขั้นตอนเข้า approval queue เพิ่มเติม (risk guard ฝั่ง frontend)`,
+          },
+        ])
+      }
       const responseSources = dedupeSources([
         ...(Array.isArray((res as any).sources)
           ? (res as any).sources
@@ -379,6 +567,12 @@ export function AvatarAssistant() {
           },
         ])
       }
+      if ((res as any).tool_proposals && Array.isArray((res as any).tool_proposals) && showDebugBlocks) {
+        const deniedCount = ((res as any).tool_proposals as any[]).filter((p) => p?.allowed === false).length
+        if (deniedCount > 0) {
+          setHistory((prev) => [...prev, { role: 'assistant', text: `มี ${deniedCount} ขั้นตอนที่ถูก policy ปฏิเสธก่อน execute` }])
+        }
+      }
       if (res.confirmation_request) {
         setPendingConfirm({
           session_id: res.session_id,
@@ -412,12 +606,34 @@ export function AvatarAssistant() {
     }
   }
 
+  const onRetryQuery = async () => {
+    if (!lastUserPrompt || loading) return
+    setInput(lastUserPrompt)
+    setHistory((prev) => [...prev, { role: 'assistant', text: 'กำลังลองใหม่ (retry query)...' }])
+    // queue microtask so state updates before onSend reads input
+    setTimeout(() => {
+      void (async () => {
+        setInput(lastUserPrompt)
+      })()
+    }, 0)
+  }
+
+  const onRetryAnswer = async () => {
+    if (!lastUserPrompt || loading) return
+    setHistory((prev) => [...prev, { role: 'assistant', text: 'กำลังลองสรุปคำตอบใหม่ (retry answer)...' }])
+    setInput(lastUserPrompt)
+    setTimeout(() => {
+      void onSend()
+    }, 0)
+  }
+
   const onApprove = async () => {
     if (!lastChat?.session_id || pendingApprovalIds.length === 0 || loading) return
     setLoading(true)
     try {
       const res = await executeAssistantPlan(lastChat.session_id, pendingApprovalIds, lastChat.nonce)
       recordUsage('execute', res.usage)
+      updateTraceMeta(res)
       setPendingApprovalIds([])
       const denied = (res.results || []).filter((r) => r.status === 'denied')
       const errors = (res.results || []).filter((r) => r.status === 'error')
@@ -440,7 +656,9 @@ export function AvatarAssistant() {
         }))
         .filter((x) => !!x.route)
       const mergedSources = dedupeSources([...(actionSources || []), ...recordSources])
-      if (mergedSources.length > 0 || (res.records || []).length > 0) {
+      const traceSources = dedupeSources([...(res.sources || []).map((s: any) => ({ label: String(s?.label || 'Source'), route: s?.route ? String(s.route) : '' })).filter((s) => !!s.route)])
+      const cardSources = dedupeSources([...mergedSources, ...traceSources])
+      if (cardSources.length > 0 || (res.records || []).length > 0) {
         appendResultCards([
           {
             id: `approve-${Date.now()}`,
@@ -450,7 +668,7 @@ export function AvatarAssistant() {
               label: r.tool,
               value: r.status,
             })),
-            sources: mergedSources,
+            sources: cardSources,
           },
         ])
       }
@@ -468,10 +686,32 @@ export function AvatarAssistant() {
 
   const onRunWorkflow = async () => {
     if (!lastChat?.session_id || pendingRunIds.length === 0 || loading) return
+    const proposalById = new Map(
+      (traceMeta.toolProposals || [])
+        .filter((p) => p?.id)
+        .map((p) => [String(p.id), p]),
+    )
+    const riskyPending = pendingRunIds.filter((id) => {
+      const p = proposalById.get(String(id))
+      return RISKY_APPROVAL_CATEGORIES.has(String(p?.category || '').toLowerCase()) || isRiskyToolName(p?.tool)
+    })
+    if (riskyPending.length > 0) {
+      setPendingRunIds((prev) => prev.filter((id) => !riskyPending.includes(id)))
+      setPendingApprovalIds((prev) => Array.from(new Set([...prev, ...riskyPending])))
+      setHistory((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          text: `บล็อกการรันอัตโนมัติ ${riskyPending.length} ขั้นตอน และย้ายไปคิว approval`,
+        },
+      ])
+      return
+    }
     setLoading(true)
     try {
       const res = await executeAssistantPlan(lastChat.session_id, pendingRunIds, lastChat.nonce)
       recordUsage('execute', res.usage)
+      updateTraceMeta(res)
       setPendingRunIds([])
       const actionSources = applyUiActions(res.ui_actions || [])
       const denied = (res.results || []).filter((r) => r.status === 'denied')
@@ -484,6 +724,8 @@ export function AvatarAssistant() {
         }))
         .filter((x) => !!x.route)
       const mergedSources = dedupeSources([...(actionSources || []), ...recordSources])
+      const traceSources = dedupeSources([...(res.sources || []).map((s: any) => ({ label: String(s?.label || 'Source'), route: s?.route ? String(s.route) : '' })).filter((s) => !!s.route)])
+      const cardSources = dedupeSources([...mergedSources, ...traceSources])
       if (denied.length > 0 || errors.length > 0) {
         setHistory((prev) => [...prev, { role: 'assistant', text: 'ทำงานบางส่วนสำเร็จ แต่มีบางขั้นตอนติดข้อจำกัด' }])
       } else {
@@ -495,7 +737,7 @@ export function AvatarAssistant() {
           },
         ])
       }
-      if (mergedSources.length > 0 || created.length > 0) {
+      if (cardSources.length > 0 || created.length > 0) {
         appendResultCards([
           {
             id: `run-${Date.now()}`,
@@ -505,7 +747,7 @@ export function AvatarAssistant() {
               label: r.tool,
               value: r.status,
             })),
-            sources: mergedSources,
+            sources: cardSources,
           },
         ])
       }
@@ -536,19 +778,22 @@ export function AvatarAssistant() {
         qty: pendingConfirm.qty,
       })
       recordUsage('confirm', res.usage)
+      updateTraceMeta(res)
       setPendingConfirm(null)
       if (res.reply) {
         setHistory((prev) => [...prev, { role: 'assistant', text: res.reply as string }])
       }
       const actionSources = applyUiActions(res.ui_actions || [])
-      if ((actionSources || []).length > 0) {
+      const traceSources = dedupeSources([...(res.sources || []).map((s: any) => ({ label: String(s?.label || 'Source'), route: s?.route ? String(s.route) : '' })).filter((s) => !!s.route)])
+      const mergedSources = dedupeSources([...(actionSources || []), ...traceSources])
+      if (mergedSources.length > 0) {
         appendResultCards([
           {
             id: `confirm-${Date.now()}`,
             title: 'ผลการยืนยันเอกสาร',
             summary: confirmed ? 'ยืนยันและดำเนินการแล้ว' : 'ยกเลิกการดำเนินการ',
             rows: [],
-            sources: actionSources || [],
+            sources: mergedSources,
           },
         ])
       }
@@ -594,7 +839,7 @@ export function AvatarAssistant() {
               <button
                 className="btn btn-sm btn-light"
                 disabled={loading}
-                onClick={() => setInput('สรุปยอดขายสินค้า "Demo Product" เดือนนี้')}
+                onClick={() => setInput('สรุปยอดขายสินค้าประจำเดือนนี้')}
               >
                 สรุปยอดขายสินค้า
               </button>
@@ -657,7 +902,7 @@ export function AvatarAssistant() {
                             <button
                               key={`${card.id}-src-${idx}`}
                               className="btn btn-sm btn-outline-secondary"
-                              onClick={() => safeNavigate(src.route)}
+                              onClick={() => src.route && safeNavigate(src.route)}
                             >
                               {src.label}
                             </button>
@@ -669,7 +914,7 @@ export function AvatarAssistant() {
                 </div>
               </div>
             )}
-            {showDebugBlocks && (
+            {showTechnicalBlocks && (
               <div className="avatar-assistant-perm mb-2">
                 <div className="small text-muted mb-1">Your Odoo permissions</div>
                 <div className="d-flex flex-wrap gap-1">
@@ -681,13 +926,93 @@ export function AvatarAssistant() {
                 </div>
               </div>
             )}
-            {usageSummary.calls > 0 && (
+            {showTechnicalBlocks && usageSummary.calls > 0 && (
               <div className="small text-muted mb-2">
                 Token usage: in {usageSummary.prompt.toLocaleString('en-US')} / out {usageSummary.completion.toLocaleString('en-US')} / total {usageSummary.total.toLocaleString('en-US')}
                 {usageSummary.lastModel ? ` (model: ${usageSummary.lastModel})` : ''}
               </div>
             )}
-            {showDebugBlocks && previewPlan.length > 0 && (
+            {showTechnicalBlocks && (traceMeta.mode || traceMeta.traceId || traceMeta.warnings.length > 0 || traceMeta.safety) && (
+              <div className="avatar-preview-box mb-2">
+                <div className="avatar-preview-title">AI Runtime</div>
+                <div className="small text-muted">
+                  Mode: {traceMeta.mode || 'unknown'}
+                  {traceMeta.traceId ? ` • trace: ${traceMeta.traceId.slice(0, 12)}` : ''}
+                  {assistantContextKey ? ` • instance ${assistantContextKey}` : ''}
+                </div>
+                {traceMeta.safety && (
+                  <div className="small text-muted mt-1">
+                    Safety: DB-only {traceMeta.safety.db_only_enforced ? 'on' : 'off'}
+                    {typeof traceMeta.safety.company_id === 'number' ? ` • company ${traceMeta.safety.company_id}` : ''}
+                    {typeof traceMeta.safety.approval_required_count === 'number'
+                      ? ` • approvals ${traceMeta.safety.approval_required_count}`
+                      : ''}
+                  </div>
+                )}
+                {traceMeta.warnings.length > 0 && (
+                  <div className="small text-warning mt-1">Warnings: {traceMeta.warnings.join(' | ')}</div>
+                )}
+                {traceMeta.sources.length > 0 && (
+                  <div className="avatar-result-sources mt-2">
+                    {traceMeta.sources.map((src, idx) =>
+                      src.route ? (
+                        <button
+                          key={`trace-src-${idx}`}
+                          className="btn btn-sm btn-outline-secondary"
+                          onClick={() => safeNavigate(src.route || '')}
+                        >
+                          {src.label}
+                        </button>
+                      ) : (
+                        <span key={`trace-src-${idx}`} className="badge text-bg-light border">
+                          {src.label}
+                        </span>
+                      ),
+                    )}
+                  </div>
+                )}
+                <div className="d-flex flex-wrap gap-2 mt-2">
+                  <button
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={() => setTraceDrawerOpen((v) => !v)}
+                    type="button"
+                  >
+                    {traceDrawerOpen ? 'ซ่อนที่มาข้อมูล/Trace' : 'ดูที่มาข้อมูล/Trace'}
+                  </button>
+                  <button className="btn btn-sm btn-outline-secondary" onClick={() => void onRetryQuery()} disabled={loading || !lastUserPrompt} type="button">
+                    Retry query
+                  </button>
+                  <button className="btn btn-sm btn-outline-secondary" onClick={() => void onRetryAnswer()} disabled={loading || !lastUserPrompt} type="button">
+                    Retry answer
+                  </button>
+                  <button className="btn btn-sm btn-outline-danger" onClick={() => clearAssistantContext('ล้าง context assistant แล้ว')} disabled={loading} type="button">
+                    ล้าง Context
+                  </button>
+                </div>
+                {traceDrawerOpen && (
+                  <div className="mt-2 p-2 border rounded bg-light-subtle">
+                    <div className="small fw-semibold mb-1">Trace Details (safe)</div>
+                    {traceMeta.toolProposals && traceMeta.toolProposals.length > 0 ? (
+                      <div className="d-flex flex-column gap-1">
+                        {traceMeta.toolProposals.map((p, idx) => (
+                          <div key={`${p.id || p.tool || 't'}-${idx}`} className="small d-flex flex-wrap gap-1 align-items-center">
+                            <span className="badge text-bg-light border">{p.tool || 'tool'}</span>
+                            {p.category ? <span className="badge text-bg-light border">{p.category}</span> : null}
+                            <span className={`badge ${p.allowed === false ? 'text-bg-danger' : 'text-bg-success'}`}>{p.allowed === false ? 'denied' : 'allowed'}</span>
+                            {p.requires_approval ? <span className="badge text-bg-warning">approval</span> : null}
+                            {p.auto_safe ? <span className="badge text-bg-info">auto-safe</span> : null}
+                            {p.policy?.deny_reason ? <span className="text-danger">{String(p.policy.deny_reason)}</span> : null}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="small text-muted">No tool proposals in latest response.</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            {showTechnicalBlocks && previewPlan.length > 0 && (
               <div className="avatar-preview-box mb-2">
                 <div className="avatar-preview-title">Workflow Preview</div>
                 <div className="avatar-preview-subtitle">ตรวจสอบก่อนกด Run Workflow</div>
@@ -852,6 +1177,16 @@ export function AvatarAssistant() {
             </div>
             {pendingApprovalIds.length > 0 && (
               <div className="mt-2">
+                {approvalGroups.length > 0 && (
+                  <div className="small text-muted mb-1 d-flex flex-wrap gap-1">
+                    <span>Approval queue:</span>
+                    {approvalGroups.map((g) => (
+                      <span key={g.key} className="badge text-bg-light border">
+                        {g.label}: {g.count}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <button className="btn btn-warning btn-sm" onClick={() => void onApprove()} disabled={loading}>
                   ยืนยันก่อนทำงาน ({pendingApprovalIds.length})
                 </button>

@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { getPartnerLedger } from '@/api/services/accounting-reports.service'
+import { ReportDataTable } from '@/features/accounting/ReportDataTable'
 
 export function PartnerLedgerReportPage() {
   const navigate = useNavigate()
@@ -75,14 +76,8 @@ export function PartnerLedgerReportPage() {
           โหลดรายงานไม่สำเร็จ: {q.error instanceof Error ? q.error.message : 'Unknown error'}
         </div>
       ) : (
-        <Card className="p-3">
-          <div className="fw-semibold mb-2">Raw reportData</div>
-          <pre className="small mb-0" style={{ whiteSpace: 'pre-wrap' }}>
-            {q.isLoading ? 'กำลังโหลด...' : JSON.stringify(q.data?.reportData ?? {}, null, 2)}
-          </pre>
-        </Card>
+        <ReportDataTable title="รายการลูกหนี้/เจ้าหนี้" reportData={q.data?.reportData} loading={q.isLoading} />
       )}
     </div>
   )
 }
-

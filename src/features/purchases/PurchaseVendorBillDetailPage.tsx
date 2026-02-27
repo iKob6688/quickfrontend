@@ -255,7 +255,9 @@ export function PurchaseVendorBillDetailPage() {
       <RegisterPaymentModal
         open={paymentOpen}
         onClose={() => setPaymentOpen(false)}
-        onSubmit={(payload) => paymentMutation.mutateAsync(payload)}
+        onSubmit={async (payload) => {
+          await paymentMutation.mutateAsync(payload)
+        }}
         defaultAmount={Math.max(0, amountDue)}
         currency={bill.currency}
       />

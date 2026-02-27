@@ -218,6 +218,117 @@ curl -i http://127.0.0.1:18069/web/login | head
   - **Fix**: `sudo systemctl restart odoo18-api` (and ensure you're hitting the correct instance/port).
 - **401 Unauthorized** with JSON `Missing X-ADT-API-Key header`:
   - **Meaning**: you didn’t send `X-ADT-API-Key` (curl) or frontend env `VITE_API_KEY` is empty/wrong.
+
+## AI Assistant (Safe LLM / DB-only)
+
+The React assistant UI integrates with `adt_th_api` AI endpoints and now supports a **backend-only LLM adapter** with deterministic fallback.
+
+### Security model (important)
+
+- LLM runs **only on backend** (`adt_th_api`)
+- LLM **does not** access DB directly
+- LLM can only propose backend tools (tool registry)
+- Tool execution uses normal Odoo ORM access (ACL + record rules + company scope)
+- All business facts must come from the current Odoo DB/company context
+- Sensitive write actions (confirm/post/payment/status changes) should remain approval-gated
+
+### AI endpoints (unchanged paths)
+
+- `/api/th/v1/ai/capabilities`
+- `/api/th/v1/ai/runtime`
+- `/api/th/v1/ai/chat`
+- `/api/th/v1/ai/execute`
+- `/api/th/v1/ai/confirm`
+- `/api/th/v1/ai/tasks`
+
+`/web/adt/th/v1/ai/*` aliases remain supported for web-session style integrations.
+
+### Backend config (Odoo `ir.config_parameter`)
+
+Set these in Odoo (System Parameters) for LLM mode:
+
+- `adt_th_api.ai_enabled=1`
+- `adt_th_api.ai_mode=approve_required` (or `auto_safe`, `plan_only`)
+- `adt_th_api.ai_provider=openai_compat` (or `local`)
+- `adt_th_api.ai_provider=openclaw` (for offline/local OpenAI-compatible runtime)
+- `adt_th_api.ai_llm_enabled=1`
+- `adt_th_api.ai_model=<model-name>`
+- `adt_th_api.ai_base_url=<openai-compatible-base-url>`
+- `adt_th_api.ai_api_key=<secret>`
+- `adt_th_api.ai_timeout_sec=30`
+
+For OpenClaw-specific overrides:
+
+- `adt_th_api.ai_openclaw_base_url=<openclaw-base-url>`
+- `adt_th_api.ai_openclaw_model=<openclaw-model>`
+- `adt_th_api.ai_openclaw_api_key=<optional-api-key>`
+
+If `ai_provider=local` or LLM is unavailable, the assistant falls back to deterministic planning (`mode=deterministic_fallback`).
+
+### Frontend behavior
+
+The assistant UI shows runtime metadata returned by backend:
+
+- `mode` (`llm` / `deterministic_fallback`)
+- `trace_id`
+- `warnings`
+- `safety` (DB-only flag, company id, approval count)
+- `sources` (safe source summaries / record links)
+- token `usage` (provider usage or local estimate)
+- safe trace panel / drawer for tool proposals (allowed/denied, approval flags, deny reason)
+- retry controls (`Retry query`, `Retry answer`)
+- assistant context reset on company/instance change (to prevent cross-company chat context bleed)
+- approval queue grouping summary (`Draft create`, `Status change`, `Payment`, `Posting`, etc.)
+
+### Backend AI behavior (current phase)
+
+- Backend-only LLM adapter (`OpenAI-compatible`) with deterministic fallback
+- Central provider resolver (`local` / `openai_compat` / `openclaw`) in backend adapter
+- Tool registry + policy metadata (category / auto-safe / approval-required)
+- Sales / Purchase / Reports tool coverage extended (read + selected write wrappers)
+- Structured `execute` results include `data`, `computed_from`, `error_code` (for source summaries and safe trace)
+- AI errors include `trace_id` for support/debug without exposing sensitive stack traces
+
+### AI eval harness (read workflow + safety contract)
+
+Run a quick regression to verify `/ai/*` contract and DB-only safety metadata:
+
+```bash
+npm run ai:eval -- \
+  --base http://localhost:8069 \
+  --db q01 \
+  --api-key <API_KEY> \
+  --token <BEARER_TOKEN> \
+  --instance-id <INSTANCE_ID>
+```
+
+What it checks:
+- `capabilities` endpoint reachable
+- `chat` responses include `mode`, `trace_id`, `safety`, `usage`
+- warns if `safety.db_only_enforced` is not `true`
+- runs Thai read prompts for Sales/Purchase/Reports summary scenarios
+- runs write-risk prompts and asserts approval gating (`approval_required_count > 0`)
+
+### Approval hard-guard (current behavior)
+
+In backend policy, tools are forced into approval queue when either:
+- category is `write_posting`, or
+- tool name indicates risky action (`confirm`, `validate`, `post`, `payment`, `register`)
+
+This keeps write-risk actions from auto-running even if category metadata is misconfigured.
+
+### Upgrade / reload after backend AI changes
+
+When changing Python files in `adt_th_api` (AI adapter, tools, controller):
+
+```bash
+cd /Users/ikob/Documents/iKobDoc/Active22/V18/odoo
+/Users/ikob/Documents/iKobDoc/Active22/V18/odoo-venv18/bin/python3 ./odoo-bin \
+  -c /Users/ikob/Documents/iKobDoc/Active22/V18/odoo/odoo.conf \
+  -d q01 -u adt_th_api --stop-after-init
+```
+
+Then restart the Odoo server process and hard refresh the frontend.
 - **405 Method Not Allowed** with `Allow: POST, OPTIONS`:
   - **Meaning**: you used the wrong HTTP method (e.g. GET). Use **POST** for JSON-RPC endpoints.
 
@@ -554,4 +665,3 @@ This section is for the Odoo/middleware team. It lists what the React app alread
     - Support pagination via `limit`/`offset`
     - Respect `X-Instance-ID` header for company scoping
     - Use standard error codes (`AUTH_REQUIRED`, `VALIDATION_ERROR`, `NOT_FOUND`, `CONFLICT`, etc.)
-

@@ -29,6 +29,15 @@ export interface AssistantCapabilities {
     lang?: string
     user_id?: number
   }
+  runtime?: AssistantRuntimeInfo
+}
+
+export interface AssistantRuntimeInfo {
+  provider: 'local' | 'openai_compat' | 'openclaw' | string
+  enabled: boolean
+  model: string
+  base_url: string
+  ready: boolean
 }
 
 export interface AssistantPlanStep {
@@ -49,6 +58,35 @@ export interface AssistantRecordRef {
   name?: string
 }
 
+export interface AssistantSourceDescriptor {
+  label: string
+  route?: string
+  model?: string
+  id?: number
+  count?: number
+  date_from?: string
+  date_to?: string
+  [key: string]: unknown
+}
+
+export interface AssistantSafetyInfo {
+  db_only_enforced?: boolean
+  company_id?: number
+  approval_required_count?: number
+  [key: string]: unknown
+}
+
+export interface AssistantToolProposal {
+  id?: string
+  tool: string
+  category?: string
+  auto_safe?: boolean
+  allowed?: boolean
+  requires_approval?: boolean
+  policy?: Record<string, unknown>
+  args?: Record<string, unknown>
+}
+
 export interface AssistantTokenUsage {
   prompt_tokens?: number
   completion_tokens?: number
@@ -62,6 +100,12 @@ export interface AssistantChatResponse {
   session_id: string
   nonce?: string
   reply: string
+  mode?: 'llm' | 'deterministic_fallback' | string
+  trace_id?: string
+  warnings?: string[]
+  sources?: AssistantSourceDescriptor[]
+  safety?: AssistantSafetyInfo
+  tool_proposals?: AssistantToolProposal[]
   usage?: AssistantTokenUsage | Record<string, unknown>
   permission_explanations?: string[]
   confirmation_request?: {
@@ -84,6 +128,11 @@ export interface AssistantExecuteResponse {
   session_id: string
   reply?: string
   confirmed?: boolean
+  mode?: 'llm' | 'deterministic_fallback' | string
+  trace_id?: string
+  warnings?: string[]
+  sources?: AssistantSourceDescriptor[]
+  safety?: AssistantSafetyInfo
   usage?: AssistantTokenUsage | Record<string, unknown>
   permission_explanations?: string[]
   results: Array<{
@@ -157,6 +206,14 @@ export async function getAssistantCapabilities(lang?: string) {
     {
       ...(lang ? { lang } : {}),
     },
+  )
+}
+
+export async function getAssistantRuntime() {
+  return postWithFallback<AssistantRuntimeInfo>(
+    '/th/v1/ai/runtime',
+    '/web/adt/th/v1/ai/runtime',
+    {},
   )
 }
 

@@ -2,9 +2,9 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 
 import { PageHeader } from '@/components/ui/PageHeader'
-import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { getBankBook, getCashBook } from '@/api/services/accounting-reports.service'
+import { ReportDataTable } from '@/features/accounting/ReportDataTable'
 
 type Mode = 'cash' | 'bank'
 
@@ -25,7 +25,7 @@ export function BookReportPage(props: { mode: Mode }) {
     <div>
       <PageHeader
         title={title}
-        subtitle="เชื่อมต่อ API แล้ว (แสดง raw reportData จาก backend)"
+        subtitle="สรุปรายการสมุดรายวันจากข้อมูลจริงในระบบ"
         breadcrumb="Home · Accounting · Reports"
         actions={
           <div className="d-flex gap-2 flex-wrap">
@@ -45,15 +45,8 @@ export function BookReportPage(props: { mode: Mode }) {
           โหลดรายงานไม่สำเร็จ: {q.error instanceof Error ? q.error.message : 'Unknown error'}
         </div>
       ) : (
-        <Card className="p-3">
-          <div className="fw-semibold mb-2">Raw reportData</div>
-          <pre className="small mb-0" style={{ whiteSpace: 'pre-wrap' }}>
-            {q.isLoading ? 'กำลังโหลด...' : JSON.stringify(q.data?.reportData ?? {}, null, 2)}
-          </pre>
-        </Card>
+        <ReportDataTable title="รายการสมุดรายวัน" reportData={q.data?.reportData} loading={q.isLoading} />
       )}
     </div>
   )
 }
-
-

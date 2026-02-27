@@ -65,7 +65,8 @@ export function PurchaseOrdersListPage() {
     const base = { all: 0, draft: 0, sent: 0, to_approve: 0, purchase: 0, done: 0, cancel: 0 } as Record<StatusTab, number>
     for (const o of countsQuery.data ?? []) {
       base.all += 1
-      base[o.status] += 1
+      const status = o.status as StatusTab
+      if (status in base) base[status] += 1
     }
     return base
   }, [countsQuery.data])

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { getTrialBalance, type TargetMove } from '@/api/services/accounting-reports.service'
 import { toISODate, firstDayOfThisMonth, lastDayOfThisMonth, firstDayOfLastMonth, lastDayOfLastMonth, firstDayOfThisYear, lastDayOfThisYear } from '@/lib/datePresets'
+import { ReportDataTable } from '@/features/accounting/ReportDataTable'
 
 type Item = Record<string, unknown>
 
@@ -138,17 +139,11 @@ export function TrialBalanceReportPage() {
           {items.length > 0 ? (
             <DataTable title="รายการ" columns={columns} rows={items} empty={q.isLoading ? 'กำลังโหลด...' : 'ไม่มีข้อมูล'} />
           ) : (
-            <Card className="p-3">
-              <div className="fw-semibold mb-2">Raw reportData</div>
-              <pre className="small mb-0" style={{ whiteSpace: 'pre-wrap' }}>
-                {q.isLoading ? 'กำลังโหลด...' : JSON.stringify(q.data?.reportData ?? {}, null, 2)}
-              </pre>
-            </Card>
+            <ReportDataTable title="รายการงบทดลอง" reportData={q.data?.reportData} loading={q.isLoading} />
           )}
         </>
       )}
     </div>
   )
 }
-
 

@@ -92,6 +92,48 @@ function formatTaxRowsForExport(report: any, type: 'vat' | 'wht'): Record<string
   }))
 }
 
+function num(value: unknown): number {
+  const n = Number(value ?? 0)
+  return Number.isFinite(n) ? n : 0
+}
+
+function formatAmount(value: unknown): string {
+  return num(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function ReportRowsTable({ rows }: { rows: Record<string, unknown>[] }) {
+  if (!rows.length) {
+    return <div className="text-muted">ไม่พบรายการในช่วงวันที่ที่เลือก</div>
+  }
+  const headers = Object.keys(rows[0] || {})
+  return (
+    <div className="table-responsive">
+      <table className="table table-sm align-middle mb-0">
+        <thead>
+          <tr>
+            {headers.map((h) => (
+              <th key={h} className="text-nowrap">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, idx) => (
+            <tr key={idx}>
+              {headers.map((h) => (
+                <td key={h} className="text-nowrap">
+                  {String(r[h] ?? '')}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 export function VatReportPage() {
   const navigate = useNavigate()
   const [taxType, setTaxType] = useState<'sale' | 'purchase'>('sale')
@@ -298,13 +340,37 @@ export function VatReportPage() {
         <div className="alert alert-danger">
           โหลดรายงานไม่สำเร็จ: {reportQuery.error instanceof Error ? reportQuery.error.message : 'Unknown error'}
         </div>
+      ) : reportQuery.isLoading ? (
+        <Card className="p-3 text-muted">กำลังโหลดรายงาน...</Card>
       ) : (
-        <Card className="p-3">
-          <div className="fw-semibold mb-2">Raw reportData</div>
-          <pre className="small mb-0" style={{ whiteSpace: 'pre-wrap' }}>
-            {reportQuery.isLoading ? 'กำลังโหลด...' : JSON.stringify(reportQuery.data?.reportData ?? {}, null, 2)}
-          </pre>
-        </Card>
+        <>
+          <Card className="p-3 mb-3">
+            <div className="row g-3">
+              <div className="col-md-4">
+                <div className="small text-muted">จำนวนรายการ</div>
+                <div className="h5 mb-0">
+                  {num((reportQuery.data as any)?.totals?.recordCount ?? (reportQuery.data as any)?.reportData?.totals?.recordCount ?? formatTaxRowsForExport(reportQuery.data, 'vat').length).toLocaleString('en-US')}
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="small text-muted">ฐานภาษีรวม</div>
+                <div className="h5 mb-0">
+                  {formatAmount((reportQuery.data as any)?.totals?.totalBase ?? (reportQuery.data as any)?.reportData?.totals?.totalBase)}
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="small text-muted">ภาษีรวม</div>
+                <div className="h5 mb-0">
+                  {formatAmount((reportQuery.data as any)?.totals?.totalTax ?? (reportQuery.data as any)?.reportData?.totals?.totalTax)}
+                </div>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-3">
+            <div className="fw-semibold mb-2">รายการ VAT</div>
+            <ReportRowsTable rows={formatTaxRowsForExport(reportQuery.data, 'vat')} />
+          </Card>
+        </>
       )}
     </div>
   )
@@ -388,7 +454,7 @@ export function WhtReportPage() {
     )
   }
 
-  const handleBackendWhtExport = async (format: 'pdf' | 'xlsx' | 'txt') => {
+  const handleBackendWhtExport = async (format: 'pdf' | 'xlsx' | 'text') => {
     await openWhtReportExport({
       whtType,
       dateFrom,
@@ -428,7 +494,7 @@ export function WhtReportPage() {
             <Button size="sm" variant="ghost" onClick={() => void handleBackendWhtExport('pdf')} disabled={reportQuery.isLoading || reportQuery.isError}>
               Export PDF (Backend)
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => void handleBackendWhtExport('txt')} disabled={reportQuery.isLoading || reportQuery.isError}>
+            <Button size="sm" variant="ghost" onClick={() => void handleBackendWhtExport('text')} disabled={reportQuery.isLoading || reportQuery.isError}>
               Export TXT (Backend)
             </Button>
           </div>
@@ -477,13 +543,37 @@ export function WhtReportPage() {
         <div className="alert alert-danger">
           โหลดรายงานไม่สำเร็จ: {reportQuery.error instanceof Error ? reportQuery.error.message : 'Unknown error'}
         </div>
+      ) : reportQuery.isLoading ? (
+        <Card className="p-3 text-muted">กำลังโหลดรายงาน...</Card>
       ) : (
-        <Card className="p-3">
-          <div className="fw-semibold mb-2">Raw reportData</div>
-          <pre className="small mb-0" style={{ whiteSpace: 'pre-wrap' }}>
-            {reportQuery.isLoading ? 'กำลังโหลด...' : JSON.stringify(reportQuery.data?.reportData ?? {}, null, 2)}
-          </pre>
-        </Card>
+        <>
+          <Card className="p-3 mb-3">
+            <div className="row g-3">
+              <div className="col-md-4">
+                <div className="small text-muted">จำนวนรายการ</div>
+                <div className="h5 mb-0">
+                  {num((reportQuery.data as any)?.totals?.recordCount ?? (reportQuery.data as any)?.reportData?.totals?.recordCount ?? formatTaxRowsForExport(reportQuery.data, 'wht').length).toLocaleString('en-US')}
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="small text-muted">ฐานภาษีรวม</div>
+                <div className="h5 mb-0">
+                  {formatAmount((reportQuery.data as any)?.totals?.totalBase ?? (reportQuery.data as any)?.reportData?.totals?.totalBase)}
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="small text-muted">ภาษีหักรวม</div>
+                <div className="h5 mb-0">
+                  {formatAmount((reportQuery.data as any)?.totals?.totalWht ?? (reportQuery.data as any)?.reportData?.totals?.totalWht)}
+                </div>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-3">
+            <div className="fw-semibold mb-2">รายการภาษีหัก ณ ที่จ่าย</div>
+            <ReportRowsTable rows={formatTaxRowsForExport(reportQuery.data, 'wht')} />
+          </Card>
+        </>
       )}
     </div>
   )
