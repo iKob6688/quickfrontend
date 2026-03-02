@@ -47,6 +47,8 @@ export interface PartnerDetail {
   street?: string
   street2?: string
   city?: string
+  district?: string
+  subDistrict?: string
   zip?: string
   countryId?: number | null
   countryName?: string | null
@@ -62,6 +64,8 @@ export interface PartnerUpsertPayload {
   street?: string
   street2?: string
   city?: string
+  district?: string
+  subDistrict?: string
   zip?: string
   countryId?: number | null
   tags?: string[]
@@ -111,6 +115,9 @@ interface BackendPartnerDetail {
   street?: string
   street2?: string
   city?: string
+  district?: string
+  sub_district?: string
+  subDistrict?: string
   zip?: string
   countryId?: number | null
   countryName?: string | null
@@ -163,6 +170,9 @@ function mapBackendPartnerDetailToFrontend(backend: BackendPartnerDetail): Partn
   const name = backend.name || backend.displayName || backend.display_name || ''
   const displayName = backend.displayName || backend.display_name || name
 
+  const district = (backend.district || backend.city || '') as string
+  const subDistrict = (backend.subDistrict || backend.sub_district || '') as string
+
   return {
     id: backend.id,
     name,
@@ -179,10 +189,22 @@ function mapBackendPartnerDetailToFrontend(backend: BackendPartnerDetail): Partn
     street: backend.street,
     street2: backend.street2,
     city: backend.city,
+    district: district || undefined,
+    subDistrict: subDistrict || undefined,
     zip: backend.zip,
     countryId: backend.countryId,
     countryName: backend.countryName,
   }
+}
+
+function composeStreet2(street2?: string, subDistrict?: string): string | undefined {
+  const base = (street2 || '').trim()
+  const sub = (subDistrict || '').trim()
+  if (!base && !sub) return undefined
+  if (!sub) return base || undefined
+  if (!base) return `แขวง/ตำบล ${sub}`
+  if (base.includes(sub)) return base
+  return `${base} | แขวง/ตำบล ${sub}`
 }
 
 export async function listPartners(params: PartnerListParams) {
@@ -391,8 +413,10 @@ export async function createPartner(payload: PartnerUpsertPayload) {
       mobile: payload.mobile,
       email: payload.email,
       street: payload.street,
-      street2: payload.street2,
-      city: payload.city,
+      street2: composeStreet2(payload.street2, payload.subDistrict),
+      city: payload.district || payload.city,
+      district: payload.district,
+      subDistrict: payload.subDistrict,
       zip: payload.zip,
       countryId: payload.countryId,
       tags: payload.tags,
@@ -414,8 +438,10 @@ export async function updatePartner(id: number, payload: PartnerUpsertPayload) {
       mobile: payload.mobile,
       email: payload.email,
       street: payload.street,
-      street2: payload.street2,
-      city: payload.city,
+      street2: composeStreet2(payload.street2, payload.subDistrict),
+      city: payload.district || payload.city,
+      district: payload.district,
+      subDistrict: payload.subDistrict,
       zip: payload.zip,
       countryId: payload.countryId,
       tags: payload.tags,
@@ -518,4 +544,3 @@ export async function setPartnersActiveByQuery(
     truncated: total > maxItems,
   }
 }
-

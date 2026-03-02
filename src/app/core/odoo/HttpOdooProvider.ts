@@ -73,7 +73,24 @@ function n(v: unknown): number {
 }
 
 function s(v: unknown): string {
-  return typeof v === 'string' ? v : v == null ? '' : String(v)
+  if (typeof v === 'string') {
+    const cleaned = v
+      .replace(/\b(false|none|null|undefined)\b/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    if (!cleaned) return ''
+    if (/^[-–—]+$/.test(cleaned)) return ''
+    return cleaned
+  }
+  if (typeof v === 'boolean') return ''
+  return v == null ? '' : String(v)
+}
+
+function normalizeAddressLines(value: unknown): string[] {
+  const rows = Array.isArray(value) ? value : []
+  return rows
+    .map((x) => s(x).trim())
+    .filter((x) => x.length > 0)
 }
 
 function normalizeErpthDto(raw: any): AnyDocumentDTO {
@@ -88,7 +105,9 @@ function normalizeErpthDto(raw: any): AnyDocumentDTO {
     docType,
     company: {
       name: s(companyRaw.name),
-      addressLines: Array.isArray(companyRaw.addressLines) ? companyRaw.addressLines : Array.isArray(companyRaw.address_lines) ? companyRaw.address_lines.map(s) : [],
+      addressLines: normalizeAddressLines(
+        Array.isArray(companyRaw.addressLines) ? companyRaw.addressLines : companyRaw.address_lines,
+      ),
       taxId: s(companyRaw.taxId ?? companyRaw.tax_id) || undefined,
       tel: s(companyRaw.tel) || undefined,
       fax: s(companyRaw.fax) || undefined,
@@ -99,7 +118,9 @@ function normalizeErpthDto(raw: any): AnyDocumentDTO {
     },
     partner: {
       name: s(partnerRaw.name),
-      addressLines: Array.isArray(partnerRaw.addressLines) ? partnerRaw.addressLines : Array.isArray(partnerRaw.address_lines) ? partnerRaw.address_lines.map(s) : undefined,
+      addressLines: normalizeAddressLines(
+        Array.isArray(partnerRaw.addressLines) ? partnerRaw.addressLines : partnerRaw.address_lines,
+      ),
       taxId: s(partnerRaw.taxId ?? partnerRaw.tax_id) || undefined,
       branch: s(partnerRaw.branch) || undefined,
       tel: s(partnerRaw.tel ?? partnerRaw.phone) || undefined,

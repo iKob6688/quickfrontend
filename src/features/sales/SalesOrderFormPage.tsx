@@ -343,7 +343,7 @@ export function SalesOrderFormPage() {
               </div>
             </Alert>
           ) : null}
-          <Card>
+          <Card className="overflow-visible">
             <h5 className="h6 fw-semibold mb-3">ข้อมูลหลัก</h5>
             <div className="row g-3">
               <div className="col-md-6">
@@ -384,6 +384,7 @@ export function SalesOrderFormPage() {
                   onChange={setPartnerSearch}
                   placeholder="พิมพ์เพื่อค้นหาลูกค้า (ชื่อ / VAT / อีเมล)"
                   minChars={1}
+                  menuZIndex={5000}
                   isLoading={partnerOptionsQuery.isFetching || selectedPartnerQuery.isFetching}
                   isLoadingMore={partnerOptionsQuery.isFetchingNextPage}
                   onLoadMore={() => {

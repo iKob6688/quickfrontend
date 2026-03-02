@@ -30,8 +30,17 @@ const DEFAULT_FORM_DATA: PartnerUpsertPayload = {
   street: '',
   street2: '',
   city: '',
+  district: '',
+  subDistrict: '',
   zip: '',
   countryId: null,
+}
+
+function extractSubDistrict(street2?: string): string {
+  const raw = String(street2 || '').trim()
+  if (!raw) return ''
+  const m = raw.match(/(?:แขวง\/ตำบล)\s*([^\|,]+)/i)
+  return m?.[1]?.trim() || ''
 }
 
 export function CustomerFormPage() {
@@ -68,6 +77,8 @@ export function CustomerFormPage() {
       street: data.street || '',
       street2: data.street2 || '',
       city: data.city || '',
+      district: data.district || data.city || '',
+      subDistrict: data.subDistrict || extractSubDistrict(data.street2),
       zip: data.zip || '',
       countryId: data.countryId ?? null,
     }
@@ -126,6 +137,8 @@ export function CustomerFormPage() {
       street: formData.street?.trim() || undefined,
       street2: formData.street2?.trim() || undefined,
       city: formData.city?.trim() || undefined,
+      district: formData.district?.trim() || undefined,
+      subDistrict: formData.subDistrict?.trim() || undefined,
       zip: formData.zip?.trim() || undefined,
     })
   }
@@ -243,11 +256,19 @@ export function CustomerFormPage() {
                   />
                 </div>
                 <div className="col-md-4">
-                  <Label htmlFor="city">เขต/อำเภอ</Label>
+                  <Label htmlFor="subDistrict">แขวง/ตำบล</Label>
                   <Input
-                    id="city"
-                    value={formData.city ?? ''}
-                    onChange={(e) => updateFormData({ city: e.target.value })}
+                    id="subDistrict"
+                    value={formData.subDistrict ?? ''}
+                    onChange={(e) => updateFormData({ subDistrict: e.target.value })}
+                  />
+                </div>
+                <div className="col-md-4">
+                  <Label htmlFor="district">เขต/อำเภอ</Label>
+                  <Input
+                    id="district"
+                    value={formData.district ?? ''}
+                    onChange={(e) => updateFormData({ district: e.target.value, city: e.target.value })}
                   />
                 </div>
                 <div className="col-md-4">
@@ -320,4 +341,3 @@ export function CustomerFormPage() {
     </div>
   )
 }
-

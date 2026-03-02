@@ -232,7 +232,7 @@ export function CustomerDetailPage() {
                 <div>{query.data.street || '—'}</div>
                 {query.data.street2 ? <div>{query.data.street2}</div> : null}
                 <div>
-                  {[query.data.city, query.data.zip].filter(Boolean).join(' ') || ''}
+                  {[query.data.subDistrict, query.data.district || query.data.city, query.data.zip].filter(Boolean).join(' ') || ''}
                 </div>
                 <div className="text-muted">
                   {query.data.countryName || ''}
@@ -245,4 +245,3 @@ export function CustomerDetailPage() {
     </div>
   )
 }
-
