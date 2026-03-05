@@ -15,6 +15,10 @@ import {
   getAssistantLanguageEventName,
   type AssistantLanguage,
 } from '@/lib/assistantLanguage'
+import { buildAssistantInsight, isAssistantDataQuery } from '@/features/assistant/assistantInsights'
+import { listPartners } from '@/api/services/partners.service'
+import { listProducts } from '@/api/services/products.service'
+import { createSalesOrder } from '@/api/services/sales-orders.service'
 import { getInstanceId } from '@/lib/instanceId'
 import { toast } from '@/lib/toastStore'
 import { toApiError } from '@/api/response'
@@ -41,6 +45,8 @@ type AssistantResultCard = {
   sources: AssistantSourceLink[]
 }
 
+type CandidateRow = { id: number; name: string; vat?: string; code?: string; barcode?: string }
+
 type UsageSummary = {
   prompt: number
   completion: number
@@ -55,6 +61,7 @@ type AssistantTraceMeta = {
   warnings: string[]
   sources: Array<{ label: string; route?: string }>
   safety?: { db_only_enforced?: boolean; company_id?: number; approval_required_count?: number }
+  scopeContext?: { db?: string; company_id?: number }
   toolProposals?: Array<{
     id?: string
     tool?: string
@@ -141,6 +148,8 @@ export function AvatarAssistant() {
     qty: number
     summary: string
   } | null>(null)
+  const [contactPickerFilter, setContactPickerFilter] = useState('')
+  const [productPickerFilter, setProductPickerFilter] = useState('')
 
   useEffect(() => {
     let mounted = true
@@ -365,6 +374,148 @@ export function AvatarAssistant() {
     })
   }
 
+  const todayIso = () => {
+    const d = new Date()
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+
+  const plusDaysIso = (days: number) => {
+    const d = new Date()
+    d.setDate(d.getDate() + days)
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+
+  const parseQty = (text: string): number => {
+    const m = text.match(/(?:จำนวน|qty|qty\.?)\s*([0-9]+(?:\.[0-9]+)?)/i) || text.match(/([0-9]+(?:\.[0-9]+)?)\s*(?:ชิ้น|หน่วย|pcs?)/i)
+    const qty = Number(m?.[1] || 1)
+    return Number.isFinite(qty) && qty > 0 ? qty : 1
+  }
+
+  const extractTerm = (text: string, key: string, stops: string[]): string => {
+    const idx = text.indexOf(key)
+    if (idx < 0) return ''
+    let s = text.slice(idx + key.length).trim()
+    const stopIdx = stops
+      .map((w) => s.indexOf(w))
+      .filter((n) => n >= 0)
+      .sort((a, b) => a - b)[0]
+    if (typeof stopIdx === 'number') s = s.slice(0, stopIdx)
+    return s.replace(/^[:=\-]\s*/, '').trim()
+  }
+
+  const isHelpOnlyPlan = (res: AssistantChatResponse): boolean => {
+    const plan = Array.isArray(res.plan) ? res.plan : []
+    if (!plan.length) return false
+    const allHelp = plan.every((p) => String(p.tool || '').toLowerCase() === 'get_help')
+    if (!allHelp) return false
+    const hasWorkSignals =
+      Boolean(res.confirmation_request) ||
+      (Array.isArray(res.records) && res.records.length > 0) ||
+      (Array.isArray(res.ui_actions) && res.ui_actions.length > 0)
+    return !hasWorkSignals
+  }
+
+  const isNoopExecution = (res: AssistantExecuteResponse): boolean => {
+    const rows = Array.isArray(res.results) ? res.results : []
+    if (!rows.length) return false
+    const allHelp = rows.every((r) => String(r.tool || '').toLowerCase() === 'get_help')
+    const hasArtifacts =
+      (Array.isArray(res.records) && res.records.length > 0) ||
+      (Array.isArray(res.ui_actions) && res.ui_actions.length > 0)
+    return allHelp && !hasArtifacts
+  }
+
+  const toCustomerCandidate = (r: any): CandidateRow => ({
+    id: Number(r.id),
+    name: String(r.name || '').trim(),
+    vat: r.vat ? String(r.vat) : undefined,
+  })
+
+  const toProductCandidate = (r: any): CandidateRow => ({
+    id: Number(r.id),
+    name: String(r.name || '').trim(),
+    code: r.defaultCode ? String(r.defaultCode) : undefined,
+    barcode: r.barcode ? String(r.barcode) : undefined,
+  })
+
+  const prepareLocalQuotationIntent = async (text: string): Promise<boolean> => {
+    const low = text.toLowerCase()
+    const isQuote = low.includes('ใบเสนอราคา') || low.includes('เสนอราคา') || low.includes('quotation') || low.includes('quote')
+    if (!isQuote) return false
+
+    const customerTerm = extractTerm(text, 'ลูกค้า', ['สินค้า', 'จำนวน', 'qty'])
+    const productTerm = extractTerm(text, 'สินค้า', ['จำนวน', 'qty', 'ลูกค้า'])
+    const qty = parseQty(text)
+
+    const contacts = await listPartners({ q: customerTerm || undefined, active: true, limit: 20, offset: 0 })
+    const products = await listProducts({ q: productTerm || undefined, active: true, limit: 20, offset: 0 })
+    const contactCandidates = (contacts.items || []).map(toCustomerCandidate).filter((x) => x.id && x.name)
+    const productCandidates = (products.items || []).map(toProductCandidate).filter((x) => x.id && x.name)
+    if (!contactCandidates.length || !productCandidates.length) {
+      setHistory((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          text: !contactCandidates.length && !productCandidates.length
+            ? 'ไม่พบทั้งลูกค้าและสินค้าในระบบจากคำสั่งนี้'
+            : !contactCandidates.length
+              ? 'ไม่พบลูกค้าในระบบจากคำสั่งนี้'
+              : 'ไม่พบสินค้าในระบบจากคำสั่งนี้',
+        },
+      ])
+      return true
+    }
+
+    const firstContact = contactCandidates[0]
+    const firstProduct = productCandidates[0]
+    setPendingConfirm({
+      session_id: 'local_quote',
+      nonce: 'local',
+      doc_type: 'quotation',
+      contact_name: firstContact.name,
+      product_name: firstProduct.name,
+      contact_id: firstContact.id,
+      product_id: firstProduct.id,
+      contact_candidates: contactCandidates.map((c) => ({ id: c.id, name: c.name, vat: c.vat })),
+      product_candidates: productCandidates.map((p) => ({ id: p.id, name: p.name, code: p.code, barcode: p.barcode })),
+      qty,
+      summary: `เตรียมสร้างใบเสนอราคา ลูกค้า ${firstContact.name} สินค้า ${firstProduct.name} จำนวน ${qty}`,
+    })
+    setContactPickerFilter('')
+    setProductPickerFilter('')
+    setHistory((prev) => [
+      ...prev,
+      { role: 'assistant', text: 'เตรียมข้อมูลสำหรับสร้างใบเสนอราคาแล้ว ตรวจสอบแล้วกด Confirm ได้เลย' },
+    ])
+    return true
+  }
+
+  const appendInsightCard = async (text: string) => {
+    if (!isAssistantDataQuery(text)) return false
+    const insight = await buildAssistantInsight(text)
+    if (!insight) return false
+    appendResultCards([
+      {
+        id: `insight-${Date.now()}`,
+        title: insight.title,
+        summary: insight.summary,
+        confidence: insight.confidence,
+        generatedAt: insight.generatedAt,
+        explain: insight.explain,
+        rows: insight.rows,
+        sources: insight.sources,
+      },
+    ])
+    setHistory((prev) => [...prev, { role: 'assistant', text: insight.summary }])
+    return true
+  }
+
   const appendResultCards = (nextCards: AssistantResultCard[]) => {
     if (!nextCards.length) return
     setResultCards((prev) => [...nextCards, ...prev].slice(0, 5))
@@ -387,6 +538,10 @@ export function AvatarAssistant() {
       safety:
         (res as any)?.safety && typeof (res as any).safety === 'object'
           ? ((res as any).safety as any)
+          : undefined,
+      scopeContext:
+        (res as any)?.scope_context && typeof (res as any).scope_context === 'object'
+          ? ((res as any).scope_context as any)
           : undefined,
       toolProposals: Array.isArray((res as any)?.tool_proposals)
         ? ((res as any).tool_proposals as any[]).map((p) => ({
@@ -477,7 +632,10 @@ export function AvatarAssistant() {
       recordUsage('chat', res.usage)
       updateTraceMeta(res)
       setLastChat(res)
-      setHistory((prev) => [...prev, { role: 'assistant', text: res.reply || 'รับทราบ กำลังเตรียมขั้นตอนให้' }])
+      setHistory((prev) => [
+        ...prev,
+        { role: 'assistant', text: res.business_reply || res.reply || 'รับทราบ กำลังเตรียมขั้นตอนให้' },
+      ])
       if ((res.plan || []).length > 0) {
         const planCount = (res.plan || []).length
         const restricted = (res.plan || []).filter((p) => p.requires_approval).length
@@ -522,8 +680,9 @@ export function AvatarAssistant() {
       const runnableSteps = (res.plan || [])
         .map((p) => p.id)
         .filter((id) => !needApproveSet.has(id))
-      setPendingApprovalIds(needApprove)
-      setPendingRunIds(runnableSteps)
+      const helpOnly = isHelpOnlyPlan(res)
+      setPendingApprovalIds(helpOnly ? [] : needApprove)
+      setPendingRunIds(helpOnly ? [] : runnableSteps)
       if (promotedByFrontend > 0) {
         setHistory((prev) => [
           ...prev,
@@ -593,7 +752,15 @@ export function AvatarAssistant() {
         })
         return
       }
-      setHistory((prev) => [...prev, { role: 'assistant', text: 'พร้อมทำงานแล้ว กด "เริ่มทำงาน" ได้เลย' }])
+      if (!helpOnly) {
+        setHistory((prev) => [...prev, { role: 'assistant', text: 'พร้อมทำงานแล้ว กด "เริ่มทำงาน" ได้เลย' }])
+      }
+      if (helpOnly) {
+        const quoteHandled = await prepareLocalQuotationIntent(text)
+        if (!quoteHandled) {
+          await appendInsightCard(text)
+        }
+      }
     } catch (err) {
       const apiErr = toApiError(err)
       toast.error('Assistant error', apiErr.message)
@@ -635,8 +802,14 @@ export function AvatarAssistant() {
       recordUsage('execute', res.usage)
       updateTraceMeta(res)
       setPendingApprovalIds([])
+      if (res.business_reply) {
+        setHistory((prev) => [...prev, { role: 'assistant', text: res.business_reply as string }])
+      }
       const denied = (res.results || []).filter((r) => r.status === 'denied')
       const errors = (res.results || []).filter((r) => r.status === 'error')
+      const failReasons = (res.results || [])
+        .filter((r) => r.status === 'denied' || r.status === 'error')
+        .map((r) => `${r.tool}: ${r.error || r.status}`)
       if (denied.length > 0 || errors.length > 0) {
         setHistory((prev) => [
           ...prev,
@@ -645,6 +818,9 @@ export function AvatarAssistant() {
             text: 'บางขั้นตอนถูกจำกัดสิทธิ์หรือผิดพลาด กรุณาตรวจสอบสิทธิ์ก่อนดำเนินการต่อ',
           },
         ])
+        if (failReasons.length > 0) {
+          setHistory((prev) => [...prev, { role: 'assistant', text: `สาเหตุ: ${failReasons.join(' | ')}` }])
+        }
       } else {
         setHistory((prev) => [...prev, { role: 'assistant', text: 'ยืนยันและดำเนินการเรียบร้อยแล้ว' }])
       }
@@ -658,19 +834,23 @@ export function AvatarAssistant() {
       const mergedSources = dedupeSources([...(actionSources || []), ...recordSources])
       const traceSources = dedupeSources([...(res.sources || []).map((s: any) => ({ label: String(s?.label || 'Source'), route: s?.route ? String(s.route) : '' })).filter((s) => !!s.route)])
       const cardSources = dedupeSources([...mergedSources, ...traceSources])
-      if (cardSources.length > 0 || (res.records || []).length > 0) {
-        appendResultCards([
-          {
-            id: `approve-${Date.now()}`,
-            title: 'ผลการอนุมัติและดำเนินการ',
-            summary: `ดำเนินการแล้ว ${(res.results || []).length} ขั้นตอน`,
-            rows: (res.results || []).map((r) => ({
-              label: r.tool,
-              value: r.status,
-            })),
-            sources: cardSources,
-          },
-        ])
+      appendResultCards([
+        {
+          id: `approve-${Date.now()}`,
+          title: 'ผลการอนุมัติและดำเนินการ',
+          summary: `ดำเนินการแล้ว ${(res.results || []).length} ขั้นตอน`,
+          rows: (res.results || []).map((r) => ({
+            label: r.tool,
+            value:
+              r.status === 'success'
+                ? 'สำเร็จ'
+                : `${r.status}${r.error ? `: ${r.error}` : ''}`,
+          })),
+          sources: cardSources,
+        },
+      ])
+      if (isNoopExecution(res)) {
+        await appendInsightCard(lastUserPrompt || '')
       }
     } catch (err) {
       const apiErr = toApiError(err)
@@ -713,9 +893,15 @@ export function AvatarAssistant() {
       recordUsage('execute', res.usage)
       updateTraceMeta(res)
       setPendingRunIds([])
+      if (res.business_reply) {
+        setHistory((prev) => [...prev, { role: 'assistant', text: res.business_reply as string }])
+      }
       const actionSources = applyUiActions(res.ui_actions || [])
       const denied = (res.results || []).filter((r) => r.status === 'denied')
       const errors = (res.results || []).filter((r) => r.status === 'error')
+      const failReasons = (res.results || [])
+        .filter((r) => r.status === 'denied' || r.status === 'error')
+        .map((r) => `${r.tool}: ${r.error || r.status}`)
       const created = (res.records || []).map((r) => `${r.model}#${r.id}${r.name ? ` (${r.name})` : ''}`)
       const recordSources = (res.records || [])
         .map((r) => ({
@@ -728,6 +914,9 @@ export function AvatarAssistant() {
       const cardSources = dedupeSources([...mergedSources, ...traceSources])
       if (denied.length > 0 || errors.length > 0) {
         setHistory((prev) => [...prev, { role: 'assistant', text: 'ทำงานบางส่วนสำเร็จ แต่มีบางขั้นตอนติดข้อจำกัด' }])
+        if (failReasons.length > 0) {
+          setHistory((prev) => [...prev, { role: 'assistant', text: `สาเหตุ: ${failReasons.join(' | ')}` }])
+        }
       } else {
         setHistory((prev) => [
           ...prev,
@@ -737,19 +926,23 @@ export function AvatarAssistant() {
           },
         ])
       }
-      if (cardSources.length > 0 || created.length > 0) {
-        appendResultCards([
-          {
-            id: `run-${Date.now()}`,
-            title: 'ผลการทำงาน Workflow',
-            summary: created.length > 0 ? `สร้าง/อัปเดต ${created.length} รายการ` : 'ดำเนินการสำเร็จ',
-            rows: (res.results || []).map((r) => ({
-              label: r.tool,
-              value: r.status,
-            })),
-            sources: cardSources,
-          },
-        ])
+      appendResultCards([
+        {
+          id: `run-${Date.now()}`,
+          title: 'ผลการทำงาน Workflow',
+          summary: created.length > 0 ? `สร้าง/อัปเดต ${created.length} รายการ` : 'ดำเนินการเสร็จแล้ว',
+          rows: (res.results || []).map((r) => ({
+            label: r.tool,
+            value:
+              r.status === 'success'
+                ? 'สำเร็จ'
+                : `${r.status}${r.error ? `: ${r.error}` : ''}`,
+          })),
+          sources: cardSources,
+        },
+      ])
+      if (isNoopExecution(res)) {
+        await appendInsightCard(lastUserPrompt || '')
       }
     } catch (err) {
       const apiErr = toApiError(err)
@@ -767,6 +960,61 @@ export function AvatarAssistant() {
     if (!pendingConfirm || loading) return
     setLoading(true)
     try {
+      if (pendingConfirm.session_id === 'local_quote') {
+        if (!confirmed) {
+          setPendingConfirm(null)
+          setHistory((prev) => [...prev, { role: 'assistant', text: 'ยกเลิกการสร้างใบเสนอราคาแล้ว' }])
+          return
+        }
+        const partnerId = Number(pendingConfirm.contact_id || 0)
+        const productId = Number(pendingConfirm.product_id || 0)
+        if (!partnerId || !productId) {
+          setHistory((prev) => [...prev, { role: 'assistant', text: 'กรุณาเลือกลูกค้าและสินค้าให้ครบก่อน Confirm' }])
+          return
+        }
+        const pList = await listProducts({ q: pendingConfirm.product_name || undefined, active: true, limit: 30, offset: 0 })
+        const pPicked = (pList.items || []).find((x) => x.id === productId) || (pList.items || [])[0]
+        const unitPrice = Number(pPicked?.listPrice || pPicked?.price || 0)
+        const qty = Math.max(Number(pendingConfirm.qty || 1), 1)
+        const created = await createSalesOrder({
+          partnerId,
+          orderDate: todayIso(),
+          validityDate: plusDaysIso(15),
+          currency: 'THB',
+          orderType: 'quotation',
+          lines: [
+            {
+              productId,
+              description: pendingConfirm.product_name || pPicked?.name || 'Product',
+              quantity: qty,
+              unitPrice,
+              subtotal: unitPrice * qty,
+              totalTax: 0,
+              total: unitPrice * qty,
+            },
+          ],
+          notes: 'Created by iMeaw assistant local fallback',
+        })
+        setPendingConfirm(null)
+        setHistory((prev) => [
+          ...prev,
+          { role: 'assistant', text: `สร้างใบเสนอราคาเรียบร้อย: ${created.number || `#${created.id}`}` },
+        ])
+        appendResultCards([
+          {
+            id: `local-quote-${Date.now()}`,
+            title: 'สร้างใบเสนอราคา',
+            summary: `สร้างสำเร็จ ${created.number || `#${created.id}`} ยอดรวม ${Number(created.total || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} THB`,
+            rows: [
+              { label: 'ลูกค้า', value: created.partnerName || String(created.partnerId || partnerId) },
+              { label: 'สินค้า', value: pendingConfirm.product_name },
+              { label: 'จำนวน', value: String(qty) },
+            ],
+            sources: [{ label: 'เปิดใบเสนอราคา', route: `/sales/orders/${created.id}` }],
+          },
+        ])
+        return
+      }
       const res = await confirmAssistantDocument({
         session_id: pendingConfirm.session_id,
         nonce: pendingConfirm.nonce,
@@ -780,8 +1028,8 @@ export function AvatarAssistant() {
       recordUsage('confirm', res.usage)
       updateTraceMeta(res)
       setPendingConfirm(null)
-      if (res.reply) {
-        setHistory((prev) => [...prev, { role: 'assistant', text: res.reply as string }])
+      if (res.business_reply || res.reply) {
+        setHistory((prev) => [...prev, { role: 'assistant', text: String(res.business_reply || res.reply) }])
       }
       const actionSources = applyUiActions(res.ui_actions || [])
       const traceSources = dedupeSources([...(res.sources || []).map((s: any) => ({ label: String(s?.label || 'Source'), route: s?.route ? String(s.route) : '' })).filter((s) => !!s.route)])
@@ -822,6 +1070,10 @@ export function AvatarAssistant() {
             </button>
           </div>
           <div className="card-body">
+            <div className="small text-muted mb-2">
+              Context: company {traceMeta.scopeContext?.company_id || caps?.session?.company_id || '-'} · db{' '}
+              {traceMeta.scopeContext?.db || '-'}
+            </div>
             <div className="avatar-assistant-quick mb-2">
               <button className="btn btn-sm btn-light" disabled={loading} onClick={() => setInput('ค้นลูกค้า')}>
                 ค้นลูกค้า
@@ -1066,17 +1318,27 @@ export function AvatarAssistant() {
                     disabled={loading}
                   />
                   {(pendingConfirm.contact_candidates || []).length > 0 && (
+                    <>
+                    {(pendingConfirm.contact_candidates || []).length > 8 && (
+                      <input
+                        className="form-control form-control-sm"
+                        value={contactPickerFilter}
+                        onChange={(e) => setContactPickerFilter(e.target.value)}
+                        placeholder="ค้นหาในรายชื่อลูกค้า"
+                        disabled={loading}
+                      />
+                    )}
                     <select
                       className="form-select form-select-sm"
                       value={pendingConfirm.contact_id || ''}
                       onChange={(e) => {
-                        const id = Number(e.target.value || 0)
-                        const row = (pendingConfirm.contact_candidates || []).find((c) => c.id === id)
+                        const selected = e.target.value || ''
+                        const row = (pendingConfirm.contact_candidates || []).find((c) => String(c.id) === selected)
                         setPendingConfirm((prev) =>
                           prev
                             ? {
                                 ...prev,
-                                contact_id: id || undefined,
+                                contact_id: row?.id || undefined,
                                 contact_name: row?.name || prev.contact_name,
                               }
                             : prev,
@@ -1084,13 +1346,21 @@ export function AvatarAssistant() {
                       }}
                       disabled={loading}
                     >
-                      <option value="">เลือก contact ที่จะใช้</option>
-                      {(pendingConfirm.contact_candidates || []).map((c) => (
+                      <option value="">เลือกลูกค้าที่จะใช้</option>
+                      {(pendingConfirm.contact_candidates || [])
+                        .filter((c) => {
+                          const q = contactPickerFilter.trim().toLowerCase()
+                          if (!q) return true
+                          return `${c.name || ''} ${c.vat || ''}`.toLowerCase().includes(q)
+                        })
+                        .slice(0, 25)
+                        .map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name} {c.vat ? `(VAT: ${c.vat})` : ''}
                         </option>
                       ))}
                     </select>
+                    </>
                   )}
                   <input
                     className="form-control form-control-sm"
@@ -1102,17 +1372,27 @@ export function AvatarAssistant() {
                     disabled={loading}
                   />
                   {(pendingConfirm.product_candidates || []).length > 0 && (
+                    <>
+                    {(pendingConfirm.product_candidates || []).length > 8 && (
+                      <input
+                        className="form-control form-control-sm"
+                        value={productPickerFilter}
+                        onChange={(e) => setProductPickerFilter(e.target.value)}
+                        placeholder="ค้นหาในรายการสินค้า"
+                        disabled={loading}
+                      />
+                    )}
                     <select
                       className="form-select form-select-sm"
                       value={pendingConfirm.product_id || ''}
                       onChange={(e) => {
-                        const id = Number(e.target.value || 0)
-                        const row = (pendingConfirm.product_candidates || []).find((c) => c.id === id)
+                        const selected = e.target.value || ''
+                        const row = (pendingConfirm.product_candidates || []).find((c) => String(c.id) === selected)
                         setPendingConfirm((prev) =>
                           prev
                             ? {
                                 ...prev,
-                                product_id: id || undefined,
+                                product_id: row?.id || undefined,
                                 product_name: row?.name || prev.product_name,
                               }
                             : prev,
@@ -1121,12 +1401,20 @@ export function AvatarAssistant() {
                       disabled={loading}
                     >
                       <option value="">เลือกสินค้า/บริการที่จะใช้</option>
-                      {(pendingConfirm.product_candidates || []).map((p) => (
+                      {(pendingConfirm.product_candidates || [])
+                        .filter((p) => {
+                          const q = productPickerFilter.trim().toLowerCase()
+                          if (!q) return true
+                          return `${p.name || ''} ${p.code || ''} ${p.barcode || ''}`.toLowerCase().includes(q)
+                        })
+                        .slice(0, 25)
+                        .map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.name} {p.code ? `[${p.code}]` : ''} {p.barcode ? `(BC: ${p.barcode})` : ''}
                         </option>
                       ))}
                     </select>
+                    </>
                   )}
                   <input
                     className="form-control form-control-sm"
@@ -1175,7 +1463,7 @@ export function AvatarAssistant() {
                 ส่ง
               </button>
             </div>
-            {pendingApprovalIds.length > 0 && (
+            {!pendingConfirm && pendingApprovalIds.length > 0 && (
               <div className="mt-2">
                 {approvalGroups.length > 0 && (
                   <div className="small text-muted mb-1 d-flex flex-wrap gap-1">
@@ -1192,7 +1480,7 @@ export function AvatarAssistant() {
                 </button>
               </div>
             )}
-            {pendingRunIds.length > 0 && (
+            {!pendingConfirm && pendingRunIds.length > 0 && (
               <div className="mt-2">
                 <button className="btn btn-success btn-sm" onClick={() => void onRunWorkflow()} disabled={loading}>
                   เริ่มทำงาน ({pendingRunIds.length})

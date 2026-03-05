@@ -100,11 +100,18 @@ export interface AssistantChatResponse {
   session_id: string
   nonce?: string
   reply: string
+  business_reply?: string
   mode?: 'llm' | 'deterministic_fallback' | string
   trace_id?: string
   warnings?: string[]
   sources?: AssistantSourceDescriptor[]
   safety?: AssistantSafetyInfo
+  scope_context?: {
+    db?: string
+    company_id?: number
+  }
+  needs_clarification?: boolean
+  clarification_fields?: string[]
   tool_proposals?: AssistantToolProposal[]
   usage?: AssistantTokenUsage | Record<string, unknown>
   permission_explanations?: string[]
@@ -127,12 +134,18 @@ export interface AssistantChatResponse {
 export interface AssistantExecuteResponse {
   session_id: string
   reply?: string
+  business_reply?: string
   confirmed?: boolean
   mode?: 'llm' | 'deterministic_fallback' | string
   trace_id?: string
   warnings?: string[]
   sources?: AssistantSourceDescriptor[]
   safety?: AssistantSafetyInfo
+  scope_context?: {
+    db?: string
+    company_id?: number
+  }
+  action_summary?: string[]
   usage?: AssistantTokenUsage | Record<string, unknown>
   permission_explanations?: string[]
   results: Array<{

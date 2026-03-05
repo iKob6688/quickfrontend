@@ -219,6 +219,35 @@ curl -i http://127.0.0.1:18069/web/login | head
 - **401 Unauthorized** with JSON `Missing X-ADT-API-Key header`:
   - **Meaning**: you didn’t send `X-ADT-API-Key` (curl) or frontend env `VITE_API_KEY` is empty/wrong.
 
+## AI Assistant (OpenClaw provider) — Production
+
+This frontend must call AI through `adt_th_api` only:
+
+- Frontend: `POST /api/th/v1/ai/*`
+- Odoo (`adt_th_api`): policy gate + ACL/record-rule + company/db scope
+- LLM provider: `openclaw` via internal URL (no direct frontend access)
+
+### Required Odoo config (`ir.config_parameter`)
+
+```text
+adt_th_api.ai_llm_enabled=1
+adt_th_api.ai_provider=openclaw
+adt_th_api.ai_openclaw_base_url=http://127.0.0.1:11434/v1
+adt_th_api.ai_openclaw_model=<model>
+adt_th_api.ai_timeout_sec=30
+adt_th_api.ai_mode=auto_safe
+adt_th_api.ai_feature_sales=1
+adt_th_api.ai_feature_purchase=1
+adt_th_api.ai_feature_reports=1
+```
+
+### Security requirements
+
+- Do not expose OpenClaw to public internet.
+- Keep OpenClaw bound to localhost/private network.
+- Do not call OpenClaw from frontend; use `/api/th/v1/ai/*` only.
+- DB/company scope is enforced in backend session execution; cross-db execution is denied.
+
 ## AI Assistant (Safe LLM / DB-only)
 
 The React assistant UI integrates with `adt_th_api` AI endpoints and now supports a **backend-only LLM adapter** with deterministic fallback.
