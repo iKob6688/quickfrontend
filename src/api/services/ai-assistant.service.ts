@@ -173,18 +173,21 @@ export interface AssistantTaskItem {
   }
 }
 
+const ENABLE_AI_LEGACY_WEB_FALLBACK = import.meta.env.VITE_AI_LEGACY_WEB_FALLBACK === '1'
+
 async function postWithFallback<T>(apiPath: string, webPath: string, payload: Record<string, unknown>) {
   const rpcPayload = makeRpc(payload)
-  const candidates: Array<{ url: string; baseURL?: string }> = [
-    // Contract route via /api proxy.
-    { url: apiPath },
-    // Internal route via /api proxy (some deployments).
-    { url: webPath },
-    // Direct same-origin route (avoid being prefixed by apiClient baseURL=/api)
-    { url: webPath, baseURL: window.location.origin },
-  ]
+  // Production-grade default: use canonical /api/th/v1/ai/* contract only.
+  // Legacy /web/adt fallback is opt-in by env flag for old deployments.
+  const candidates: Array<{ url: string; baseURL?: string }> = [{ url: apiPath }]
+  if (ENABLE_AI_LEGACY_WEB_FALLBACK) {
+    candidates.push({ url: webPath })
+  }
   let lastError: unknown = null
+  const attempted: string[] = []
   for (const candidate of candidates) {
+    const attemptedUrl = `${candidate.baseURL || '(apiClient.baseURL)'}${candidate.url}`
+    attempted.push(attemptedUrl)
     try {
       const response = await apiClient.post(
         candidate.url,
@@ -207,9 +210,12 @@ async function postWithFallback<T>(apiPath: string, webPath: string, payload: Re
       lastError = err
     }
   }
-  throw lastError instanceof Error
-    ? lastError
-    : new ApiError(`Assistant internal route failed: ${webPath}`)
+  if (lastError instanceof Error) {
+    const err = new ApiError(`${lastError.message}\nAssistant routes tried: ${attempted.join(' , ')}`)
+    ;(err as any).cause = lastError
+    throw err
+  }
+  throw new ApiError(`Assistant route failed. Tried: ${attempted.join(' , ')}`)
 }
 
 export async function getAssistantCapabilities(lang?: string) {

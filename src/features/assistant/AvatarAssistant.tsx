@@ -516,6 +516,13 @@ export function AvatarAssistant() {
     return true
   }
 
+  const runLocalFallbackFromPrompt = async (text: string): Promise<boolean> => {
+    const quoteHandled = await prepareLocalQuotationIntent(text)
+    if (quoteHandled) return true
+    const insightHandled = await appendInsightCard(text)
+    return insightHandled
+  }
+
   const appendResultCards = (nextCards: AssistantResultCard[]) => {
     if (!nextCards.length) return
     setResultCards((prev) => [...nextCards, ...prev].slice(0, 5))
@@ -755,19 +762,26 @@ export function AvatarAssistant() {
       if (!helpOnly) {
         setHistory((prev) => [...prev, { role: 'assistant', text: 'พร้อมทำงานแล้ว กด "เริ่มทำงาน" ได้เลย' }])
       }
-      if (helpOnly) {
-        const quoteHandled = await prepareLocalQuotationIntent(text)
-        if (!quoteHandled) {
-          await appendInsightCard(text)
-        }
-      }
+      if (helpOnly) await runLocalFallbackFromPrompt(text)
     } catch (err) {
       const apiErr = toApiError(err)
-      toast.error('Assistant error', apiErr.message)
-      setHistory((prev) => [
-        ...prev,
-        { role: 'assistant', text: `ขออภัย ตอนนี้ประมวลผลไม่สำเร็จ: ${apiErr.message}` },
-      ])
+      const localHandled = await runLocalFallbackFromPrompt(text)
+      if (localHandled) {
+        setHistory((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            text:
+              'AI backend ไม่พร้อมตอนนี้ จึงสลับเป็น local assistant ชั่วคราว และดำเนินการจากข้อมูลในระบบให้แล้ว',
+          },
+        ])
+      } else {
+        toast.error('Assistant error', apiErr.message)
+        setHistory((prev) => [
+          ...prev,
+          { role: 'assistant', text: `ขออภัย ตอนนี้ประมวลผลไม่สำเร็จ: ${apiErr.message}` },
+        ])
+      }
     } finally {
       setLoading(false)
     }
