@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getInvoice, postInvoice, registerPayment, openInvoicePdf, amendInvoice, type RegisterPaymentPayload } from '@/api/services/invoices.service'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -20,6 +20,7 @@ const FALLBACK_RS_TPL_INVOICE = 'invoice_default_v1'
 
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [paymentOpen, setPaymentOpen] = useState(false)
@@ -30,6 +31,7 @@ export function InvoiceDetailPage() {
   const studioSettings = useStudioSettingsStore((s) => s.settings)
 
   const invoiceId = id ? Number.parseInt(id, 10) : null
+  const requestedAction = searchParams.get('action')
   const rsTplFull = studioSettings.defaultTemplateIdByDocType?.receipt_full || FALLBACK_RS_TPL_TAX_FULL
   const rsTplShort = studioSettings.defaultTemplateIdByDocType?.receipt_short || FALLBACK_RS_TPL_TAX_SHORT
   const rsTplInvoice = (studioSettings.defaultTemplateIdByDocType as any)?.invoice || FALLBACK_RS_TPL_INVOICE
@@ -68,6 +70,55 @@ export function InvoiceDetailPage() {
     enabled: !!invoiceId,
   })
 
+  const invoicePayments = invoice?.payments || []
+  const invoiceTotal = invoice?.total ?? 0
+  const invoiceAmountPaid =
+    invoice?.amountPaid ??
+    (invoicePayments.length > 0
+      ? invoicePayments.reduce((sum, p) => sum + Number(p.amount || 0), 0)
+      : 0)
+  const invoiceAmountDue = Math.max(
+    0,
+    invoice?.amountDue ?? (invoiceTotal - invoiceAmountPaid),
+  )
+
+  useEffect(() => {
+    if (!requestedAction || !invoice) return
+    if (
+      requestedAction === 'payment' &&
+      invoice.status === 'posted' &&
+      invoiceAmountDue > 0
+    ) {
+      setPaymentOpen(true)
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          next.delete('action')
+          return next
+        },
+        { replace: true },
+      )
+      return
+    }
+    if (requestedAction === 'receipt' && invoicePayments.length > 0) {
+      setPrintMenuOpen(true)
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          next.delete('action')
+          return next
+        },
+        { replace: true },
+      )
+    }
+  }, [
+    requestedAction,
+    invoice,
+    invoiceAmountDue,
+    invoicePayments.length,
+    setSearchParams,
+  ])
+
   useEffect(() => {
     if (!invoice?.payments?.length) {
       setSelectedReceiptPaymentId(null)
@@ -82,6 +133,7 @@ export function InvoiceDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
       queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['invoices', 'receipts'] })
       toast.success('โพสต์ใบแจ้งหนี้สำเร็จ')
     },
     onError: (err) => {
@@ -123,6 +175,7 @@ export function InvoiceDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
       queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['invoices', 'receipts'] })
       toast.success('บันทึกรับชำระเงินสำเร็จ')
     },
     onError: (err) => {
@@ -268,23 +321,27 @@ export function InvoiceDetailPage() {
   const currency = invoice.currency || 'THB'
   
   // Payment information from API (fallback to calculated if not available)
-  const amountPaid = invoice.amountPaid ?? (invoice.status === 'paid' ? total : 0)
-  const amountDue = invoice.amountDue ?? (invoice.status === 'paid' ? 0 : total - amountPaid)
+  const amountPaidFromHistory = (invoice.payments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0)
+  const amountPaid = invoice.amountPaid ?? (amountPaidFromHistory > 0 ? amountPaidFromHistory : invoice.status === 'paid' ? total : 0)
+  const amountDue = invoice.amountDue ?? Math.max(0, total - amountPaid)
   // Map default_account_id to bankAccount if needed
   const payments = (invoice.payments || []).map((p) => ({
     ...p,
     bankAccount: p.bankAccount ?? (p.default_account_id ? String(p.default_account_id) : null),
   }))
   
-  // Debug: Log payment data to check bank account info
-  if (payments.length > 0) {
-    console.log('[InvoiceDetailPage] Payments data:', payments.map(p => ({
-      id: p.id,
-      journal: p.journal,
-      bankAccount: p.bankAccount,
-      bankAccountNumber: p.bankAccountNumber,
-    })))
-  }
+  const paymentBadgeTone =
+    invoice.paymentState === 'paid' || amountDue === 0
+      ? 'green'
+      : invoice.paymentState === 'partial' || invoice.paymentState === 'in_payment' || amountPaid > 0
+        ? 'amber'
+        : 'blue'
+  const paymentBadgeText =
+    invoice.paymentState === 'paid' || amountDue === 0
+      ? 'ชำระครบแล้ว'
+      : invoice.paymentState === 'partial' || invoice.paymentState === 'in_payment' || amountPaid > 0
+        ? 'ชำระบางส่วน'
+        : 'รอการชำระเงิน'
 
   return (
     <div>
@@ -653,11 +710,6 @@ export function InvoiceDetailPage() {
                                         ? `${payment.bankAccount} ${payment.bankAccountNumber}`
                                         : payment.bankAccount || payment.bankAccountNumber || ''
                                       
-                                      console.log(`[Payment ${payment.id}] hasBankInfo: ${hasBankInfo}, tooltipText: "${tooltipText}"`, {
-                                        bankAccount: payment.bankAccount,
-                                        bankAccountNumber: payment.bankAccountNumber,
-                                      })
-                                      
                                       return hasBankInfo ? (
                                         <OverlayTrigger
                                           placement="top"
@@ -722,13 +774,7 @@ export function InvoiceDetailPage() {
                 
                 {/* Status badge */}
                 <div className="mt-3">
-                  {amountDue === 0 ? (
-                    <Badge tone="green">ชำระครบแล้ว</Badge>
-                  ) : amountPaid > 0 ? (
-                    <Badge tone="amber">ชำระบางส่วน</Badge>
-                  ) : (
-                    <Badge tone="blue">รอการชำระเงิน</Badge>
-                  )}
+                  <Badge tone={paymentBadgeTone}>{paymentBadgeText}</Badge>
                 </div>
               </div>
             </Card>

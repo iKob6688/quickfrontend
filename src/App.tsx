@@ -22,6 +22,7 @@ import { PurchaseVendorBillDetailPage } from '@/features/purchases/PurchaseVendo
 import { PurchaseReceiptDetailPage } from '@/features/purchases/PurchaseReceiptDetailPage'
 import { ExpensesListPage } from '@/features/expenses/ExpensesListPage'
 import { ExpenseDetailPage } from '@/features/expenses/ExpenseDetailPage'
+import { ExpenseFormPage } from '@/features/expenses/ExpenseFormPage'
 import { CustomersListPage } from '@/features/customers/CustomersListPage'
 import { CustomerDetailPage } from '@/features/customers/CustomerDetailPage'
 import { CustomerFormPage } from '@/features/customers/CustomerFormPage'
@@ -92,6 +93,7 @@ function AppRoutes() {
           <Route path="/products/new" element={<ProductFormPage />} />
           <Route path="/products/:id/edit" element={<ProductFormPage />} />
           <Route path="/sales/invoices" element={<InvoicesListPage />} />
+          <Route path="/sales/receipts" element={<InvoicesListPage mode="receipts" />} />
           <Route path="/sales/invoices/new" element={<InvoiceFormPage />} />
           <Route path="/sales/invoices/:id" element={<InvoiceDetailPage />} />
           <Route path="/sales/invoices/:id/edit" element={<InvoiceFormPage />} />
@@ -111,6 +113,7 @@ function AppRoutes() {
           <Route path="/purchases/requests/:id" element={<PurchaseRequestDetailPage />} />
           <Route path="/purchases/requests/:id/edit" element={<PurchaseRequestFormPage />} />
           <Route path="/expenses" element={<ExpensesListPage />} />
+          <Route path="/expenses/new" element={<ExpenseFormPage />} />
           <Route path="/expenses/:id" element={<ExpenseDetailPage />} />
           <Route path="/accounting/reports" element={<AccountingReportsPage />} />
           <Route path="/accounting/reports/profit-loss" element={<ProfitLossReportPage />} />

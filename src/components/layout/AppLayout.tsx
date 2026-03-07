@@ -39,6 +39,7 @@ export function AppLayout() {
     { path: '/products', label: 'สินค้า', scope: 'products', icon: 'bi-box-seam' },
     { path: '/sales/orders', label: 'ใบเสนอราคา/SO', scope: 'invoice', icon: 'bi-file-earmark-text' },
     { path: '/sales/invoices', label: 'ใบแจ้งหนี้', scope: 'invoice', icon: 'bi-receipt' },
+    { path: '/sales/receipts', label: 'ใบเสร็จรับเงิน', scope: 'invoice', icon: 'bi-receipt-cutoff' },
     { path: '/purchases/orders', label: 'ใบสั่งซื้อ', scope: 'purchase', icon: 'bi-cart' },
     { path: '/purchases/requests', label: 'คำขอซื้อ', scope: 'purchase', icon: 'bi-clipboard-check' },
     { path: '/expenses', label: 'รายจ่าย', scope: 'expense', icon: 'bi-cash-stack' },

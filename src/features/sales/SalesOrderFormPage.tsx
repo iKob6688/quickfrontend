@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, Spinner } from 'react-bootstrap'
+import { Alert, Modal, Spinner } from 'react-bootstrap'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -13,7 +13,7 @@ import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { extractFieldErrors, type FieldErrors } from '@/lib/formErrors'
 import { clearDraft, loadDraft, loadRecentNotes, pushRecentNote, saveDraft } from '@/lib/formDrafts'
 import { toast } from '@/lib/toastStore'
-import { listPartners, getPartner } from '@/api/services/partners.service'
+import { createPartner, listPartners, getPartner, type PartnerUpsertPayload } from '@/api/services/partners.service'
 import {
   createSalesOrder,
   getSalesOrder,
@@ -22,6 +22,7 @@ import {
   type SalesOrderPayload,
   type SalesOrderType,
 } from '@/api/services/sales-orders.service'
+import { CountrySelector } from '@/features/customers/CountrySelector'
 
 const SALES_ORDER_DRAFT_KEY = 'qf:draft:sales-order-form:create:v1'
 const SALES_ORDER_RECENT_NOTES_KEY = 'qf:recent-notes:sales-order:v1'
@@ -75,6 +76,24 @@ export function SalesOrderFormPage() {
   }, [isEdit, existingOrder])
 
   const [partnerSearch, setPartnerSearch] = useState('')
+  const [quickPartnerOpen, setQuickPartnerOpen] = useState(false)
+  const [quickPartnerSaving, setQuickPartnerSaving] = useState(false)
+  const thailandId = Number(import.meta.env.VITE_COUNTRY_TH_ID || 219)
+  const [quickPartner, setQuickPartner] = useState<PartnerUpsertPayload>({
+    company_type: 'company',
+    name: '',
+    vat: '',
+    phone: '',
+    email: '',
+    street: '',
+    district: '',
+    subDistrict: '',
+    zip: '',
+    countryId: thailandId,
+    vatPriceMode: 'vat_excluded',
+    branchCode: 'สำนักงานใหญ่',
+    active: true,
+  })
   const debouncedPartnerSearch = useDebouncedValue(partnerSearch, 250)
   const partnerLimit = 20
 
@@ -245,6 +264,8 @@ export function SalesOrderFormPage() {
   }
 
   const removeLine = (index: number) => {
+    const ok = window.confirm('ยืนยันการลบรายการนี้?')
+    if (!ok) return
     setFormData((prev) => ({
       ...prev,
       lines: prev.lines.filter((_, i) => i !== index),
@@ -252,6 +273,52 @@ export function SalesOrderFormPage() {
   }
 
   const totalAmount = formData.lines.reduce((sum, line) => sum + (line.total || 0), 0)
+
+  const submitQuickPartner = async () => {
+    if (!quickPartner.name?.trim()) {
+      toast.error('กรุณากรอกชื่อรายชื่อติดต่อ')
+      return
+    }
+    try {
+      setQuickPartnerSaving(true)
+      const created = await createPartner({
+        ...quickPartner,
+        name: quickPartner.name.trim(),
+        email: quickPartner.email?.trim() || undefined,
+        phone: quickPartner.phone?.trim() || undefined,
+        vat: quickPartner.vat?.trim() || undefined,
+        street: quickPartner.street?.trim() || undefined,
+        district: quickPartner.district?.trim() || undefined,
+        subDistrict: quickPartner.subDistrict?.trim() || undefined,
+        zip: quickPartner.zip?.trim() || undefined,
+      })
+      await queryClient.invalidateQueries({ queryKey: ['partner-selector-sales-order'] })
+      await queryClient.invalidateQueries({ queryKey: ['partners'] })
+      setFormData((prev) => ({ ...prev, partnerId: created.id }))
+      setPartnerSearch(created.displayName || created.name)
+      setQuickPartnerOpen(false)
+      setQuickPartner({
+        company_type: 'company',
+        name: '',
+        vat: '',
+        phone: '',
+        email: '',
+        street: '',
+        district: '',
+        subDistrict: '',
+        zip: '',
+        countryId: thailandId,
+        vatPriceMode: 'vat_excluded',
+        branchCode: 'สำนักงานใหญ่',
+        active: true,
+      })
+      toast.success('สร้างรายชื่อติดต่อใหม่สำเร็จ')
+    } catch (err) {
+      toast.error('สร้างรายชื่อติดต่อไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+    } finally {
+      setQuickPartnerSaving(false)
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -283,6 +350,7 @@ export function SalesOrderFormPage() {
   }
 
   return (
+    <>
     <form onSubmit={handleSubmit} className="qf-so-page">
       <PageHeader
         title={isEdit ? 'แก้ไขใบเสนอราคา / Sale Order' : 'สร้างใบเสนอราคา / Sale Order'}
@@ -412,9 +480,18 @@ export function SalesOrderFormPage() {
                       <Button size="sm" variant="ghost" type="button" onClick={() => navigate(`/customers/${formData.partnerId}/edit`)}>
                         แก้ไขลูกค้า
                       </Button>
+                      <Button size="sm" variant="ghost" type="button" onClick={() => setQuickPartnerOpen(true)}>
+                        + ผู้ติดต่อใหม่
+                      </Button>
                     </div>
                   </div>
-                ) : null}
+                ) : (
+                  <div className="mt-2">
+                    <Button size="sm" variant="ghost" type="button" onClick={() => setQuickPartnerOpen(true)}>
+                      + สร้างผู้ติดต่อใหม่จากฟอร์มนี้
+                    </Button>
+                  </div>
+                )}
                 {fieldErrors?.partnerId ? <small className="text-danger">{fieldErrors.partnerId}</small> : null}
               </div>
 
@@ -614,5 +691,122 @@ export function SalesOrderFormPage() {
       </div>
 
     </form>
+    <Modal show={quickPartnerOpen} onHide={() => setQuickPartnerOpen(false)} centered>
+      <Modal.Header closeButton>
+        <Modal.Title>สร้างรายชื่อติดต่อใหม่ (Quick Create)</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <div className="row g-3">
+          <div className="col-12">
+            <Label htmlFor="quick-partner-name" required>
+              ชื่อรายชื่อติดต่อ
+            </Label>
+            <Input
+              id="quick-partner-name"
+              value={quickPartner.name}
+              onChange={(e) => setQuickPartner((prev) => ({ ...prev, name: e.target.value }))}
+            />
+          </div>
+          <div className="col-md-6">
+            <Label htmlFor="quick-partner-vat">เลขผู้เสียภาษี</Label>
+            <Input
+              id="quick-partner-vat"
+              value={quickPartner.vat || ''}
+              onChange={(e) => setQuickPartner((prev) => ({ ...prev, vat: e.target.value }))}
+            />
+          </div>
+          <div className="col-md-6">
+            <Label htmlFor="quick-partner-phone">โทรศัพท์</Label>
+            <Input
+              id="quick-partner-phone"
+              value={quickPartner.phone || ''}
+              onChange={(e) => setQuickPartner((prev) => ({ ...prev, phone: e.target.value }))}
+            />
+          </div>
+          <div className="col-md-6">
+            <Label htmlFor="quick-partner-email">อีเมล</Label>
+            <Input
+              id="quick-partner-email"
+              type="email"
+              value={quickPartner.email || ''}
+              onChange={(e) => setQuickPartner((prev) => ({ ...prev, email: e.target.value }))}
+            />
+          </div>
+          <div className="col-md-6">
+            <Label htmlFor="quick-partner-vat-mode">ประเภทราคา</Label>
+            <select
+              id="quick-partner-vat-mode"
+              className="form-select"
+              value={quickPartner.vatPriceMode || 'vat_excluded'}
+              onChange={(e) =>
+                setQuickPartner((prev) => ({
+                  ...prev,
+                  vatPriceMode: e.target.value as PartnerUpsertPayload['vatPriceMode'],
+                }))
+              }
+            >
+              <option value="no_vat">ไม่มี VAT</option>
+              <option value="vat_included">รวม VAT</option>
+              <option value="vat_excluded">แยก VAT</option>
+            </select>
+          </div>
+          <div className="col-md-6">
+            <Label htmlFor="quick-partner-branch">สาขา</Label>
+            <Input
+              id="quick-partner-branch"
+              value={quickPartner.branchCode || ''}
+              onChange={(e) => setQuickPartner((prev) => ({ ...prev, branchCode: e.target.value }))}
+            />
+          </div>
+          <div className="col-md-6">
+            <CountrySelector
+              value={quickPartner.countryId}
+              onChange={(value) => setQuickPartner((prev) => ({ ...prev, countryId: value }))}
+            />
+          </div>
+          <div className="col-md-6">
+            <Label htmlFor="quick-partner-subDistrict">แขวง/ตำบล</Label>
+            <Input
+              id="quick-partner-subDistrict"
+              value={quickPartner.subDistrict || ''}
+              onChange={(e) => setQuickPartner((prev) => ({ ...prev, subDistrict: e.target.value }))}
+            />
+          </div>
+          <div className="col-md-6">
+            <Label htmlFor="quick-partner-district">เขต/อำเภอ</Label>
+            <Input
+              id="quick-partner-district"
+              value={quickPartner.district || ''}
+              onChange={(e) => setQuickPartner((prev) => ({ ...prev, district: e.target.value, city: e.target.value }))}
+            />
+          </div>
+          <div className="col-md-6">
+            <Label htmlFor="quick-partner-zip">รหัสไปรษณีย์</Label>
+            <Input
+              id="quick-partner-zip"
+              value={quickPartner.zip || ''}
+              onChange={(e) => setQuickPartner((prev) => ({ ...prev, zip: e.target.value }))}
+            />
+          </div>
+          <div className="col-12">
+            <Label htmlFor="quick-partner-street">ที่อยู่</Label>
+            <Input
+              id="quick-partner-street"
+              value={quickPartner.street || ''}
+              onChange={(e) => setQuickPartner((prev) => ({ ...prev, street: e.target.value }))}
+            />
+          </div>
+        </div>
+      </Modal.Body>
+      <Modal.Footer>
+        <Button size="sm" variant="secondary" type="button" onClick={() => setQuickPartnerOpen(false)}>
+          ยกเลิก
+        </Button>
+        <Button size="sm" type="button" onClick={submitQuickPartner} isLoading={quickPartnerSaving}>
+          บันทึกผู้ติดต่อ
+        </Button>
+      </Modal.Footer>
+    </Modal>
+    </>
   )
 }

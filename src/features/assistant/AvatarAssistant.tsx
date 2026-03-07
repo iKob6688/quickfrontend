@@ -413,12 +413,7 @@ export function AvatarAssistant() {
     const plan = Array.isArray(res.plan) ? res.plan : []
     if (!plan.length) return false
     const allHelp = plan.every((p) => String(p.tool || '').toLowerCase() === 'get_help')
-    if (!allHelp) return false
-    const hasWorkSignals =
-      Boolean(res.confirmation_request) ||
-      (Array.isArray(res.records) && res.records.length > 0) ||
-      (Array.isArray(res.ui_actions) && res.ui_actions.length > 0)
-    return !hasWorkSignals
+    return allHelp
   }
 
   const isNoopExecution = (res: AssistantExecuteResponse): boolean => {
@@ -762,7 +757,13 @@ export function AvatarAssistant() {
       if (!helpOnly) {
         setHistory((prev) => [...prev, { role: 'assistant', text: 'พร้อมทำงานแล้ว กด "เริ่มทำงาน" ได้เลย' }])
       }
-      if (helpOnly) await runLocalFallbackFromPrompt(text)
+      if (helpOnly) {
+        setHistory((prev) => [
+          ...prev,
+          { role: 'assistant', text: 'กำลังสลับเป็นโหมดช่วยค้น/สรุปข้อมูลจากฐานข้อมูลโดยตรง' },
+        ])
+        await runLocalFallbackFromPrompt(text)
+      }
     } catch (err) {
       const apiErr = toApiError(err)
       const localHandled = await runLocalFallbackFromPrompt(text)
@@ -779,7 +780,7 @@ export function AvatarAssistant() {
         toast.error('Assistant error', apiErr.message)
         setHistory((prev) => [
           ...prev,
-          { role: 'assistant', text: `ขออภัย ตอนนี้ประมวลผลไม่สำเร็จ: ${apiErr.message}` },
+          { role: 'assistant', text: 'ขออภัย ตอนนี้ผู้ช่วยยังเชื่อมต่อ backend ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' },
         ])
       }
     } finally {
@@ -1079,7 +1080,7 @@ export function AvatarAssistant() {
         <div className="avatar-assistant-panel card shadow">
           <div className="card-header d-flex align-items-center justify-content-between">
             <strong>iMeaw Assistant</strong>
-            <button className="btn btn-sm btn-light" onClick={() => setOpen(false)}>
+            <button type="button" className="btn btn-sm btn-light" onClick={() => setOpen(false)}>
               ✕
             </button>
           </div>
@@ -1089,13 +1090,14 @@ export function AvatarAssistant() {
               {traceMeta.scopeContext?.db || '-'}
             </div>
             <div className="avatar-assistant-quick mb-2">
-              <button className="btn btn-sm btn-light" disabled={loading} onClick={() => setInput('ค้นลูกค้า')}>
+              <button type="button" className="btn btn-sm btn-light" disabled={loading} onClick={() => setInput('ค้นลูกค้า')}>
                 ค้นลูกค้า
               </button>
-              <button className="btn btn-sm btn-light" disabled={loading} onClick={() => setInput('ค้นสินค้า')}>
+              <button type="button" className="btn btn-sm btn-light" disabled={loading} onClick={() => setInput('ค้นสินค้า')}>
                 ค้นสินค้า
               </button>
               <button
+                type="button"
                 className="btn btn-sm btn-light"
                 disabled={loading}
                 onClick={() => setInput('สรุปยอดซื้อรายลูกค้า เดือนนี้')}
@@ -1103,6 +1105,7 @@ export function AvatarAssistant() {
                 สรุปยอดซื้อรายลูกค้า
               </button>
               <button
+                type="button"
                 className="btn btn-sm btn-light"
                 disabled={loading}
                 onClick={() => setInput('สรุปยอดขายสินค้าประจำเดือนนี้')}
@@ -1152,6 +1155,7 @@ export function AvatarAssistant() {
                               <div className="avatar-result-value">{row.value}</div>
                               {row.route ? (
                                 <button
+                                  type="button"
                                   className="btn btn-link btn-sm p-0 text-decoration-none"
                                   onClick={() => safeNavigate(row.route || '')}
                                 >
@@ -1166,6 +1170,7 @@ export function AvatarAssistant() {
                         <div className="avatar-result-sources mt-1">
                           {card.sources.map((src, idx) => (
                             <button
+                              type="button"
                               key={`${card.id}-src-${idx}`}
                               className="btn btn-sm btn-outline-secondary"
                               onClick={() => src.route && safeNavigate(src.route)}
@@ -1317,33 +1322,16 @@ export function AvatarAssistant() {
                 ) : null}
               </div>
             )}
-            {pendingConfirm && (
+                    {pendingConfirm && (
               <div className="avatar-confirm-box mb-2">
                 <div className="small fw-semibold mb-1">Confirm {pendingConfirm.doc_type}</div>
                 <div className="small text-muted mb-2">{pendingConfirm.summary}</div>
                 <div className="d-flex flex-column gap-2">
-                  <input
-                    className="form-control form-control-sm"
-                    value={pendingConfirm.contact_name}
-                    onChange={(e) =>
-                      setPendingConfirm((prev) => (prev ? { ...prev, contact_name: e.target.value } : prev))
-                    }
-                    placeholder="Contact"
-                    disabled={loading}
-                  />
+                  <div className="small text-muted fw-semibold">ลูกค้า</div>
                   {(pendingConfirm.contact_candidates || []).length > 0 && (
                     <>
-                    {(pendingConfirm.contact_candidates || []).length > 8 && (
-                      <input
-                        className="form-control form-control-sm"
-                        value={contactPickerFilter}
-                        onChange={(e) => setContactPickerFilter(e.target.value)}
-                        placeholder="ค้นหาในรายชื่อลูกค้า"
-                        disabled={loading}
-                      />
-                    )}
                     <select
-                      className="form-select form-select-sm"
+                      className="form-select form-select-sm avatar-confirm-select"
                       value={pendingConfirm.contact_id || ''}
                       onChange={(e) => {
                         const selected = e.target.value || ''
@@ -1376,28 +1364,11 @@ export function AvatarAssistant() {
                     </select>
                     </>
                   )}
-                  <input
-                    className="form-control form-control-sm"
-                    value={pendingConfirm.product_name}
-                    onChange={(e) =>
-                      setPendingConfirm((prev) => (prev ? { ...prev, product_name: e.target.value } : prev))
-                    }
-                    placeholder="Product"
-                    disabled={loading}
-                  />
+                  <div className="small text-muted fw-semibold">สินค้า/บริการ</div>
                   {(pendingConfirm.product_candidates || []).length > 0 && (
                     <>
-                    {(pendingConfirm.product_candidates || []).length > 8 && (
-                      <input
-                        className="form-control form-control-sm"
-                        value={productPickerFilter}
-                        onChange={(e) => setProductPickerFilter(e.target.value)}
-                        placeholder="ค้นหาในรายการสินค้า"
-                        disabled={loading}
-                      />
-                    )}
                     <select
-                      className="form-select form-select-sm"
+                      className="form-select form-select-sm avatar-confirm-select"
                       value={pendingConfirm.product_id || ''}
                       onChange={(e) => {
                         const selected = e.target.value || ''
@@ -1430,6 +1401,12 @@ export function AvatarAssistant() {
                     </select>
                     </>
                   )}
+                  {(pendingConfirm.contact_candidates || []).length === 0 ? (
+                    <div className="small text-muted border rounded px-2 py-1 bg-light">{pendingConfirm.contact_name || '-'}</div>
+                  ) : null}
+                  {(pendingConfirm.product_candidates || []).length === 0 ? (
+                    <div className="small text-muted border rounded px-2 py-1 bg-light">{pendingConfirm.product_name || '-'}</div>
+                  ) : null}
                   <input
                     className="form-control form-control-sm"
                     type="number"
@@ -1445,6 +1422,7 @@ export function AvatarAssistant() {
                   />
                   <div className="d-flex gap-2">
                     <button
+                      type="button"
                       className="btn btn-success btn-sm"
                       disabled={loading}
                       onClick={() => void onConfirmDocument(true)}
@@ -1452,6 +1430,7 @@ export function AvatarAssistant() {
                       Confirm
                     </button>
                     <button
+                      type="button"
                       className="btn btn-outline-secondary btn-sm"
                       disabled={loading}
                       onClick={() => void onConfirmDocument(false)}
@@ -1473,7 +1452,7 @@ export function AvatarAssistant() {
                 }}
                 disabled={loading}
               />
-              <button className="btn btn-primary" onClick={() => void onSend()} disabled={loading}>
+              <button type="button" className="btn btn-primary" onClick={() => void onSend()} disabled={loading}>
                 ส่ง
               </button>
             </div>
@@ -1489,14 +1468,14 @@ export function AvatarAssistant() {
                     ))}
                   </div>
                 )}
-                <button className="btn btn-warning btn-sm" onClick={() => void onApprove()} disabled={loading}>
+                <button type="button" className="btn btn-warning btn-sm" onClick={() => void onApprove()} disabled={loading}>
                   ยืนยันก่อนทำงาน ({pendingApprovalIds.length})
                 </button>
               </div>
             )}
             {!pendingConfirm && pendingRunIds.length > 0 && (
               <div className="mt-2">
-                <button className="btn btn-success btn-sm" onClick={() => void onRunWorkflow()} disabled={loading}>
+                <button type="button" className="btn btn-success btn-sm" onClick={() => void onRunWorkflow()} disabled={loading}>
                   เริ่มทำงาน ({pendingRunIds.length})
                 </button>
               </div>

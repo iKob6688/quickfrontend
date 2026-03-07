@@ -39,6 +39,8 @@ export function PurchaseOrderDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchaseOrder', orderId] })
       queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] })
+      queryClient.invalidateQueries({ queryKey: ['purchaseReceipts'] })
+      queryClient.invalidateQueries({ queryKey: ['purchaseVendorBill'] })
       toast.success('ยืนยันใบสั่งซื้อสำเร็จ')
     },
     onError: (err) => {
@@ -51,6 +53,8 @@ export function PurchaseOrderDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchaseOrder', orderId] })
       queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] })
+      queryClient.invalidateQueries({ queryKey: ['purchaseReceipts'] })
+      queryClient.invalidateQueries({ queryKey: ['purchaseVendorBill'] })
       toast.success('ยกเลิกใบสั่งซื้อสำเร็จ')
       setCancelModalOpen(false)
       setCancelReason('')
@@ -65,6 +69,8 @@ export function PurchaseOrderDetailPage() {
     onSuccess: async (res) => {
       await queryClient.invalidateQueries({ queryKey: ['purchaseOrder', orderId] })
       await queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] })
+      await queryClient.invalidateQueries({ queryKey: ['purchaseReceipts'] })
+      await queryClient.invalidateQueries({ queryKey: ['purchaseVendorBill'] })
       toast.success(res.received ? 'รับสินค้าเข้าคลังสำเร็จ' : 'ไม่มีรายการรับของค้าง', res.message)
     },
     onError: (err) => {
@@ -77,6 +83,8 @@ export function PurchaseOrderDetailPage() {
     onSuccess: async (res) => {
       await queryClient.invalidateQueries({ queryKey: ['purchaseOrder', orderId] })
       await queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] })
+      await queryClient.invalidateQueries({ queryKey: ['purchaseReceipts'] })
+      await queryClient.invalidateQueries({ queryKey: ['purchaseVendorBill'] })
       toast.success(res.created ? 'สร้าง Vendor Bill สำเร็จ' : 'พบ Vendor Bill เดิมแล้ว', res.billNumber || (res.billId ? `#${res.billId}` : undefined))
       if (res.billId) {
         const open = window.confirm(`เปิดเอกสาร Vendor Bill #${res.billId} ในหน้า React ตอนนี้หรือไม่?`)

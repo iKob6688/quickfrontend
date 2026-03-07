@@ -142,6 +142,8 @@ export function PurchaseRequestFormPage() {
   }
 
   const removeLine = (index: number) => {
+    const ok = window.confirm('ยืนยันการลบรายการนี้?')
+    if (!ok) return
     setDraft((prev) => {
       const lines = (prev.lines || formData.lines || []).filter((_, i) => i !== index)
       return { ...prev, lines: lines.length ? lines : [{ ...EMPTY_LINE }] }
@@ -312,7 +314,8 @@ export function PurchaseRequestFormPage() {
                 <div key={idx} className="border rounded p-3">
                   <div className="d-flex justify-content-between align-items-center mb-2">
                     <div className="fw-semibold">รายการที่ {idx + 1}</div>
-                    <Button size="sm" variant="ghost" onClick={() => removeLine(idx)}>
+                    <Button size="sm" variant="secondary" onClick={() => removeLine(idx)}>
+                      <i className="bi bi-trash me-1"></i>
                       ลบ
                     </Button>
                   </div>

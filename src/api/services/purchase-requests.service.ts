@@ -63,8 +63,79 @@ export interface ListPurchaseRequestsParams {
 // NOTE: backend reality (adt_th_api): purchase requests are exposed under /api/th/v1/purchases/requests/*
 const basePath = '/th/v1/purchases/requests'
 
+type Raw = Record<string, unknown>
+
+function num(v: unknown): number {
+  if (typeof v === 'number' && Number.isFinite(v)) return v
+  if (typeof v === 'string') {
+    const parsed = Number(v.replace(/,/g, ''))
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+  return 0
+}
+
+function idOf(v: unknown): number {
+  if (!v || typeof v !== 'object') return num(v)
+  const obj = v as Raw
+  return num(obj.id ?? obj._id ?? (obj.record && typeof obj.record === 'object' ? (obj.record as Raw).id : 0))
+}
+
+function normalizePurchaseRequest(raw: unknown): PurchaseRequest {
+  const wrapped = (raw || {}) as Raw
+  const item = (wrapped.request && typeof wrapped.request === 'object'
+    ? (wrapped.request as Raw)
+    : wrapped) as Raw
+  const linesRaw = Array.isArray(item.lines) ? item.lines : Array.isArray(item.lineIds) ? item.lineIds : []
+  return {
+    id: idOf(item),
+    name: item.name ? String(item.name) : undefined,
+    requestorName: item.requestorName ? String(item.requestorName) : undefined,
+    requestorId: num(item.requestorId ?? item.requestor_id),
+    requestedDate: String(item.requestedDate ?? item.requested_date ?? item.date ?? ''),
+    requiredDate: item.requiredDate ? String(item.requiredDate) : item.required_date ? String(item.required_date) : undefined,
+    state: (String(item.state || 'draft') as PurchaseRequest['state']),
+    origin: item.origin ? String(item.origin) : undefined,
+    lines: linesRaw.map((lRaw) => {
+      const l = (lRaw || {}) as Raw
+      return {
+        productId: num(l.productId ?? l.product_id) || null,
+        description: String(l.description ?? l.name ?? ''),
+        quantity: num(l.quantity),
+        estimatedCost: num(l.estimatedCost ?? l.estimated_cost),
+        uomId: num(l.uomId ?? l.uom_id) || null,
+        note: l.note ? String(l.note) : undefined,
+      }
+    }),
+    notes: item.notes ? String(item.notes) : undefined,
+    approverId: num(item.approverId ?? item.approver_id) || null,
+    approverName: item.approverName ? String(item.approverName) : null,
+    approvalDate: item.approvalDate ? String(item.approvalDate) : null,
+    rejectedReason: item.rejectedReason ? String(item.rejectedReason) : null,
+    purchaseOrderId: num(item.purchaseOrderId ?? item.purchase_order_id) || null,
+    purchaseOrderName: item.purchaseOrderName ? String(item.purchaseOrderName) : null,
+    totalEstimatedCost: num(item.totalEstimatedCost ?? item.total_estimated_cost),
+    createdAt: String(item.createdAt ?? item.created_at ?? item.create_date ?? ''),
+    updatedAt: String(item.updatedAt ?? item.updated_at ?? item.write_date ?? ''),
+  }
+}
+
 function normalizePurchaseRequestList(raw: unknown): PurchaseRequestListItem[] {
-  if (Array.isArray(raw)) return raw as PurchaseRequestListItem[]
+  if (Array.isArray(raw)) {
+    return raw
+      .map((r) => normalizePurchaseRequest(r))
+      .filter((r) => r.id > 0)
+      .map((r) => ({
+        id: r.id,
+        name: r.name || '',
+        requestorName: r.requestorName || '',
+        requestorId: r.requestorId || 0,
+        requestedDate: r.requestedDate || '',
+        requiredDate: r.requiredDate,
+        state: r.state,
+        totalEstimatedCost: r.totalEstimatedCost,
+        purchaseOrderName: r.purchaseOrderName,
+      }))
+  }
   if (!raw || typeof raw !== 'object') return []
 
   const obj = raw as Record<string, unknown>
@@ -79,7 +150,7 @@ function normalizePurchaseRequestList(raw: unknown): PurchaseRequestListItem[] {
   ]
 
   for (const candidate of candidates) {
-    if (Array.isArray(candidate)) return candidate as PurchaseRequestListItem[]
+    if (Array.isArray(candidate)) return normalizePurchaseRequestList(candidate)
   }
 
   return []
@@ -103,43 +174,43 @@ export async function listPurchaseRequests(params?: ListPurchaseRequestsParams) 
 export async function getPurchaseRequest(id: number) {
   const body = makeRpc({ id })
   const response = await apiClient.post(`${basePath}/${id}`, body)
-  return unwrapResponse<PurchaseRequest>(response)
+  return normalizePurchaseRequest(unwrapResponse<unknown>(response))
 }
 
 export async function createPurchaseRequest(payload: PurchaseRequestPayload) {
   const body = makeRpc(payload)
   const response = await apiClient.post(basePath, body)
-  return unwrapResponse<PurchaseRequest>(response)
+  return normalizePurchaseRequest(unwrapResponse<unknown>(response))
 }
 
 export async function updatePurchaseRequest(id: number, payload: PurchaseRequestPayload) {
   const body = makeRpc({ id, ...payload })
   const response = await apiClient.put(`${basePath}/${id}`, body)
-  return unwrapResponse<PurchaseRequest>(response)
+  return normalizePurchaseRequest(unwrapResponse<unknown>(response))
 }
 
 export async function submitPurchaseRequest(id: number) {
   const body = makeRpc({ id })
   const response = await apiClient.post(`${basePath}/${id}/submit`, body)
-  return unwrapResponse<PurchaseRequest>(response)
+  return normalizePurchaseRequest(unwrapResponse<unknown>(response))
 }
 
 export async function approvePurchaseRequest(id: number) {
   const body = makeRpc({ id })
   const response = await apiClient.post(`${basePath}/${id}/approve`, body)
-  return unwrapResponse<PurchaseRequest>(response)
+  return normalizePurchaseRequest(unwrapResponse<unknown>(response))
 }
 
 export async function rejectPurchaseRequest(id: number, reason?: string) {
   const body = makeRpc({ id, ...(reason && { reason }) })
   const response = await apiClient.post(`${basePath}/${id}/reject`, body)
-  return unwrapResponse<PurchaseRequest>(response)
+  return normalizePurchaseRequest(unwrapResponse<unknown>(response))
 }
 
 export async function cancelPurchaseRequest(id: number) {
   const body = makeRpc({ id })
   const response = await apiClient.post(`${basePath}/${id}/cancel`, body)
-  return unwrapResponse<PurchaseRequest>(response)
+  return normalizePurchaseRequest(unwrapResponse<unknown>(response))
 }
 
 export interface ConvertToPurchaseOrderPayload {

@@ -592,13 +592,16 @@ export function InvoiceFormPage() {
                               type="button"
                               className="btn btn-sm btn-outline-danger"
                               onClick={() => {
+                                const ok = window.confirm('ยืนยันการลบรายการนี้?')
+                                if (!ok) return
                                 const next = [...formData.lines]
                                 next.splice(idx, 1)
                                 setFormData({ ...formData, lines: next })
                               }}
                               title="ลบรายการ"
                             >
-                              <i className="bi bi-trash"></i>
+                              <i className="bi bi-trash me-1"></i>
+                              ลบ
                             </button>
                           </td>
                         </tr>

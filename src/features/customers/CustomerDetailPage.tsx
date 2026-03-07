@@ -9,6 +9,12 @@ import { Spinner, Alert } from 'react-bootstrap'
 import { getPartner, archivePartner, unarchivePartner } from '@/api/services/partners.service'
 import { toast } from '@/lib/toastStore'
 
+function vatPriceModeLabel(mode?: string | null): string {
+  if (mode === 'no_vat') return 'ไม่มี VAT'
+  if (mode === 'vat_included') return 'รวม VAT'
+  return 'แยก VAT'
+}
+
 export function CustomerDetailPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -220,6 +226,14 @@ export function CustomerDetailPage() {
                       คัดลอก
                     </Button>
                   </div>
+                </div>
+                <div className="col-md-6">
+                  <div className="small text-muted mb-1">ประเภทราคา</div>
+                  <div className="fw-semibold">{vatPriceModeLabel(query.data.vatPriceMode)}</div>
+                </div>
+                <div className="col-md-6">
+                  <div className="small text-muted mb-1">สาขา</div>
+                  <div className="fw-semibold">{query.data.branchCode || 'สำนักงานใหญ่'}</div>
                 </div>
               </div>
             </Card>

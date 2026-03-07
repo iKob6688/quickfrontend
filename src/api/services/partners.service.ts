@@ -52,6 +52,8 @@ export interface PartnerDetail {
   zip?: string
   countryId?: number | null
   countryName?: string | null
+  vatPriceMode?: 'no_vat' | 'vat_included' | 'vat_excluded'
+  branchCode?: string
 }
 
 export interface PartnerUpsertPayload {
@@ -70,6 +72,8 @@ export interface PartnerUpsertPayload {
   countryId?: number | null
   tags?: string[]
   payment_term_id?: number
+  vatPriceMode?: 'no_vat' | 'vat_included' | 'vat_excluded'
+  branchCode?: string
   active?: boolean
 }
 
@@ -121,6 +125,12 @@ interface BackendPartnerDetail {
   zip?: string
   countryId?: number | null
   countryName?: string | null
+  vat_price_mode?: 'no_vat' | 'vat_included' | 'vat_excluded'
+  vatPriceMode?: 'no_vat' | 'vat_included' | 'vat_excluded'
+  x_vat_price_mode?: 'no_vat' | 'vat_included' | 'vat_excluded'
+  branch_code?: string
+  branchCode?: string
+  x_branch_code?: string
   [key: string]: unknown // Allow additional fields
 }
 
@@ -173,6 +183,11 @@ function mapBackendPartnerDetailToFrontend(backend: BackendPartnerDetail): Partn
   const district = (backend.district || backend.city || '') as string
   const subDistrict = (backend.subDistrict || backend.sub_district || '') as string
 
+  const vatPriceMode =
+    backend.vatPriceMode || backend.vat_price_mode || backend.x_vat_price_mode || undefined
+  const branchCode =
+    backend.branchCode || backend.branch_code || backend.x_branch_code || undefined
+
   return {
     id: backend.id,
     name,
@@ -194,6 +209,8 @@ function mapBackendPartnerDetailToFrontend(backend: BackendPartnerDetail): Partn
     zip: backend.zip,
     countryId: backend.countryId,
     countryName: backend.countryName,
+    vatPriceMode,
+    branchCode,
   }
 }
 
@@ -421,10 +438,17 @@ export async function createPartner(payload: PartnerUpsertPayload) {
       countryId: payload.countryId,
       tags: payload.tags,
       payment_term_id: payload.payment_term_id,
+      vat_price_mode: payload.vatPriceMode,
+      vatPriceMode: payload.vatPriceMode,
+      x_vat_price_mode: payload.vatPriceMode,
+      branch_code: payload.branchCode,
+      branchCode: payload.branchCode,
+      x_branch_code: payload.branchCode,
       ...(payload.active !== undefined ? { active: payload.active } : {}),
     }),
   )
-  return unwrapResponse<PartnerDetail>(response)
+  const raw = unwrapResponse<BackendPartnerDetail>(response)
+  return mapBackendPartnerDetailToFrontend(raw)
 }
 
 export async function updatePartner(id: number, payload: PartnerUpsertPayload) {
@@ -446,10 +470,17 @@ export async function updatePartner(id: number, payload: PartnerUpsertPayload) {
       countryId: payload.countryId,
       tags: payload.tags,
       payment_term_id: payload.payment_term_id,
+      vat_price_mode: payload.vatPriceMode,
+      vatPriceMode: payload.vatPriceMode,
+      x_vat_price_mode: payload.vatPriceMode,
+      branch_code: payload.branchCode,
+      branchCode: payload.branchCode,
+      x_branch_code: payload.branchCode,
       ...(payload.active !== undefined ? { active: payload.active } : {}),
     }),
   )
-  return unwrapResponse<PartnerDetail>(response)
+  const raw = unwrapResponse<BackendPartnerDetail>(response)
+  return mapBackendPartnerDetailToFrontend(raw)
 }
 
 export async function archivePartner(id: number) {

@@ -68,7 +68,8 @@ const basePath = '/th/v1/purchases/orders'
  * Backend response format (from Odoo) - List item
  */
 interface BackendPurchaseOrderListItem {
-  id: number
+  id?: number
+  _id?: number
   name?: string
   documentNumber?: string
   vendor?: {
@@ -90,7 +91,8 @@ interface BackendPurchaseOrderListItem {
  * Backend response format (from Odoo) - Full order detail
  */
 interface BackendPurchaseOrder {
-  id: number
+  id?: number
+  _id?: number
   name?: string
   documentNumber?: string
   vendor?: {
@@ -126,15 +128,31 @@ interface BackendPurchaseOrder {
     total?: number
     [key: string]: unknown
   }>
-  receipts?: Array<{ id: number; name?: string; state?: string; scheduled_date?: string | null }>
-  vendorBills?: Array<{ id: number; name?: string; state?: string; amount_total?: number }>
+  receipts?: Array<{ id?: number; _id?: number; name?: string; state?: string; scheduled_date?: string | null }>
+  vendorBills?: Array<{ id?: number; _id?: number; name?: string; state?: string; amount_total?: number }>
   [key: string]: unknown // Allow additional fields
+}
+
+function extractId(v: unknown): number {
+  if (typeof v === 'number' && Number.isFinite(v)) return v
+  if (!v || typeof v !== 'object') return 0
+  const obj = v as Record<string, unknown>
+  if (typeof obj.id === 'number' && Number.isFinite(obj.id)) return obj.id
+  if (typeof obj._id === 'number' && Number.isFinite(obj._id)) return obj._id
+  const nested = obj.record
+  if (nested && typeof nested === 'object') {
+    const rec = nested as Record<string, unknown>
+    if (typeof rec.id === 'number' && Number.isFinite(rec.id)) return rec.id
+    if (typeof rec._id === 'number' && Number.isFinite(rec._id)) return rec._id
+  }
+  return 0
 }
 
 /**
  * Maps backend response format to frontend format
  */
 function mapBackendToFrontend(backend: BackendPurchaseOrderListItem): PurchaseOrderListItem {
+  const orderId = extractId(backend)
   // Map state to status (Odoo state → frontend status)
   const stateMap: Record<string, PurchaseOrderListItem['status']> = {
     draft: 'draft',
@@ -199,7 +217,7 @@ function mapBackendToFrontend(backend: BackendPurchaseOrderListItem): PurchaseOr
   const currency = backend.currency ? String(backend.currency) : 'THB'
 
   return {
-    id: backend.id,
+    id: orderId,
     number,
     vendorName: vendorName || '—',
     vendorId,
@@ -302,6 +320,7 @@ export async function listPurchaseOrders(params?: ListPurchaseOrdersParams) {
  * Maps backend full order format to frontend format
  */
 function mapBackendOrderToFrontend(backend: BackendPurchaseOrder): PurchaseOrder {
+  const orderId = extractId(backend)
   // Map state to status
   const stateMap: Record<string, PurchaseOrder['status']> = {
     draft: 'draft',
@@ -364,7 +383,7 @@ function mapBackendOrderToFrontend(backend: BackendPurchaseOrder): PurchaseOrder
   }))
 
   return {
-    id: backend.id,
+    id: orderId,
     number,
     vendorName: vendorName || '—',
     vendorId,
@@ -379,8 +398,16 @@ function mapBackendOrderToFrontend(backend: BackendPurchaseOrder): PurchaseOrder
     notes: backend.notes || undefined,
     createdAt: orderDate, // Use orderDate as fallback
     updatedAt: orderDate, // Use orderDate as fallback
-    receipts: Array.isArray(backend.receipts) ? backend.receipts : [],
-    vendorBills: Array.isArray(backend.vendorBills) ? backend.vendorBills : [],
+    receipts: Array.isArray(backend.receipts)
+      ? backend.receipts
+          .map((r) => ({ ...r, id: extractId(r) }))
+          .filter((r) => r.id > 0)
+      : [],
+    vendorBills: Array.isArray(backend.vendorBills)
+      ? backend.vendorBills
+          .map((b) => ({ ...b, id: extractId(b) }))
+          .filter((b) => b.id > 0)
+      : [],
   }
 }
 
@@ -451,7 +478,7 @@ export async function getPurchaseOrder(id: number) {
     }
   }
 
-  if (!backendData || typeof backendData !== 'object' || !backendData.id) {
+  if (!backendData || typeof backendData !== 'object' || extractId(backendData) <= 0) {
     throw new Error('Invalid purchase order response format')
   }
 

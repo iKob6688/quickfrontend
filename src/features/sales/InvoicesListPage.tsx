@@ -7,24 +7,40 @@ import { Badge } from '@/components/ui/Badge'
 import { useMemo, useState } from 'react'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { listInvoices } from '@/api/services/invoices.service'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Spinner } from 'react-bootstrap'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 
-export function InvoicesListPage() {
+interface InvoicesListPageProps {
+  mode?: 'invoices' | 'receipts'
+}
+
+export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
   const navigate = useNavigate()
-  type StatusTab = 'all' | 'draft' | 'posted' | 'paid' | 'cancelled'
-  const [tab, setTab] = useState<StatusTab>('all')
+  const [searchParams, setSearchParams] = useSearchParams()
+  type StatusTab = 'all' | 'draft' | 'posted' | 'paid' | 'cancelled' | 'due'
+  const [tab, setTab] = useState<StatusTab>(
+    mode === 'receipts' ? 'paid' : searchParams.get('payment') === 'due' ? 'due' : 'all',
+  )
   const [q, setQ] = useState('')
   const qDebounced = useDebouncedValue(q, 300)
   const limit = 30
+  const isReceiptMode = mode === 'receipts'
 
   const query = useInfiniteQuery({
-    queryKey: ['invoices', tab, qDebounced, limit],
+    queryKey: ['invoices', mode, tab, qDebounced, limit],
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
+      const status =
+        isReceiptMode
+          ? tab === 'all'
+            ? undefined
+            : 'paid'
+          : tab === 'all' || tab === 'due'
+            ? undefined
+            : tab
       return await listInvoices({
-        status: tab === 'all' ? undefined : tab,
+        status,
         search: qDebounced || undefined,
         limit,
         offset: pageParam,
@@ -42,22 +58,43 @@ export function InvoicesListPage() {
     return query.data?.pages.flatMap((p) => p) ?? []
   }, [query.data?.pages])
   const countsQuery = useQuery({
-    queryKey: ['invoices-counts', qDebounced],
-    queryFn: () => listInvoices({ search: qDebounced || undefined, limit: 1000, offset: 0 }),
+    queryKey: ['invoices-counts', mode, qDebounced],
+    queryFn: () =>
+      listInvoices({
+        search: qDebounced || undefined,
+        limit: 1000,
+        offset: 0,
+        ...(isReceiptMode ? { status: 'paid' as const } : {}),
+      }),
     staleTime: 30_000,
   })
   const statusCounts = useMemo(() => {
-    const base = { all: 0, draft: 0, posted: 0, paid: 0, cancelled: 0 } as Record<StatusTab, number>
+    const base = { all: 0, draft: 0, posted: 0, paid: 0, cancelled: 0, due: 0 } as Record<StatusTab, number>
     for (const inv of countsQuery.data ?? []) {
-      base.all += 1
+      if (isReceiptMode) {
+        if (inv.status !== 'draft' && inv.status !== 'cancelled') base.all += 1
+      } else {
+        base.all += 1
+      }
       base[inv.status] += 1
+      const dueAmount = inv.amountDue ?? Math.max(0, (inv.total ?? 0) - (inv.amountPaid ?? 0))
+      const isPaid = inv.status === 'paid' || inv.paymentState === 'paid' || dueAmount <= 0
+      if (!isPaid && inv.status !== 'draft' && inv.status !== 'cancelled') base.due += 1
     }
     return base
-  }, [countsQuery.data])
+  }, [countsQuery.data, isReceiptMode])
 
   // Transform API data to table rows
   const rows = useMemo(() => {
-    return invoices.map((inv) => ({
+    return invoices
+      .filter((inv) => (isReceiptMode ? inv.status !== 'draft' && inv.status !== 'cancelled' : true))
+      .filter((inv) => {
+        if (isReceiptMode || tab !== 'due') return true
+        const dueAmount = inv.amountDue ?? Math.max(0, (inv.total ?? 0) - (inv.amountPaid ?? 0))
+        const isPaid = inv.status === 'paid' || inv.paymentState === 'paid' || dueAmount <= 0
+        return !isPaid && inv.status !== 'draft' && inv.status !== 'cancelled'
+      })
+      .map((inv) => ({
       id: inv.id,
       number: inv.number,
       customer: inv.customerName,
@@ -73,23 +110,32 @@ export function InvoicesListPage() {
       paymentState: inv.paymentState,
       amountPaid: inv.amountPaid,
       amountDue: inv.amountDue,
+      hasReceipt: inv.hasReceipt,
     }))
-  }, [invoices])
+  }, [invoices, isReceiptMode, tab])
 
   const columns: Column<(typeof rows)[number]>[] = [
     {
       key: 'number',
       header: 'เลขที่เอกสาร',
       className: 'text-nowrap',
-      cell: (r) => (
-        <button
-          type="button"
-          className="btn btn-link p-0 fw-semibold text-primary text-decoration-none font-monospace"
-          onClick={() => navigate(`/sales/invoices/${r.id}`)}
-        >
-          {r.number || `ร่าง #${r.id}`}
-        </button>
-      ),
+      cell: (r) => {
+        const total = r.total ?? 0
+        const paymentState = r.paymentState
+        const amountDue = r.amountDue ?? total
+        const isPaid =
+          r.status === 'paid' || paymentState === 'paid' || (amountDue <= 0 && total > 0)
+        const actionSuffix = isReceiptMode ? (isPaid ? '?action=receipt' : '?action=payment') : ''
+        return (
+          <button
+            type="button"
+            className="btn btn-link p-0 fw-semibold text-primary text-decoration-none font-monospace"
+            onClick={() => navigate(`/sales/invoices/${r.id}${actionSuffix}`)}
+          >
+            {r.number || `ร่าง #${r.id}`}
+          </button>
+        )
+      },
     },
     { 
       key: 'customer', 
@@ -144,8 +190,7 @@ export function InvoicesListPage() {
       header: 'สถานะการชำระ',
       className: 'text-nowrap',
       cell: (r) => {
-        // Only show payment status for posted invoices
-        if (r.status !== 'posted') {
+        if (r.status === 'draft' || r.status === 'cancelled') {
           return <span className="text-muted small">—</span>
         }
         
@@ -155,7 +200,7 @@ export function InvoicesListPage() {
         const amountPaid = r.amountPaid ?? 0
         
         // Use paymentState as primary source (most reliable from Odoo)
-        if (paymentState === 'paid') {
+        if (paymentState === 'paid' || r.status === 'paid') {
           // Fully paid according to Odoo payment_state
           return <Badge tone="green">ชำระครบแล้ว</Badge>
         } else if (paymentState === 'partial' || paymentState === 'in_payment') {
@@ -182,29 +227,58 @@ export function InvoicesListPage() {
         }
       },
     },
+    {
+      key: 'actions',
+      header: 'ดำเนินการ',
+      className: 'text-nowrap text-end',
+      cell: (r) => {
+        const total = r.total ?? 0
+        const paymentState = r.paymentState
+        const amountDue = r.amountDue ?? total
+        const isPaid = r.status === 'paid' || paymentState === 'paid' || (amountDue <= 0 && total > 0)
+        if (r.status === 'draft' || r.status === 'cancelled') {
+          return <span className="text-muted small">—</span>
+        }
+        return isPaid ? (
+          <Button size="sm" variant="ghost" onClick={() => navigate(`/sales/invoices/${r.id}?action=receipt`)}>
+            ดูใบเสร็จ
+          </Button>
+        ) : (
+          <Button size="sm" onClick={() => navigate(`/sales/invoices/${r.id}?action=payment`)}>
+            {isReceiptMode ? 'สร้างใบเสร็จรับเงิน' : 'ชำระเงิน'}
+          </Button>
+        )
+      },
+    },
   ]
 
   return (
     <div>
       <PageHeader
-        title="ใบเสร็จรับเงิน / ใบแจ้งหนี้"
-        subtitle="ค้นหา ดู และจัดการเอกสารขาย (รูปแบบ UI ใกล้ PEAK)"
-        breadcrumb="รายรับ · ใบเสร็จรับเงิน"
+        title={isReceiptMode ? 'ใบเสร็จรับเงิน' : 'ใบแจ้งหนี้'}
+        subtitle={
+          isReceiptMode
+            ? 'ค้นหาและเปิดรายการใบเสร็จรับเงิน (เอกสารที่ชำระแล้ว)'
+            : 'ค้นหา ดู และจัดการเอกสารขาย (รูปแบบ UI ใกล้ PEAK)'
+        }
+        breadcrumb={isReceiptMode ? 'รายรับ · ใบเสร็จรับเงิน' : 'รายรับ · ใบแจ้งหนี้'}
         actions={
           <div className="d-flex align-items-center gap-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => navigate('/sales/invoices/new')}
-            >
-              + ออกใบเสร็จ
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => navigate('/sales/invoices/new')}
-            >
-              + สร้างใบแจ้งหนี้
-            </Button>
+            {!isReceiptMode ? (
+              <Button
+                size="sm"
+                onClick={() => navigate('/sales/invoices/new')}
+              >
+                + สร้างใบแจ้งหนี้
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => navigate('/sales/invoices?payment=due')}
+              >
+                + เลือกใบแจ้งหนี้เพื่อสร้างใบเสร็จ
+              </Button>
+            )}
             <Button size="sm" variant="secondary" disabled>
               พิมพ์รายงาน
             </Button>
@@ -215,14 +289,32 @@ export function InvoicesListPage() {
       <div className="mb-4 d-flex flex-column gap-3 flex-sm-row align-items-sm-center justify-content-sm-between">
         <Tabs
           value={tab}
-          onChange={setTab}
-          items={[
-            { key: 'all', label: 'ทั้งหมด', count: statusCounts.all },
-            { key: 'draft', label: 'ร่าง', count: statusCounts.draft },
-            { key: 'posted', label: 'ยืนยันแล้ว', count: statusCounts.posted },
-            { key: 'paid', label: 'รับชำระแล้ว', count: statusCounts.paid },
-            { key: 'cancelled', label: 'ยกเลิก', count: statusCounts.cancelled },
-          ]}
+          onChange={(next) => {
+            const nextValue = next as StatusTab
+            if (isReceiptMode && nextValue !== 'paid' && nextValue !== 'all') return
+            setTab(nextValue)
+            if (!isReceiptMode) {
+              const q = new URLSearchParams(searchParams)
+              if (nextValue === 'due') q.set('payment', 'due')
+              else q.delete('payment')
+              setSearchParams(q, { replace: true })
+            }
+          }}
+          items={
+            isReceiptMode
+              ? [
+                  { key: 'paid', label: 'ใบเสร็จรับเงิน', count: statusCounts.paid },
+                  { key: 'all', label: 'ทั้งหมด', count: statusCounts.all },
+                ]
+              : [
+                  { key: 'all', label: 'ทั้งหมด', count: statusCounts.all },
+                  { key: 'due', label: 'ค้างชำระ', count: statusCounts.due },
+                  { key: 'draft', label: 'ร่าง', count: statusCounts.draft },
+                  { key: 'posted', label: 'ยืนยันแล้ว', count: statusCounts.posted },
+                  { key: 'paid', label: 'รับชำระแล้ว', count: statusCounts.paid },
+                  { key: 'cancelled', label: 'ยกเลิก', count: statusCounts.cancelled },
+                ]
+          }
         />
         <div className="d-flex gap-2 w-100 justify-content-sm-end" style={{ maxWidth: '560px' }}>
           <div className="w-100" style={{ maxWidth: '360px' }}>
@@ -234,7 +326,19 @@ export function InvoicesListPage() {
             />
           </div>
           {(q || tab !== 'all') && (
-            <Button size="sm" variant="ghost" onClick={() => { setQ(''); setTab('all') }}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setQ('')
+                setTab(isReceiptMode ? 'paid' : 'all')
+                if (!isReceiptMode) {
+                  const next = new URLSearchParams(searchParams)
+                  next.delete('payment')
+                  setSearchParams(next, { replace: true })
+                }
+              }}
+            >
               ล้างตัวกรอง
             </Button>
           )}
@@ -279,7 +383,9 @@ export function InvoicesListPage() {
                 <p className="small text-muted mb-0">
                   {qDebounced
                     ? 'ไม่พบข้อมูลที่ค้นหา ลองค้นหาด้วยคำอื่น'
-                    : 'ยังไม่มีใบแจ้งหนี้ในระบบ'}
+                    : isReceiptMode
+                      ? 'ยังไม่มีใบเสร็จรับเงินในระบบ'
+                      : 'ยังไม่มีใบแจ้งหนี้ในระบบ'}
                 </p>
               </div>
             }

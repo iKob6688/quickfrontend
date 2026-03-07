@@ -253,6 +253,8 @@ export function PurchaseOrderFormPage() {
   }
 
   const removeLine = (index: number) => {
+    const ok = window.confirm('ยืนยันการลบรายการนี้?')
+    if (!ok) return
     setFormData((prev) => ({
       ...prev,
       lines: (prev.lines || []).filter((_, i) => i !== index),
@@ -364,11 +366,12 @@ export function PurchaseOrderFormPage() {
       cell: (r) => (
         <Button
           size="sm"
-          variant="ghost"
+          variant="secondary"
           onClick={() => removeLine(r.id)}
-          className="text-danger"
+          className="text-danger-emphasis"
         >
-          <i className="bi bi-trash"></i>
+          <i className="bi bi-trash me-1"></i>
+          ลบ
         </Button>
       ),
     },

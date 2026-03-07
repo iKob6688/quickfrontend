@@ -5,6 +5,7 @@
   z-index: 1200;
   max-width: calc(100vw - 16px);
   max-height: calc(100vh - 16px);
+  pointer-events: none;
 }
 
 .avatar-assistant-trigger {
@@ -15,6 +16,7 @@
   padding: 0;
   background: transparent;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+  pointer-events: auto;
 }
 
 .avatar-assistant-trigger img {
@@ -25,12 +27,13 @@
 }
 
 .avatar-assistant-panel {
-  width: min(520px, calc(100vw - 24px));
+  width: min(560px, calc(100vw - 24px));
   margin-bottom: 12px;
-  max-height: calc(100vh - 32px);
+  max-height: min(82vh, 760px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  pointer-events: auto;
 }
 
 .avatar-assistant-panel .card-header {
@@ -42,6 +45,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   overflow-x: hidden;
+  padding-bottom: 12px;
 }
 
 .avatar-assistant-quick {
@@ -64,17 +68,22 @@
   max-width: 100%;
 }
 
+.avatar-confirm-box .avatar-confirm-select {
+  max-height: 220px;
+}
+
 @media (max-width: 576px) {
   .avatar-assistant-root {
     right: 8px;
     left: 8px;
     bottom: 8px;
     max-width: none;
+    pointer-events: none;
   }
 
   .avatar-assistant-panel {
     width: 100%;
-    max-height: calc(100vh - 16px);
+    max-height: calc(100vh - 12px);
   }
 }
 

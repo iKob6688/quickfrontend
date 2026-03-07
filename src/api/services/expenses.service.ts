@@ -89,11 +89,27 @@ function parseNumber(v: unknown): number {
   return 0
 }
 
+function extractId(v: unknown): number {
+  if (typeof v === 'number' && Number.isFinite(v)) return v
+  if (!v || typeof v !== 'object') return 0
+  const obj = v as Record<string, unknown>
+  if (typeof obj.id === 'number' && Number.isFinite(obj.id)) return obj.id
+  if (typeof obj._id === 'number' && Number.isFinite(obj._id)) return obj._id
+  const nested = obj.record
+  if (nested && typeof nested === 'object') {
+    const rec = nested as Record<string, unknown>
+    if (typeof rec.id === 'number' && Number.isFinite(rec.id)) return rec.id
+    if (typeof rec._id === 'number' && Number.isFinite(rec._id)) return rec._id
+  }
+  return 0
+}
+
 function mapBackendToFrontend(item: BackendExpenseListItem): ExpenseListItem {
+  const id = extractId(item)
   // Map backend state → our UI status
   const status = (item.state as ExpenseListItem['status'] | undefined) ?? 'draft'
   return {
-    id: item.id,
+    id,
     number: item.name ?? '',
     employeeName: item.employee?.name ?? '',
     employeeId: typeof item.employee?.id === 'number' ? item.employee.id : 0,
@@ -135,7 +151,7 @@ export async function listExpenses(params?: ListExpensesParams) {
     if (looksFrontend) return rawItems as ExpenseListItem[]
 
     return (rawItems as BackendExpenseListItem[])
-      .filter((it) => it && typeof it === 'object' && typeof (it as any).id === 'number')
+      .filter((it) => it && typeof it === 'object' && extractId(it) > 0)
       .map(mapBackendToFrontend)
   }
 
@@ -181,7 +197,7 @@ function normalizeExpensePayload(data: unknown): Expense {
     }
     if (isFrontendExpenseLike(obj)) return obj
     // Some endpoints may return backend detail directly without wrapper
-    if ('id' in obj && ('state' in obj || 'total_amount' in obj || 'unit_amount' in obj)) {
+    if (extractId(obj) > 0 && ('state' in obj || 'total_amount' in obj || 'unit_amount' in obj)) {
       return mapBackendExpenseDetailToFrontend(obj as BackendExpenseDetail)
     }
   }
@@ -189,6 +205,7 @@ function normalizeExpensePayload(data: unknown): Expense {
 }
 
 function mapBackendExpenseDetailToFrontend(backend: BackendExpenseDetail): Expense {
+  const expenseId = extractId(backend)
   const status = (backend.state as Expense['status'] | undefined) ?? 'draft'
   const total = parseNumber(backend.total_amount)
   const unitAmount = parseNumber(backend.unit_amount)
@@ -237,7 +254,7 @@ function mapBackendExpenseDetailToFrontend(backend: BackendExpenseDetail): Expen
   ]
 
   return {
-    id: backend.id,
+    id: expenseId,
     number: backend.name ?? '',
     employeeName: backend.employee?.name ?? '',
     expenseDate: backend.date ?? '',

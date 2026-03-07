@@ -33,7 +33,9 @@ const DEFAULT_FORM_DATA: PartnerUpsertPayload = {
   district: '',
   subDistrict: '',
   zip: '',
-  countryId: null,
+  countryId: Number(import.meta.env.VITE_COUNTRY_TH_ID || 219),
+  vatPriceMode: 'vat_excluded',
+  branchCode: 'สำนักงานใหญ่',
 }
 
 function extractSubDistrict(street2?: string): string {
@@ -81,6 +83,8 @@ export function CustomerFormPage() {
       subDistrict: data.subDistrict || extractSubDistrict(data.street2),
       zip: data.zip || '',
       countryId: data.countryId ?? null,
+      vatPriceMode: data.vatPriceMode || 'vat_excluded',
+      branchCode: data.branchCode || 'สำนักงานใหญ่',
     }
   }, [existingQuery.data])
 
@@ -140,6 +144,8 @@ export function CustomerFormPage() {
       district: formData.district?.trim() || undefined,
       subDistrict: formData.subDistrict?.trim() || undefined,
       zip: formData.zip?.trim() || undefined,
+      vatPriceMode: formData.vatPriceMode || 'vat_excluded',
+      branchCode: formData.branchCode?.trim() || undefined,
     })
   }
 
@@ -283,6 +289,32 @@ export function CustomerFormPage() {
                   <CountrySelector
                     value={formData.countryId}
                     onChange={(value) => updateFormData({ countryId: value })}
+                  />
+                </div>
+                <div className="col-md-4">
+                  <Label htmlFor="vatPriceMode">ประเภทราคา</Label>
+                  <select
+                    id="vatPriceMode"
+                    className="form-select"
+                    value={formData.vatPriceMode || 'vat_excluded'}
+                    onChange={(e) =>
+                      updateFormData({
+                        vatPriceMode: e.target.value as PartnerUpsertPayload['vatPriceMode'],
+                      })
+                    }
+                  >
+                    <option value="no_vat">ไม่มี VAT</option>
+                    <option value="vat_included">รวม VAT</option>
+                    <option value="vat_excluded">แยก VAT</option>
+                  </select>
+                </div>
+                <div className="col-md-4">
+                  <Label htmlFor="branchCode">สาขา</Label>
+                  <Input
+                    id="branchCode"
+                    value={formData.branchCode ?? ''}
+                    onChange={(e) => updateFormData({ branchCode: e.target.value })}
+                    placeholder="เช่น สำนักงานใหญ่"
                   />
                 </div>
               </div>
