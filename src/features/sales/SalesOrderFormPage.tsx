@@ -556,10 +556,14 @@ export function SalesOrderFormPage() {
                             id={`so-product-${idx}`}
                             valueId={line.productId ?? null}
                             onPick={(product) => {
+                              const productTaxIds = Array.isArray(product.taxes)
+                                ? product.taxes.map((t) => Number(t.id)).filter((n) => Number.isFinite(n) && n > 0)
+                                : []
                               updateLine(idx, {
                                 productId: product.id,
                                 description: (line.description || '').trim() ? line.description : product.name,
                                 unitPrice: typeof product.listPrice === 'number' ? product.listPrice : line.unitPrice,
+                                taxIds: productTaxIds,
                               })
                             }}
                           />

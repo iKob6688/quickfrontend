@@ -18,6 +18,7 @@ export default defineConfig(({ mode }) => {
   //   - Remote with port: http://192.168.1.100:18069
   const proxyTargetRaw = env.VITE_PROXY_TARGET || 'http://127.0.0.1:8069'
   const proxyTarget = proxyTargetRaw.replace(/\/+$/, '')
+  const buildId = env.VITE_BUILD_ID || new Date().toISOString()
   // Local topology can vary. Keep /api and /web on root backend by default,
   // and preserve /odoo proxy for deployments exposing web client under /odoo.
   const apiProxyTarget = proxyTarget.replace(/\/odoo$/i, '')
@@ -32,6 +33,9 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    define: {
+      __APP_BUILD_ID__: JSON.stringify(buildId),
+    },
     resolve: {
       alias: {
         '@': resolve(__dirname, 'src'),

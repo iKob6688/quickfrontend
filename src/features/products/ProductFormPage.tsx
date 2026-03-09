@@ -15,6 +15,7 @@ import {
   updateProduct,
   type ProductUpsertPayload,
 } from '@/api/services/products.service'
+import { listTaxAdminItems } from '@/api/services/taxes.service'
 
 const DEFAULT_FORM: ProductUpsertPayload = {
   name: '',
@@ -66,6 +67,8 @@ export function ProductFormPage() {
         categoryId: productQuery.data.categoryId ?? null,
         incomeAccountId: productQuery.data.incomeAccountId ?? null,
         expenseAccountId: productQuery.data.expenseAccountId ?? null,
+        saleTaxIds: productQuery.data.saleTaxIds ?? [],
+        purchaseTaxIds: productQuery.data.purchaseTaxIds ?? [],
         ...draft,
       }
     }
@@ -79,6 +82,18 @@ export function ProductFormPage() {
     retry: 0,
   })
   const canManageAdminFields = !!productAdminMetaQuery.data?.permissions?.canManageAdminFields
+  const salesTaxesQuery = useQuery({
+    queryKey: ['tax-admin', 'product-form', 'sale'],
+    queryFn: () => listTaxAdminItems({ typeTaxUse: 'sale', activeOnly: true, vatOnly: true, limit: 500 }),
+    enabled: canManageAdminFields,
+    staleTime: 60_000,
+  })
+  const purchaseTaxesQuery = useQuery({
+    queryKey: ['tax-admin', 'product-form', 'purchase'],
+    queryFn: () => listTaxAdminItems({ typeTaxUse: 'purchase', activeOnly: true, vatOnly: true, limit: 500 }),
+    enabled: canManageAdminFields,
+    staleTime: 60_000,
+  })
 
   const saveMutation = useMutation({
     mutationFn: async (payload: ProductUpsertPayload) => {
@@ -250,6 +265,44 @@ export function ProductFormPage() {
                       </select>
                     </div>
                     <div className="col-md-6">
+                      <Label htmlFor="saleTaxId">ภาษีขาย (VAT)</Label>
+                      <select
+                        id="saleTaxId"
+                        className="form-select"
+                        value={formData.saleTaxIds?.[0] ?? ''}
+                        onChange={(e) => {
+                          const id = e.target.value ? Number(e.target.value) : null
+                          setDraft((p) => ({ ...p, saleTaxIds: id ? [id] : [] }))
+                        }}
+                      >
+                        <option value="">— ไม่กำหนด —</option>
+                        {(salesTaxesQuery.data?.items || []).map((t) => (
+                          <option key={`sale-tax-${t.id}`} value={t.id}>
+                            {t.name} ({t.amount}%)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-md-6">
+                      <Label htmlFor="purchaseTaxId">ภาษีซื้อ (VAT)</Label>
+                      <select
+                        id="purchaseTaxId"
+                        className="form-select"
+                        value={formData.purchaseTaxIds?.[0] ?? ''}
+                        onChange={(e) => {
+                          const id = e.target.value ? Number(e.target.value) : null
+                          setDraft((p) => ({ ...p, purchaseTaxIds: id ? [id] : [] }))
+                        }}
+                      >
+                        <option value="">— ไม่กำหนด —</option>
+                        {(purchaseTaxesQuery.data?.items || []).map((t) => (
+                          <option key={`purchase-tax-${t.id}`} value={t.id}>
+                            {t.name} ({t.amount}%)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-md-6">
                       <Label htmlFor="incomeAccountId">บัญชีรายได้ (Income Account)</Label>
                       <select
                         id="incomeAccountId"
@@ -331,7 +384,7 @@ export function ProductFormPage() {
                 {productAdminMetaQuery.isLoading ? (
                   <div className="text-muted">กำลังโหลดสิทธิ์และ metadata...</div>
                 ) : canManageAdminFields ? (
-                  <div className="text-success">สามารถตั้งค่า ชนิดสินค้า / category / บัญชีสินค้า ได้</div>
+                  <div className="text-success">สามารถตั้งค่า ชนิดสินค้า / category / ภาษี VAT / บัญชีสินค้า ได้</div>
                 ) : (
                   <div className="text-muted">
                     ผู้ใช้ปัจจุบันไม่มีสิทธิ์จัดการ field ขั้นสูง (ชนิดสินค้า / category / ผูกบัญชี)

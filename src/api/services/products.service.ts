@@ -16,6 +16,7 @@ export interface ProductSummary {
   listPrice?: number | null
   price?: number | null
   active?: boolean
+  taxes?: Array<{ id: number; name: string; amount?: number; amountType?: string }>
 }
 
 export interface ProductDetail extends ProductSummary {
@@ -31,6 +32,8 @@ export interface ProductDetail extends ProductSummary {
   expenseAccountId?: number | null
   expenseAccountCode?: string | null
   expenseAccountName?: string | null
+  saleTaxIds?: number[]
+  purchaseTaxIds?: number[]
 }
 
 export interface ProductListParams {
@@ -62,6 +65,8 @@ export interface ProductUpsertPayload {
   categoryId?: number | null
   incomeAccountId?: number | null
   expenseAccountId?: number | null
+  saleTaxIds?: number[]
+  purchaseTaxIds?: number[]
 }
 
 export interface ProductAdminMetaResponse {
@@ -69,6 +74,8 @@ export interface ProductAdminMetaResponse {
   productTypes: Array<{ id: string; name: string }>
   categories: Array<{ id: number; name: string }>
   accounts: Array<{ id: number; code: string; name: string; displayName?: string; accountType?: string | null }>
+  salesTaxes?: Array<{ id: number; name: string; amount?: number; amountType?: string }>
+  purchaseTaxes?: Array<{ id: number; name: string; amount?: number; amountType?: string }>
 }
 
 const basePath = '/th/v1/products'
@@ -100,6 +107,11 @@ interface BackendProductSummary {
   purchase_ok?: boolean
   description?: string | null
   description_sale?: string | null
+  taxes?: Array<{ id?: number; name?: string; amount?: number; amountType?: string; amount_type?: string }>
+  taxes_id?: Array<number | { id?: number }>
+  supplier_taxes_id?: Array<number | { id?: number }>
+  saleTaxIds?: Array<number | { id?: number }>
+  purchaseTaxIds?: Array<number | { id?: number }>
 }
 
 function toNumberOrNull(v: unknown): number | null {
@@ -113,6 +125,16 @@ function toNumberOrNull(v: unknown): number | null {
 
 function mapProductSummary(raw: BackendProductSummary): ProductSummary {
   const listPrice = toNumberOrNull(raw.listPrice ?? raw.list_price ?? raw.price)
+  const taxes = Array.isArray(raw.taxes)
+    ? raw.taxes
+        .map((t) => ({
+          id: Number((t as any)?.id || 0),
+          name: String((t as any)?.name || ''),
+          amount: typeof (t as any)?.amount === 'number' ? (t as any).amount : undefined,
+          amountType: (t as any)?.amountType || (t as any)?.amount_type,
+        }))
+        .filter((t) => t.id > 0)
+    : []
   return {
     id: raw.id,
     name: raw.name || raw.display_name || '',
@@ -127,7 +149,26 @@ function mapProductSummary(raw: BackendProductSummary): ProductSummary {
     listPrice,
     price: toNumberOrNull(raw.price),
     active: raw.active,
+    taxes,
   }
+}
+
+function toIdList(input: unknown): number[] {
+  if (!Array.isArray(input)) return []
+  return input
+    .map((v) => {
+      if (typeof v === 'number') return v
+      if (typeof v === 'string') {
+        const n = Number(v)
+        return Number.isFinite(n) ? n : 0
+      }
+      if (v && typeof v === 'object') {
+        const n = Number((v as any).id)
+        return Number.isFinite(n) ? n : 0
+      }
+      return 0
+    })
+    .filter((n) => n > 0)
 }
 
 export async function listProducts(params?: ProductListParams) {
@@ -170,6 +211,8 @@ export async function getProduct(id: number) {
     expenseAccountId: toNumberOrNull((data as any)?.expenseAccountId ?? (data as any)?.expense_account_id),
     expenseAccountCode: ((data as any)?.expenseAccountCode ?? (data as any)?.expense_account_code ?? null) as string | null,
     expenseAccountName: ((data as any)?.expenseAccountName ?? (data as any)?.expense_account_name ?? null) as string | null,
+    saleTaxIds: toIdList((data as any)?.saleTaxIds ?? (data as any)?.taxes_id ?? (data as any)?.tax_ids),
+    purchaseTaxIds: toIdList((data as any)?.purchaseTaxIds ?? (data as any)?.supplier_taxes_id ?? (data as any)?.supplierTaxIds),
   }
 }
 
@@ -189,6 +232,12 @@ export async function createProduct(payload: ProductUpsertPayload) {
       categoryId: payload.categoryId,
       incomeAccountId: payload.incomeAccountId,
       expenseAccountId: payload.expenseAccountId,
+      saleTaxIds: payload.saleTaxIds,
+      purchaseTaxIds: payload.purchaseTaxIds,
+      taxes_id: payload.saleTaxIds,
+      tax_ids: payload.saleTaxIds,
+      supplier_taxes_id: payload.purchaseTaxIds,
+      supplierTaxIds: payload.purchaseTaxIds,
     }),
   )
   const data = unwrapResponse<BackendProductSummary>(response)
@@ -211,6 +260,12 @@ export async function updateProduct(id: number, payload: Partial<ProductUpsertPa
       categoryId: payload.categoryId,
       incomeAccountId: payload.incomeAccountId,
       expenseAccountId: payload.expenseAccountId,
+      saleTaxIds: payload.saleTaxIds,
+      purchaseTaxIds: payload.purchaseTaxIds,
+      taxes_id: payload.saleTaxIds,
+      tax_ids: payload.saleTaxIds,
+      supplier_taxes_id: payload.purchaseTaxIds,
+      supplierTaxIds: payload.purchaseTaxIds,
     }),
   )
   const data = unwrapResponse<BackendProductSummary>(response)

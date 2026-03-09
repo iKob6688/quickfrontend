@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 import App from './App.tsx'
+import { installRuntimeUpgradeGuard } from './lib/runtimeUpgradeGuard'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -13,6 +14,8 @@ const queryClient = new QueryClient({
     },
   },
 })
+
+installRuntimeUpgradeGuard(__APP_BUILD_ID__)
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

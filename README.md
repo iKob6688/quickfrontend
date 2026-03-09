@@ -160,6 +160,29 @@ sudo chown -R www-data:www-data /var/www/qacc
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
+### Prevent partial frontend upgrade after deploy (important)
+
+If users keep an old tab open during deploy, they can load old `index.html` with new hashed chunks (or opposite) and the app appears incomplete.
+
+This project now includes a runtime upgrade guard:
+
+- build id is injected via `__APP_BUILD_ID__` (from `vite.config.ts`)
+- on `vite:preloadError` / chunk-load failure, frontend performs a one-time hard reload per build
+
+Recommended server headers for SPA shell (`index.html`):
+
+- `Cache-Control: no-store, no-cache, must-revalidate`
+- do **not** aggressively cache `index.html`
+- static assets in `/assets/*` can stay long-cache + immutable
+
+Recommended deploy sequence:
+
+1. build (`npm ci && npm run build`)
+2. atomic sync `dist/` to web root
+3. reload nginx
+4. force CDN cache purge for `index.html` (Cloudflare) when needed
+5. quick smoke test from fresh incognito + existing session tab
+
 ### Production deployment (Odoo API instance / adt_th_api)
 
 This frontend depends on Odoo controllers from `adt_th_api`. When you change Python controller files, **you must restart the `odoo18-api` service** to load the new routes. `-u` (upgrade module) alone does **not** hot‑reload HTTP routing in a long-running Odoo process.

@@ -514,11 +514,15 @@ export function InvoiceFormPage() {
                               onPick={(p) => {
                                 const next = [...formData.lines]
                                 const prev = next[idx]
+                                const pickedTaxRate = Array.isArray(p.taxes) && p.taxes.length
+                                  ? Number(p.taxes[0]?.amount || 0)
+                                  : prev.taxRate ?? 0
                                 next[idx] = {
                                   ...prev,
                                   productId: p.id,
                                   // If description is empty, auto-fill with product name
                                   description: (prev.description || '').trim() ? prev.description : p.name,
+                                  taxRate: Number.isFinite(pickedTaxRate) ? pickedTaxRate : 0,
                                 }
                                 setFormData({ ...formData, lines: next })
                               }}
