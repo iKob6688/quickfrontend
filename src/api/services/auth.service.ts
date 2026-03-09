@@ -52,6 +52,7 @@ const basePath = '/th/v1/auth'
 // - some mount it under /odoo/web/session/*
 // Try root first, then /odoo as fallback.
 const webSessionBaseURLs = ['', '/odoo'] as const
+const AUTH_TIMEOUT_MS = Number(import.meta.env.VITE_AUTH_TIMEOUT_MS || 15000)
 
 type OdooWebSessionAuthResult = {
   uid?: number
@@ -67,6 +68,14 @@ type OdooWebSessionAuthResult = {
 
 function is404Error(err: unknown) {
   return (err as { response?: { status?: number } })?.response?.status === 404
+}
+
+function isRecoverableAuthTransportError(err: unknown) {
+  const anyErr = err as { response?: { status?: number }; code?: string }
+  const status = anyErr?.response?.status
+  if (status === 404 || status === 502 || status === 503 || status === 504) return true
+  const code = String(anyErr?.code || '')
+  return code === 'ECONNABORTED' || code === 'ERR_NETWORK'
 }
 
 async function loginViaWebSession(payload: LoginPayload): Promise<LoginResponse> {
@@ -89,7 +98,12 @@ async function loginViaWebSession(payload: LoginPayload): Promise<LoginResponse>
           },
           id: Date.now(),
         },
-        { baseURL, withCredentials: true, maxRedirects: 0 },
+        {
+          baseURL,
+          withCredentials: true,
+          maxRedirects: 0,
+          timeout: Number.isFinite(AUTH_TIMEOUT_MS) && AUTH_TIMEOUT_MS > 0 ? AUTH_TIMEOUT_MS : 15000,
+        },
       )
       raw = response.data as { result?: OdooWebSessionAuthResult; error?: unknown } | undefined
       result = raw?.result
@@ -135,7 +149,12 @@ async function getMeViaWebSession(): Promise<MeResponse> {
       response = await apiClient.post(
         '/web/session/get_session_info',
         { jsonrpc: '2.0', method: 'call', params: {}, id: Date.now() },
-        { baseURL, withCredentials: true, maxRedirects: 0 },
+        {
+          baseURL,
+          withCredentials: true,
+          maxRedirects: 0,
+          timeout: Number.isFinite(AUTH_TIMEOUT_MS) && AUTH_TIMEOUT_MS > 0 ? AUTH_TIMEOUT_MS : 15000,
+        },
       )
       const raw = response.data as { result?: any } | undefined
       lastRaw = raw
@@ -173,7 +192,12 @@ async function logoutViaWebSession() {
       await apiClient.post(
         '/web/session/destroy',
         { jsonrpc: '2.0', method: 'call', params: {}, id: Date.now() },
-        { baseURL, withCredentials: true, maxRedirects: 0 },
+        {
+          baseURL,
+          withCredentials: true,
+          maxRedirects: 0,
+          timeout: Number.isFinite(AUTH_TIMEOUT_MS) && AUTH_TIMEOUT_MS > 0 ? AUTH_TIMEOUT_MS : 15000,
+        },
       )
       return
     } catch (e) {
@@ -189,11 +213,13 @@ export async function login(payload: LoginPayload) {
     password: payload.password,
   })
   try {
-    const response = await apiClient.post(`${basePath}/login`, body)
+    const response = await apiClient.post(`${basePath}/login`, body, {
+      timeout: Number.isFinite(AUTH_TIMEOUT_MS) && AUTH_TIMEOUT_MS > 0 ? AUTH_TIMEOUT_MS : 15000,
+    })
     return unwrapResponse<LoginResponse>(response)
   } catch (err) {
-    if (is404Error(err)) {
-      // Local/dev fallback when custom auth route is unavailable but Odoo web session exists.
+    if (isRecoverableAuthTransportError(err)) {
+      // Fallback when custom auth route is unavailable/slow but Odoo web session exists.
       return loginViaWebSession(payload)
     }
     // Handle 405 Method Not Allowed - usually means VITE_API_BASE_URL is incorrect
@@ -220,16 +246,20 @@ export async function login(payload: LoginPayload) {
 export async function getMe() {
   const body = makeRpc({})
   try {
-    const response = await apiClient.post(`${basePath}/me`, body)
+    const response = await apiClient.post(`${basePath}/me`, body, {
+      timeout: Number.isFinite(AUTH_TIMEOUT_MS) && AUTH_TIMEOUT_MS > 0 ? AUTH_TIMEOUT_MS : 15000,
+    })
     return unwrapResponse<MeResponse>(response)
   } catch (err) {
-    if (is404Error(err)) {
+    if (isRecoverableAuthTransportError(err)) {
       return getMeViaWebSession()
     }
     // Backward-compat: some deployments expose /me as GET only
     const status = (err as { response?: { status?: number } })?.response?.status
     if (status === 405) {
-      const response = await apiClient.get(`${basePath}/me`)
+      const response = await apiClient.get(`${basePath}/me`, {
+        timeout: Number.isFinite(AUTH_TIMEOUT_MS) && AUTH_TIMEOUT_MS > 0 ? AUTH_TIMEOUT_MS : 15000,
+      })
       return unwrapResponse<MeResponse>(response)
     }
     throw err
