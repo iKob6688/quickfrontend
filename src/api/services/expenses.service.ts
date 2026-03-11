@@ -80,6 +80,22 @@ export interface ListExpensesParams {
 // NOTE: backend reality (adt_th_api): expenses are exposed under /api/th/v1/expenses/*
 const basePath = '/th/v1/expenses'
 
+function toBackendExpensePayload(payload: ExpensePayload, expenseId?: number) {
+  const firstLine = Array.isArray(payload.lines) ? payload.lines[0] : undefined
+  return {
+    ...(expenseId ? { expense_id: expenseId } : {}),
+    employee_id: payload.employeeId,
+    date: payload.expenseDate,
+    currency: payload.currency,
+    description: firstLine?.description?.trim() || payload.notes || '',
+    product_id: firstLine?.productId || undefined,
+    quantity: firstLine?.quantity ?? 1,
+    unit_amount: firstLine?.unitPrice ?? 0,
+    tax_ids: firstLine?.taxId ? [firstLine.taxId] : [],
+    notes: payload.notes,
+  }
+}
+
 function parseNumber(v: unknown): number {
   if (typeof v === 'number') return Number.isFinite(v) ? v : 0
   if (typeof v === 'string') {
@@ -278,22 +294,21 @@ export async function getExpense(id: number) {
 }
 
 export async function createExpense(payload: ExpensePayload) {
-  const body = makeRpc(payload)
-  const response = await apiClient.post(basePath, body)
+  const body = makeRpc(toBackendExpensePayload(payload))
+  const response = await apiClient.post(`${basePath}/create`, body)
   const data = unwrapResponse<Expense | BackendExpenseDetailResponse | BackendExpenseDetail | { item?: unknown }>(response)
   return normalizeExpensePayload(data)
 }
 
 export async function updateExpense(id: number, payload: ExpensePayload) {
-  const body = makeRpc({ id, ...payload })
-  const response = await apiClient.put(`${basePath}/${id}`, body)
+  const response = await apiClient.post(`${basePath}/update`, makeRpc(toBackendExpensePayload(payload, id)))
   const data = unwrapResponse<Expense | BackendExpenseDetailResponse | BackendExpenseDetail | { item?: unknown }>(response)
   return normalizeExpensePayload(data)
 }
 
 export async function submitExpense(id: number) {
-  const body = makeRpc({ id })
-  const response = await apiClient.post(`${basePath}/${id}/submit`, body)
+  const body = makeRpc({ expense_id: id })
+  const response = await apiClient.post(`${basePath}/submit`, body)
   const data = unwrapResponse<Expense | BackendExpenseDetailResponse | BackendExpenseDetail | { item?: unknown }>(response)
   return normalizeExpensePayload(data)
 }

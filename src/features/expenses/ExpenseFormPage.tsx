@@ -60,11 +60,15 @@ export function ExpenseFormPage() {
     [formData.lines],
   )
 
-  const canAddLine =
-    (line.productId && line.productId > 0) ||
-    Boolean(line.description.trim() && line.quantity > 0 && line.unitPrice >= 0)
+  const canAddLine = Boolean(
+    ((line.productId && line.productId > 0) || line.description.trim()) &&
+      line.quantity > 0 &&
+      line.unitPrice >= 0,
+  )
   const canSubmit = Boolean(
-    formData.expenseDate && formData.currency && formData.lines.length > 0,
+    formData.expenseDate &&
+      formData.currency &&
+      formData.lines.length > 0,
   )
 
   const createMutation = useMutation({
@@ -216,6 +220,7 @@ export function ExpenseFormPage() {
                       </option>
                     ))}
                   </select>
+                  <div className="form-text">ถ้าไม่มีสินค้าเดิมในระบบ สามารถกรอกรายละเอียด ระบบจะสร้างสินค้า/บริการสำหรับรายจ่ายให้อัตโนมัติ</div>
                 </div>
                 <div className="col-md-6">
                   <Label htmlFor="line-description">รายละเอียด</Label>

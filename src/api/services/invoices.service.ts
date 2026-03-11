@@ -128,14 +128,18 @@ function normalizeListItem(raw: unknown): InvoiceListItem {
       ? (statusRaw as InvoiceListItem['status'])
       : 'posted'
   const paymentState = parsePaymentState(item.paymentState ?? item.payment_state)
-  const amountPaid = parseNumber(item.amountPaid ?? item.amount_paid)
+  const amountPaidRaw = parseNumber(item.amountPaid ?? item.amount_paid)
   const total = parseNumber(item.total ?? item.amount_total)
+  const inferredPaid = (paymentState === 'paid' || status === 'paid') && total > 0
+  const amountPaid = amountPaidRaw > 0 ? amountPaidRaw : inferredPaid ? total : 0
   const amountDueRaw = parseNumber(item.amountDue ?? item.amount_due)
   const amountDue = amountDueRaw > 0 || paymentState === 'not_paid' || paymentState === 'partial'
     ? amountDueRaw
-    : Math.max(0, total - amountPaid)
+    : inferredPaid
+      ? 0
+      : Math.max(0, total - amountPaid)
   const hasReceipt = Boolean(
-    (item.hasReceipt ?? item.has_receipt ?? (paymentState === 'paid')) || amountDue <= 0,
+    (item.hasReceipt ?? item.has_receipt ?? (amountPaid > 0 && paymentState === 'paid')) || amountDue <= 0,
   )
   return {
     id,
@@ -192,18 +196,22 @@ function normalizeInvoice(raw: unknown): Invoice {
     .filter((p) => p.id > 0)
   const amountPaidFromPayments = payments.reduce((sum, p) => sum + parseNumber(p.amount), 0)
   const amountPaidRaw = parseNumber(item.amountPaid ?? item.amount_paid)
-  const amountPaid = amountPaidRaw > 0 ? amountPaidRaw : amountPaidFromPayments
   const total = parseNumber(item.total ?? item.amount_total)
-  const paymentState = parsePaymentState(item.paymentState ?? item.payment_state)
-  const amountDueRaw = parseNumber(item.amountDue ?? item.amount_due)
-  const amountDue = amountDueRaw > 0 || paymentState === 'not_paid' || paymentState === 'partial'
-    ? amountDueRaw
-    : Math.max(0, total - amountPaid)
   const statusRaw = String(item.status ?? item.state ?? '').toLowerCase()
   const status: Invoice['status'] =
     statusRaw === 'draft' || statusRaw === 'cancelled' || statusRaw === 'paid'
       ? (statusRaw as Invoice['status'])
       : 'posted'
+  const paymentState = parsePaymentState(item.paymentState ?? item.payment_state)
+  const inferredPaid = (paymentState === 'paid' || status === 'paid') && total > 0
+  const amountPaid =
+    amountPaidRaw > 0 ? amountPaidRaw : amountPaidFromPayments > 0 ? amountPaidFromPayments : inferredPaid ? total : 0
+  const amountDueRaw = parseNumber(item.amountDue ?? item.amount_due)
+  const amountDue = amountDueRaw > 0 || paymentState === 'not_paid' || paymentState === 'partial'
+    ? amountDueRaw
+    : inferredPaid
+      ? 0
+      : Math.max(0, total - amountPaid)
   return {
     id,
     customerId: parseNumber(item.customerId ?? item.customer_id ?? item.partner_id),
@@ -220,7 +228,8 @@ function normalizeInvoice(raw: unknown): Invoice {
     amountDue,
     paymentState,
     hasReceipt: Boolean(
-      (item.hasReceipt ?? item.has_receipt ?? (paymentState === 'paid')) || amountDue <= 0,
+      (item.hasReceipt ?? item.has_receipt ?? (payments.length > 0 || (amountPaid > 0 && paymentState === 'paid'))) ||
+        amountDue <= 0,
     ),
     lastPaymentDate: (item.lastPaymentDate ?? item.last_payment_date ?? null) as string | null,
     payments,

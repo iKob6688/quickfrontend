@@ -125,7 +125,8 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
         const amountDue = r.amountDue ?? total
         const isPaid =
           r.status === 'paid' || paymentState === 'paid' || (amountDue <= 0 && total > 0)
-        const actionSuffix = isReceiptMode ? (isPaid ? '?action=receipt' : '?action=payment') : ''
+        const canOpenReceipt = Boolean(r.hasReceipt)
+        const actionSuffix = isReceiptMode ? (canOpenReceipt ? '?action=receipt' : isPaid ? '' : '?action=payment') : ''
         return (
           <button
             type="button"
@@ -236,16 +237,20 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
         const paymentState = r.paymentState
         const amountDue = r.amountDue ?? total
         const isPaid = r.status === 'paid' || paymentState === 'paid' || (amountDue <= 0 && total > 0)
+        const canOpenReceipt = Boolean(r.hasReceipt)
         if (r.status === 'draft' || r.status === 'cancelled') {
           return <span className="text-muted small">—</span>
         }
-        return isPaid ? (
-          <Button size="sm" variant="ghost" onClick={() => navigate(`/sales/invoices/${r.id}?action=receipt`)}>
-            ดูใบเสร็จ
-          </Button>
-        ) : (
+        if (isPaid && canOpenReceipt) {
+          return (
+            <Button size="sm" variant="ghost" onClick={() => navigate(`/sales/invoices/${r.id}?action=receipt`)}>
+              ดูใบเสร็จ
+            </Button>
+          )
+        }
+        return (
           <Button size="sm" onClick={() => navigate(`/sales/invoices/${r.id}?action=payment`)}>
-            {isReceiptMode ? 'สร้างใบเสร็จรับเงิน' : 'ชำระเงิน'}
+            {isReceiptMode ? (isPaid ? 'เปิดเอกสาร' : 'สร้างใบเสร็จรับเงิน') : 'ชำระเงิน'}
           </Button>
         )
       },

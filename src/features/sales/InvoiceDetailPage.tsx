@@ -72,14 +72,22 @@ export function InvoiceDetailPage() {
 
   const invoicePayments = invoice?.payments || []
   const invoiceTotal = invoice?.total ?? 0
+  const invoiceMarkedPaid = invoice?.paymentState === 'paid' || invoice?.status === 'paid'
   const invoiceAmountPaid =
-    invoice?.amountPaid ??
-    (invoicePayments.length > 0
-      ? invoicePayments.reduce((sum, p) => sum + Number(p.amount || 0), 0)
-      : 0)
+    invoice?.amountPaid && invoice.amountPaid > 0
+      ? invoice.amountPaid
+      : invoicePayments.length > 0
+        ? invoicePayments.reduce((sum, p) => sum + Number(p.amount || 0), 0)
+        : invoiceMarkedPaid
+          ? invoiceTotal
+          : 0
   const invoiceAmountDue = Math.max(
     0,
-    invoice?.amountDue ?? (invoiceTotal - invoiceAmountPaid),
+    invoice?.amountDue !== undefined && invoice.amountDue >= 0
+      ? invoice.amountDue
+      : invoiceMarkedPaid
+        ? 0
+        : invoiceTotal - invoiceAmountPaid,
   )
 
   useEffect(() => {
@@ -322,13 +330,28 @@ export function InvoiceDetailPage() {
   
   // Payment information from API (fallback to calculated if not available)
   const amountPaidFromHistory = (invoice.payments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0)
-  const amountPaid = invoice.amountPaid ?? (amountPaidFromHistory > 0 ? amountPaidFromHistory : invoice.status === 'paid' ? total : 0)
-  const amountDue = invoice.amountDue ?? Math.max(0, total - amountPaid)
+  const canonicalPaid = invoice.paymentState === 'paid' || invoice.status === 'paid'
+  const amountPaid =
+    invoice.amountPaid && invoice.amountPaid > 0
+      ? invoice.amountPaid
+      : amountPaidFromHistory > 0
+        ? amountPaidFromHistory
+        : canonicalPaid
+          ? total
+          : 0
+  const amountDue =
+    invoice.amountDue !== undefined && invoice.amountDue >= 0
+      ? invoice.amountDue
+      : canonicalPaid
+        ? 0
+        : Math.max(0, total - amountPaid)
   // Map default_account_id to bankAccount if needed
   const payments = (invoice.payments || []).map((p) => ({
     ...p,
     bankAccount: p.bankAccount ?? (p.default_account_id ? String(p.default_account_id) : null),
   }))
+  const canOpenReceipt = payments.length > 0
+  const paymentDataMismatch = canonicalPaid && payments.length === 0
   
   const paymentBadgeTone =
     invoice.paymentState === 'paid' || amountDue === 0
@@ -444,7 +467,7 @@ export function InvoiceDetailPage() {
                 Confirm → Payment
               </Button>
             )}
-            {payments.length > 0 && (
+            {canOpenReceipt && (
               <Button
                 size="sm"
                 variant="ghost"
@@ -481,7 +504,7 @@ export function InvoiceDetailPage() {
           <span className="text-muted small">→</span>
           <Badge tone={amountPaid > 0 ? 'green' : 'gray'}>Payment</Badge>
           <span className="text-muted small">→</span>
-          <Badge tone={payments.length > 0 ? 'green' : 'gray'}>Receipt</Badge>
+          <Badge tone={canOpenReceipt ? 'green' : 'gray'}>Receipt</Badge>
           {payments.length > 1 ? (
             <span className="small text-muted">({payments.length} payments / รองรับแบ่งชำระ)</span>
           ) : null}
@@ -768,7 +791,11 @@ export function InvoiceDetailPage() {
                   </div>
                 ) : (
                   <div className="mt-3">
-                    <div className="small text-muted">ยังไม่มีประวัติการชำระเงิน</div>
+                    <div className="small text-muted">
+                      {paymentDataMismatch
+                        ? 'เอกสารถูกทำเครื่องหมายว่าชำระแล้ว แต่ยังไม่พบ payment record สำหรับออกใบเสร็จ'
+                        : 'ยังไม่มีประวัติการชำระเงิน'}
+                    </div>
                   </div>
                 )}
                 
