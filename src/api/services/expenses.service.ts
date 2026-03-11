@@ -96,6 +96,15 @@ function toBackendExpensePayload(payload: ExpensePayload, expenseId?: number) {
   }
 }
 
+function validateExpensePayload(payload: ExpensePayload) {
+  if (!Array.isArray(payload.lines) || payload.lines.length === 0) {
+    throw new Error('Expense must contain at least one line')
+  }
+  if (payload.lines.length > 1) {
+    throw new Error('Current expense API supports one line per expense only')
+  }
+}
+
 function parseNumber(v: unknown): number {
   if (typeof v === 'number') return Number.isFinite(v) ? v : 0
   if (typeof v === 'string') {
@@ -294,6 +303,7 @@ export async function getExpense(id: number) {
 }
 
 export async function createExpense(payload: ExpensePayload) {
+  validateExpensePayload(payload)
   const body = makeRpc(toBackendExpensePayload(payload))
   const response = await apiClient.post(`${basePath}/create`, body)
   const data = unwrapResponse<Expense | BackendExpenseDetailResponse | BackendExpenseDetail | { item?: unknown }>(response)
@@ -301,6 +311,7 @@ export async function createExpense(payload: ExpensePayload) {
 }
 
 export async function updateExpense(id: number, payload: ExpensePayload) {
+  validateExpensePayload(payload)
   const response = await apiClient.post(`${basePath}/update`, makeRpc(toBackendExpensePayload(payload, id)))
   const data = unwrapResponse<Expense | BackendExpenseDetailResponse | BackendExpenseDetail | { item?: unknown }>(response)
   return normalizeExpensePayload(data)

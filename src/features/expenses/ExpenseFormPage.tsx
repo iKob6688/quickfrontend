@@ -68,7 +68,7 @@ export function ExpenseFormPage() {
   const canSubmit = Boolean(
     formData.expenseDate &&
       formData.currency &&
-      formData.lines.length > 0,
+      formData.lines.length === 1,
   )
 
   const createMutation = useMutation({
@@ -220,7 +220,7 @@ export function ExpenseFormPage() {
                       </option>
                     ))}
                   </select>
-                  <div className="form-text">ถ้าไม่มีสินค้าเดิมในระบบ สามารถกรอกรายละเอียด ระบบจะสร้างสินค้า/บริการสำหรับรายจ่ายให้อัตโนมัติ</div>
+                  <div className="form-text">เลือกสินค้าเดิมหรือกรอกรายละเอียด 1 รายการต่อ 1 เอกสารรายจ่าย</div>
                 </div>
                 <div className="col-md-6">
                   <Label htmlFor="line-description">รายละเอียด</Label>
@@ -267,6 +267,11 @@ export function ExpenseFormPage() {
                 <span className="text-muted">จำนวนรายการ</span>
                 <span className="fw-semibold">{formData.lines.length}</span>
               </div>
+              {formData.lines.length > 1 ? (
+                <div className="alert alert-warning small py-2">
+                  API ปัจจุบันรองรับ 1 รายการต่อรายจ่าย กรุณาแยกบันทึกทีละรายการ
+                </div>
+              ) : null}
               <div className="d-flex justify-content-between mb-3">
                 <span className="text-muted">ยอดรวมโดยประมาณ</span>
                 <span className="fw-semibold font-monospace">
