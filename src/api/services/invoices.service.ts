@@ -25,6 +25,7 @@ export interface InvoicePayload {
 export interface PaymentRecord {
   id: number
   amount: number
+  appliedAmount?: number
   date: string
   method?: string
   journal?: string
@@ -44,6 +45,8 @@ export interface Invoice extends InvoicePayload {
   amountDue?: number // Remaining amount to pay (if available from backend)
   paymentState?: 'not_paid' | 'partial' | 'paid' | 'in_payment'
   hasReceipt?: boolean
+  hasPaymentReceipt?: boolean
+  hasFinalReceipt?: boolean
   lastPaymentDate?: string | null
   payments?: PaymentRecord[] // Payment history (if available from backend)
   createdAt: string
@@ -66,6 +69,8 @@ export interface InvoiceListItem {
   amountPaid?: number  // Amount already paid
   amountDue?: number   // Remaining amount to pay
   hasReceipt?: boolean
+  hasPaymentReceipt?: boolean
+  hasFinalReceipt?: boolean
   lastPaymentDate?: string | null
 }
 
@@ -138,8 +143,11 @@ function normalizeListItem(raw: unknown): InvoiceListItem {
     : inferredPaid
       ? 0
       : Math.max(0, total - amountPaid)
-  const hasReceipt = Boolean(
-    (item.hasReceipt ?? item.has_receipt ?? (amountPaid > 0 && paymentState === 'paid')) || amountDue <= 0,
+  const hasPaymentReceipt = Boolean(
+    item.hasPaymentReceipt ?? item.has_payment_receipt ?? amountPaid > 0,
+  )
+  const hasFinalReceipt = Boolean(
+    item.hasFinalReceipt ?? item.has_final_receipt ?? item.hasReceipt ?? item.has_receipt ?? amountDue <= 0,
   )
   return {
     id,
@@ -154,7 +162,9 @@ function normalizeListItem(raw: unknown): InvoiceListItem {
     paymentState,
     amountPaid,
     amountDue,
-    hasReceipt,
+    hasReceipt: hasFinalReceipt,
+    hasPaymentReceipt,
+    hasFinalReceipt,
     lastPaymentDate: (item.lastPaymentDate ?? item.last_payment_date ?? null) as string | null,
   }
 }
@@ -184,6 +194,7 @@ function normalizeInvoice(raw: unknown): Invoice {
       return {
         id: parseNumber(p.id),
         amount: parseNumber(p.amount),
+        appliedAmount: parseNumber(p.appliedAmount ?? p.applied_amount) || undefined,
         date: String(p.date ?? ''),
         method: p.method ? String(p.method) : undefined,
         journal: p.journal ? String(p.journal) : undefined,
@@ -194,7 +205,7 @@ function normalizeInvoice(raw: unknown): Invoice {
       }
     })
     .filter((p) => p.id > 0)
-  const amountPaidFromPayments = payments.reduce((sum, p) => sum + parseNumber(p.amount), 0)
+  const amountPaidFromPayments = payments.reduce((sum, p) => sum + parseNumber(p.appliedAmount ?? p.amount), 0)
   const amountPaidRaw = parseNumber(item.amountPaid ?? item.amount_paid)
   const total = parseNumber(item.total ?? item.amount_total)
   const statusRaw = String(item.status ?? item.state ?? '').toLowerCase()
@@ -212,6 +223,13 @@ function normalizeInvoice(raw: unknown): Invoice {
     : inferredPaid
       ? 0
       : Math.max(0, total - amountPaid)
+  const hasPaymentReceipt = Boolean(
+    item.hasPaymentReceipt ?? item.has_payment_receipt ?? ((payments.length > 0) || (amountPaid > 0)),
+  )
+  const hasFinalReceipt = Boolean(
+    item.hasFinalReceipt ?? item.has_final_receipt ?? item.hasReceipt ?? item.has_receipt ?? amountDue <= 0,
+  )
+
   return {
     id,
     customerId: parseNumber(item.customerId ?? item.customer_id ?? item.partner_id),
@@ -227,10 +245,9 @@ function normalizeInvoice(raw: unknown): Invoice {
     amountPaid,
     amountDue,
     paymentState,
-    hasReceipt: Boolean(
-      (item.hasReceipt ?? item.has_receipt ?? (payments.length > 0 || (amountPaid > 0 && paymentState === 'paid'))) ||
-        amountDue <= 0,
-    ),
+    hasReceipt: hasFinalReceipt,
+    hasPaymentReceipt,
+    hasFinalReceipt,
     lastPaymentDate: (item.lastPaymentDate ?? item.last_payment_date ?? null) as string | null,
     payments,
     createdAt: String(item.createdAt ?? item.created_at ?? item.create_date ?? ''),

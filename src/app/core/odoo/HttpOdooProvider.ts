@@ -24,6 +24,17 @@ function withTimeout(signal: AbortSignal | undefined, timeoutMs: number) {
 }
 
 function endpointFor(docType: DocType, recordId: string): string {
+  if (docType === 'receipt_full' || docType === 'receipt_short') {
+    const receiptPath = docType === 'receipt_full' ? 'receipt/full' : 'receipt/short'
+    if (recordId.startsWith('invoice:')) {
+      const invoiceId = recordId.slice('invoice:'.length).trim()
+      return `/api/th/v1/erpth/docs/invoice/${encodeURIComponent(invoiceId)}/${receiptPath}`
+    }
+    if (recordId.startsWith('payment:')) {
+      const paymentId = recordId.slice('payment:'.length).trim()
+      return `/api/th/v1/erpth/docs/${receiptPath}/${encodeURIComponent(paymentId)}`
+    }
+  }
   switch (docType) {
     case 'quotation':
       return `/api/th/v1/erpth/docs/quotation/${encodeURIComponent(recordId)}`

@@ -111,6 +111,8 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
       amountPaid: inv.amountPaid,
       amountDue: inv.amountDue,
       hasReceipt: inv.hasReceipt,
+      hasPaymentReceipt: inv.hasPaymentReceipt,
+      hasFinalReceipt: inv.hasFinalReceipt,
     }))
   }, [invoices, isReceiptMode, tab])
 
@@ -125,8 +127,11 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
         const amountDue = r.amountDue ?? total
         const isPaid =
           r.status === 'paid' || paymentState === 'paid' || (amountDue <= 0 && total > 0)
-        const canOpenReceipt = Boolean(r.hasReceipt)
-        const actionSuffix = isReceiptMode ? (canOpenReceipt ? '?action=receipt' : isPaid ? '' : '?action=payment') : ''
+        const hasPaymentReceipt = Boolean(r.hasPaymentReceipt)
+        const hasFinalReceipt = Boolean(r.hasFinalReceipt ?? r.hasReceipt)
+        const actionSuffix = isReceiptMode
+          ? (hasPaymentReceipt || hasFinalReceipt ? '?action=receipt' : isPaid ? '' : '?action=payment')
+          : ''
         return (
           <button
             type="button"
@@ -237,20 +242,21 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
         const paymentState = r.paymentState
         const amountDue = r.amountDue ?? total
         const isPaid = r.status === 'paid' || paymentState === 'paid' || (amountDue <= 0 && total > 0)
-        const canOpenReceipt = Boolean(r.hasReceipt)
+        const hasPaymentReceipt = Boolean(r.hasPaymentReceipt)
+        const hasFinalReceipt = Boolean(r.hasFinalReceipt ?? r.hasReceipt)
         if (r.status === 'draft' || r.status === 'cancelled') {
           return <span className="text-muted small">—</span>
         }
-        if (isPaid && canOpenReceipt) {
+        if (hasPaymentReceipt || hasFinalReceipt) {
           return (
             <Button size="sm" variant="ghost" onClick={() => navigate(`/sales/invoices/${r.id}?action=receipt`)}>
-              ดูใบเสร็จ
+              {hasFinalReceipt ? 'ดูใบเสร็จ' : 'ดูเอกสารรับชำระ'}
             </Button>
           )
         }
         return (
           <Button size="sm" onClick={() => navigate(`/sales/invoices/${r.id}?action=payment`)}>
-            {isReceiptMode ? (isPaid ? 'เปิดเอกสาร' : 'สร้างใบเสร็จรับเงิน') : 'ชำระเงิน'}
+            {isReceiptMode ? (isPaid ? 'เปิดเอกสาร' : 'รับชำระเงิน') : 'ชำระเงิน'}
           </Button>
         )
       },

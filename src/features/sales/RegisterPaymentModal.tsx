@@ -8,6 +8,7 @@ interface Props {
   onClose: () => void
   onSubmit: (payload: RegisterPaymentPayload) => Promise<void> | void
   defaultAmount?: number
+  maxAmount?: number
   currency?: string
 }
 
@@ -20,6 +21,7 @@ export function RegisterPaymentModal({
   onClose,
   onSubmit,
   defaultAmount,
+  maxAmount,
   currency,
 }: Props) {
   const [amount, setAmount] = useState<string>('')
@@ -53,6 +55,10 @@ export function RegisterPaymentModal({
     setError(null)
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
       setError('กรุณาระบุจำนวนเงินที่ถูกต้อง')
+      return
+    }
+    if (maxAmount != null && parsedAmount - maxAmount > 0.00001) {
+      setError('จำนวนเงินรับชำระต้องไม่เกินยอดคงเหลือ')
       return
     }
     if (!date) {
@@ -101,6 +107,11 @@ export function RegisterPaymentModal({
               min={0}
               step="0.01"
             />
+            {maxAmount != null ? (
+              <div className="form-text">
+                ยอดคงเหลือ {maxAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency || ''}
+              </div>
+            ) : null}
           </div>
 
           <div className="mb-3">
@@ -121,7 +132,7 @@ export function RegisterPaymentModal({
               <option value="card">Card</option>
             </Form.Select>
             <div className="form-text">
-              ฝั่ง Odoo จะเป็นผู้ตัดสินใจ workflow การชำระเงินจริง
+              ใช้เป็นข้อมูลประกอบการรับชำระ ฝั่งบัญชีจริงอ้างอิง journal/payment method ของ Odoo
             </div>
           </div>
 
@@ -146,5 +157,4 @@ export function RegisterPaymentModal({
     </Modal>
   )
 }
-
 

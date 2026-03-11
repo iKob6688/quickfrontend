@@ -650,6 +650,20 @@ body {
   text-align: center;
 }
 
+.qf-app .qf-print-option-row {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+  padding: 0.15rem 0 0.9rem;
+}
+
+.qf-app .qf-print-option-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.qf-app .qf-print-option-row--disabled {
+  opacity: 0.72;
+}
+
 /* ============================================
    Sales order line editor (desktop + mobile)
    ============================================ */

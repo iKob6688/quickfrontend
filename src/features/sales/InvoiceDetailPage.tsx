@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { Spinner, Alert, OverlayTrigger, Tooltip, Modal, ButtonGroup, Button as BootstrapButton, Form } from 'react-bootstrap'
+import { Spinner, Alert, OverlayTrigger, Tooltip, Modal, ButtonGroup, Button as BootstrapButton } from 'react-bootstrap'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { RegisterPaymentModal } from '@/features/sales/RegisterPaymentModal'
 import { AmendInvoiceModal } from '@/features/sales/AmendInvoiceModal'
@@ -27,7 +27,6 @@ export function InvoiceDetailPage() {
   const [amendOpen, setAmendOpen] = useState(false)
   const [promptPayOpen, setPromptPayOpen] = useState(false)
   const [printMenuOpen, setPrintMenuOpen] = useState(false)
-  const [selectedReceiptPaymentId, setSelectedReceiptPaymentId] = useState<number | null>(null)
   const studioSettings = useStudioSettingsStore((s) => s.settings)
 
   const invoiceId = id ? Number.parseInt(id, 10) : null
@@ -77,7 +76,7 @@ export function InvoiceDetailPage() {
     invoice?.amountPaid && invoice.amountPaid > 0
       ? invoice.amountPaid
       : invoicePayments.length > 0
-        ? invoicePayments.reduce((sum, p) => sum + Number(p.amount || 0), 0)
+        ? invoicePayments.reduce((sum, p) => sum + Number((p.appliedAmount ?? p.amount) || 0), 0)
         : invoiceMarkedPaid
           ? invoiceTotal
           : 0
@@ -108,7 +107,7 @@ export function InvoiceDetailPage() {
       )
       return
     }
-    if (requestedAction === 'receipt' && invoicePayments.length > 0) {
+    if (requestedAction === 'receipt' && ((invoice.hasPaymentReceipt || invoice.hasFinalReceipt) || invoiceAmountPaid > 0)) {
       setPrintMenuOpen(true)
       setSearchParams(
         (prev) => {
@@ -123,18 +122,9 @@ export function InvoiceDetailPage() {
     requestedAction,
     invoice,
     invoiceAmountDue,
-    invoicePayments.length,
+    invoiceAmountPaid,
     setSearchParams,
   ])
-
-  useEffect(() => {
-    if (!invoice?.payments?.length) {
-      setSelectedReceiptPaymentId(null)
-      return
-    }
-    const ids = new Set(invoice.payments.map((p) => p.id))
-    setSelectedReceiptPaymentId((prev) => (prev && ids.has(prev) ? prev : invoice.payments![invoice.payments!.length - 1]!.id))
-  }, [invoice?.payments])
 
   const postMutation = useMutation({
     mutationFn: () => postInvoice(invoiceId!),
@@ -149,26 +139,26 @@ export function InvoiceDetailPage() {
     },
   })
 
-  const latestPaymentId = selectedReceiptPaymentId
+  const receiptRecordId = invoice && invoiceAmountPaid > 0 ? `invoice:${invoice.id}` : null
 
   const openReportsStudioPrint = (templateId: string) => {
-    if (!latestPaymentId) {
-      toast.error('ยังพิมพ์ใบเสร็จไม่ได้', 'ต้องมีรายการรับชำระเงินก่อน เพื่อใช้ข้อมูลจริงจาก payment')
+    if (!receiptRecordId) {
+      toast.error('ยังพิมพ์ใบเสร็จไม่ได้', 'ต้องมีรายการรับชำระเงินก่อน')
       return
     }
     toast.info('เปิดหน้าพิมพ์ (Reports Studio)', `Template: ${templateId}`)
-    const url = `/reports-studio/print/${templateId}?recordId=${encodeURIComponent(String(latestPaymentId))}`
+    const url = `/reports-studio/print/${templateId}?recordId=${encodeURIComponent(receiptRecordId)}`
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   const openReportsStudioPdf = (templateId: string) => {
-    if (!latestPaymentId) {
-      toast.error('ยังสร้าง PDF ใบเสร็จไม่ได้', 'ต้องมีรายการรับชำระเงินก่อน เพื่อใช้ข้อมูลจริงจาก payment')
+    if (!receiptRecordId) {
+      toast.error('ยังสร้าง PDF ใบเสร็จไม่ได้', 'ต้องมีรายการรับชำระเงินก่อน')
       return
     }
     toast.info('เปิด PDF (Reports Studio)', `Template: ${templateId}`)
     // Open preview and auto-trigger PDF generation there (mobile friendly: opens new tab).
-    const url = `/reports-studio/preview/${templateId}?recordId=${encodeURIComponent(String(latestPaymentId))}&auto=pdf`
+    const url = `/reports-studio/preview/${templateId}?recordId=${encodeURIComponent(receiptRecordId)}&auto=pdf`
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 
@@ -328,8 +318,8 @@ export function InvoiceDetailPage() {
   const total = invoice.total ?? 0
   const currency = invoice.currency || 'THB'
   
-  // Payment information from API (fallback to calculated if not available)
-  const amountPaidFromHistory = (invoice.payments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0)
+  // Payment information from API (backend is canonical; use history only as fallback)
+  const amountPaidFromHistory = (invoice.payments || []).reduce((sum, p) => sum + Number((p.appliedAmount ?? p.amount) || 0), 0)
   const canonicalPaid = invoice.paymentState === 'paid' || invoice.status === 'paid'
   const amountPaid =
     invoice.amountPaid && invoice.amountPaid > 0
@@ -350,7 +340,9 @@ export function InvoiceDetailPage() {
     ...p,
     bankAccount: p.bankAccount ?? (p.default_account_id ? String(p.default_account_id) : null),
   }))
-  const canOpenReceipt = payments.length > 0
+  const hasPaymentReceipt = Boolean(invoice.hasPaymentReceipt ?? payments.length > 0)
+  const hasFinalReceipt = Boolean(invoice.hasFinalReceipt ?? invoice.hasReceipt ?? (amountDue <= 0 && amountPaid > 0))
+  const canOpenReceipt = hasPaymentReceipt || hasFinalReceipt
   const paymentDataMismatch = canonicalPaid && payments.length === 0
   
   const paymentBadgeTone =
@@ -365,6 +357,88 @@ export function InvoiceDetailPage() {
       : invoice.paymentState === 'partial' || invoice.paymentState === 'in_payment' || amountPaid > 0
         ? 'ชำระบางส่วน'
         : 'รอการชำระเงิน'
+  const paymentStageText =
+    invoice.paymentState === 'paid' || amountDue === 0
+      ? 'รับชำระครบแล้ว'
+      : invoice.paymentState === 'partial' || invoice.paymentState === 'in_payment' || amountPaid > 0
+        ? 'รับชำระบางส่วน'
+        : 'ยังไม่ได้รับชำระ'
+  const printSections = [
+    {
+      key: 'invoice',
+      title: 'Invoice',
+      badge: 'เอกสารจริง',
+      badgeTone: 'blue' as const,
+      description: 'พิมพ์จากใบแจ้งหนี้นี้',
+      enabled: true,
+      helperText: 'ไม่อิงการรับชำระ',
+      printLabel: 'พิมพ์ Invoice',
+      pdfLabel: 'PDF Invoice',
+      templateLabel: 'แก้ไข Template Invoice',
+      onPrint: () => {
+        setPrintMenuOpen(false)
+        const url = `/reports-studio/print/${rsTplInvoice}?recordId=${encodeURIComponent(String(invoice.id))}`
+        window.open(url, '_blank', 'noopener,noreferrer')
+      },
+      onPdf: () => {
+        setPrintMenuOpen(false)
+        const url = `/reports-studio/preview/${rsTplInvoice}?recordId=${encodeURIComponent(String(invoice.id))}&auto=pdf`
+        window.open(url, '_blank', 'noopener,noreferrer')
+      },
+      onEdit: () => {
+        setPrintMenuOpen(false)
+        openReportsStudioEdit(rsTplInvoice)
+      },
+    },
+    {
+      key: 'receipt-partial',
+      title: 'ใบรับชำระ / ใบเสร็จแบบเต็ม',
+      badge: receiptRecordId ? 'พร้อมพิมพ์' : 'ยังไม่พร้อม',
+      badgeTone: receiptRecordId ? ('green' as const) : ('gray' as const),
+      description: 'สำหรับรับชำระบางส่วนหรือชำระครบ',
+      enabled: Boolean(receiptRecordId),
+      printLabel: 'พิมพ์เอกสารรับชำระ',
+      pdfLabel: 'PDF เอกสารรับชำระ',
+      templateLabel: 'แก้ไข Template แบบเต็ม',
+      helperText: receiptRecordId ? 'ใช้ข้อมูลรับชำระล่าสุด' : 'ต้องมีรายการรับชำระก่อน',
+      onPrint: () => {
+        setPrintMenuOpen(false)
+        openReportsStudioPrint(rsTplFull)
+      },
+      onPdf: () => {
+        setPrintMenuOpen(false)
+        openReportsStudioPdf(rsTplFull)
+      },
+      onEdit: () => {
+        setPrintMenuOpen(false)
+        openReportsStudioEdit(rsTplFull)
+      },
+    },
+    {
+      key: 'receipt-short',
+      title: 'ใบเสร็จ / ใบกำกับภาษีอย่างย่อ',
+      badge: hasFinalReceipt ? 'ชำระครบแล้ว' : 'รอชำระครบ',
+      badgeTone: hasFinalReceipt ? ('green' as const) : ('amber' as const),
+      description: 'ใช้เมื่อชำระครบแล้วเท่านั้น',
+      enabled: Boolean(receiptRecordId && hasFinalReceipt),
+      printLabel: 'พิมพ์ใบเสร็จอย่างย่อ',
+      pdfLabel: 'PDF ใบเสร็จอย่างย่อ',
+      templateLabel: 'แก้ไข Template อย่างย่อ',
+      helperText: hasFinalReceipt ? 'พร้อมพิมพ์' : 'ยังชำระไม่ครบ',
+      onPrint: () => {
+        setPrintMenuOpen(false)
+        openReportsStudioPrint(rsTplShort)
+      },
+      onPdf: () => {
+        setPrintMenuOpen(false)
+        openReportsStudioPdf(rsTplShort)
+      },
+      onEdit: () => {
+        setPrintMenuOpen(false)
+        openReportsStudioEdit(rsTplShort)
+      },
+    },
+  ]
 
   return (
     <div>
@@ -463,8 +537,9 @@ export function InvoiceDetailPage() {
                 size="sm"
                 onClick={() => setPaymentOpen(true)}
                 isLoading={paymentMutation.isPending}
+                disabled={amountDue <= 0}
               >
-                Confirm → Payment
+                รับชำระเงิน
               </Button>
             )}
             {canOpenReceipt && (
@@ -473,7 +548,7 @@ export function InvoiceDetailPage() {
                 variant="ghost"
                 onClick={() => setPrintMenuOpen(true)}
               >
-                Confirm → Receipt
+                {hasFinalReceipt ? 'เปิดเอกสารรับชำระ' : 'เอกสารรับชำระ'}
               </Button>
             )}
             {/* Professional + reliable on mobile: split button + action-sheet modal (avoids dropdown stacking issues) */}
@@ -502,9 +577,11 @@ export function InvoiceDetailPage() {
           <span className="text-muted small">→</span>
           <Badge tone={invoice.status === 'draft' ? 'gray' : 'green'}>ยืนยันใบแจ้งหนี้</Badge>
           <span className="text-muted small">→</span>
-          <Badge tone={amountPaid > 0 ? 'green' : 'gray'}>Payment</Badge>
+          <Badge tone={invoice.paymentState === 'paid' ? 'green' : amountPaid > 0 ? 'amber' : 'gray'}>{paymentStageText}</Badge>
           <span className="text-muted small">→</span>
-          <Badge tone={canOpenReceipt ? 'green' : 'gray'}>Receipt</Badge>
+          <Badge tone={hasPaymentReceipt ? 'green' : 'gray'}>เอกสารรับชำระ</Badge>
+          <span className="text-muted small">→</span>
+          <Badge tone={hasFinalReceipt ? 'green' : 'gray'}>ใบเสร็จ/ใบกำกับภาษี</Badge>
           {payments.length > 1 ? (
             <span className="small text-muted">({payments.length} payments / รองรับแบ่งชำระ)</span>
           ) : null}
@@ -521,139 +598,73 @@ export function InvoiceDetailPage() {
           <Modal.Title>พิมพ์ / PDF</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <div className="text-muted small mb-3">
-            เลือกรูปแบบการพิมพ์ (เปิดแท็บใหม่ รองรับมือถือ)
-          </div>
-          <div className="mb-2 fw-semibold">Invoice (จากเอกสารจริง)</div>
-          <div className="d-grid gap-2 mb-3">
-            <BootstrapButton
-              variant="outline-secondary"
-              onClick={() => {
-                setPrintMenuOpen(false)
-                const url = `/reports-studio/print/${rsTplInvoice}?recordId=${encodeURIComponent(String(invoice.id))}`
-                window.open(url, '_blank', 'noopener,noreferrer')
-              }}
-            >
-              พิมพ์ (Reports Studio Invoice)
-            </BootstrapButton>
-            <BootstrapButton
-              variant="outline-secondary"
-              onClick={() => {
-                setPrintMenuOpen(false)
-                const url = `/reports-studio/preview/${rsTplInvoice}?recordId=${encodeURIComponent(String(invoice.id))}&auto=pdf`
-                window.open(url, '_blank', 'noopener,noreferrer')
-              }}
-            >
-              PDF (Reports Studio Invoice)
-            </BootstrapButton>
-          </div>
-
-          {payments.length > 0 ? (
-            <Form.Group className="mb-3">
-              <Form.Label className="small fw-semibold mb-1">เลือก Payment สำหรับใบเสร็จ</Form.Label>
-              <Form.Select
-                value={selectedReceiptPaymentId ?? ''}
-                onChange={(e) => setSelectedReceiptPaymentId(e.target.value ? Number(e.target.value) : null)}
-              >
-                {payments.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    #{p.id} · {new Date(p.date).toLocaleDateString('th-TH')} · {p.amount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}
-                    {p.reference ? ` · ${p.reference}` : ''}
-                  </option>
-                ))}
-              </Form.Select>
-              <div className="small text-muted mt-1">
-                Template ใบเสร็จจะดึงข้อมูลจาก payment ที่เลือก (ใช้ข้อมูลจริงจาก `account.payment`)
+          <div className="d-flex flex-column gap-2">
+            {printSections.map((section) => (
+              <div key={section.key} className={`qf-print-option-row ${section.enabled ? '' : 'qf-print-option-row--disabled'}`}>
+                <div className="d-flex align-items-center justify-content-between gap-2 mb-1">
+                  <div className="d-flex align-items-center gap-2 flex-wrap">
+                    <div className="fw-semibold">{section.title}</div>
+                    <Badge tone={section.badgeTone}>{section.badge}</Badge>
+                  </div>
+                </div>
+                <div className="small text-muted mb-2">
+                  {section.description} · {section.helperText}
+                </div>
+                <div className="row g-2">
+                  <div className="col-12 col-md-4">
+                    <BootstrapButton
+                      className="w-100"
+                      variant={section.enabled ? 'primary' : 'outline-secondary'}
+                      disabled={!section.enabled}
+                      onClick={section.onPrint}
+                    >
+                      {section.printLabel}
+                    </BootstrapButton>
+                  </div>
+                  <div className="col-12 col-md-4">
+                    <BootstrapButton
+                      className="w-100"
+                      variant="outline-secondary"
+                      disabled={!section.enabled}
+                      onClick={section.onPdf}
+                    >
+                      {section.pdfLabel}
+                    </BootstrapButton>
+                  </div>
+                  <div className="col-12 col-md-4">
+                    <BootstrapButton
+                      className="w-100"
+                      variant="outline-secondary"
+                      onClick={section.onEdit}
+                    >
+                      Template
+                    </BootstrapButton>
+                  </div>
+                </div>
               </div>
-            </Form.Group>
-          ) : null}
-          {!latestPaymentId ? (
-            <Alert variant="warning" className="small py-2">
-              ยังไม่มีรายการรับชำระเงิน จึงใช้ Reports Studio สำหรับใบเสร็จไม่ได้ (ป้องกันการดึงข้อมูลไม่ตรงเอกสาร)
-            </Alert>
-          ) : null}
-
-          <div className="mb-2 fw-semibold">ใบกำกับภาษี (เต็ม)</div>
-          <div className="d-grid gap-2 mb-3">
-            <BootstrapButton
-              variant="outline-secondary"
-              disabled={!latestPaymentId}
-              onClick={() => {
-                setPrintMenuOpen(false)
-                openReportsStudioPrint(rsTplFull)
-              }}
-            >
-              พิมพ์
-            </BootstrapButton>
-            <BootstrapButton
-              variant="outline-secondary"
-              disabled={!latestPaymentId}
-              onClick={() => {
-                setPrintMenuOpen(false)
-                openReportsStudioPdf(rsTplFull)
-              }}
-            >
-              PDF
-            </BootstrapButton>
-            <BootstrapButton
-              variant="outline-secondary"
-              onClick={() => {
-                setPrintMenuOpen(false)
-                openReportsStudioEdit(rsTplFull)
-              }}
-            >
-              แก้ไข Template
-            </BootstrapButton>
-          </div>
-
-          <div className="mb-2 fw-semibold">ใบกำกับภาษี (อย่างย่อ)</div>
-          <div className="d-grid gap-2 mb-3">
-            <BootstrapButton
-              variant="outline-secondary"
-              disabled={!latestPaymentId}
-              onClick={() => {
-                setPrintMenuOpen(false)
-                openReportsStudioPrint(rsTplShort)
-              }}
-            >
-              พิมพ์
-            </BootstrapButton>
-            <BootstrapButton
-              variant="outline-secondary"
-              disabled={!latestPaymentId}
-              onClick={() => {
-                setPrintMenuOpen(false)
-                openReportsStudioPdf(rsTplShort)
-              }}
-            >
-              PDF
-            </BootstrapButton>
-            <BootstrapButton
-              variant="outline-secondary"
-              onClick={() => {
-                setPrintMenuOpen(false)
-                openReportsStudioEdit(rsTplShort)
-              }}
-            >
-              แก้ไข Template
-            </BootstrapButton>
+            ))}
           </div>
 
           <hr />
-          <div className="text-muted small mb-2">Fallback</div>
-          <BootstrapButton
-            variant="outline-secondary"
-            onClick={async () => {
-              try {
-                setPrintMenuOpen(false)
-                await openInvoicePdf(invoice.id)
-              } catch (err) {
-                toast.error('เปิด PDF ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
-              }
-            }}
-          >
-            PDF แบบเดิม
-          </BootstrapButton>
+          <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-md-between gap-2">
+            <div>
+              <div className="fw-semibold">Fallback</div>
+              <div className="small text-muted">ใช้ PDF เดิมของ invoice หากไม่ต้องการผ่าน Reports Studio</div>
+            </div>
+            <BootstrapButton
+              variant="outline-secondary"
+              onClick={async () => {
+                try {
+                  setPrintMenuOpen(false)
+                  await openInvoicePdf(invoice.id)
+                } catch (err) {
+                  toast.error('เปิด PDF ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+                }
+              }}
+            >
+              PDF แบบเดิม
+            </BootstrapButton>
+          </div>
         </Modal.Body>
       </Modal>
 
@@ -710,7 +721,7 @@ export function InvoiceDetailPage() {
                             <th style={{ width: '140px' }}>วันที่ชำระ</th>
                             {payments.some((p) => p.journal) && <th>ช่องทางชำระ</th>}
                             <th>วิธีชำระ</th>
-                            <th className="text-end">จำนวนเงิน</th>
+                            <th className="text-end">ยอดที่รับ</th>
                             {payments.some((p) => p.reference) && <th>อ้างอิง</th>}
                           </tr>
                         </thead>
@@ -757,7 +768,7 @@ export function InvoiceDetailPage() {
                               )}
                               <td className="small">{payment.method || 'Manual'}</td>
                               <td className="text-end font-monospace fw-semibold">
-                                {payment.amount.toLocaleString('th-TH', {
+                                {(payment.appliedAmount ?? payment.amount).toLocaleString('th-TH', {
                                   minimumFractionDigits: 2,
                                   maximumFractionDigits: 2,
                                 })}{' '}
@@ -867,6 +878,7 @@ export function InvoiceDetailPage() {
         onClose={() => setPaymentOpen(false)}
         currency={invoice.currency}
         defaultAmount={Math.max(0, amountDue)}
+        maxAmount={Math.max(0, amountDue)}
         onSubmit={async (payload) => {
           await paymentMutation.mutateAsync(payload)
         }}
