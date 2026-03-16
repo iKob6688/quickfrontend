@@ -10,9 +10,11 @@ import { listPurchaseRequests } from '@/api/services/purchase-requests.service'
 import { useNavigate } from 'react-router-dom'
 import { Spinner } from 'react-bootstrap'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
+import { useAppDateFormatter } from '@/lib/dateFormat'
 
 export function PurchaseRequestsListPage() {
   const navigate = useNavigate()
+  const formatDate = useAppDateFormatter()
   type StatusTab = 'all' | 'draft' | 'to_approve' | 'approved' | 'rejected' | 'done' | 'cancel'
   const [tab, setTab] = useState<StatusTab>('all')
   const [q, setQ] = useState('')
@@ -61,20 +63,9 @@ export function PurchaseRequestsListPage() {
       id: request.id,
       name: request.name,
       requestor: request.requestorName,
-      date: request.requestedDate
-        ? new Date(request.requestedDate).toLocaleDateString('th-TH', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-          })
-        : '—',
-      requiredDate: request.requiredDate
-        ? new Date(request.requiredDate).toLocaleDateString('th-TH', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-          })
-        : '—',
+      date: formatDate(request.requestedDate),
+      requiredDate: formatDate(request.requiredDate),
+      quantity: request.totalQuantity ?? 0,
       estimatedCost: request.totalEstimatedCost ?? 0,
       status: request.state,
       purchaseOrderName: request.purchaseOrderName,
@@ -112,6 +103,12 @@ export function PurchaseRequestsListPage() {
       header: 'วันที่ต้องการ',
       className: 'text-nowrap',
       cell: (r) => <span>{r.requiredDate}</span>,
+    },
+    {
+      key: 'quantity',
+      header: 'จำนวนรวม',
+      className: 'text-end text-nowrap',
+      cell: (r) => <span className="font-monospace">{r.quantity.toLocaleString('th-TH')}</span>,
     },
     {
       key: 'estimatedCost',

@@ -11,9 +11,11 @@ import { checkExpensesApiAvailable } from '@/api/services/expenses-check.service
 import { useNavigate } from 'react-router-dom'
 import { Spinner } from 'react-bootstrap'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
+import { useAppDateFormatter } from '@/lib/dateFormat'
 
 export function ExpensesListPage() {
   const navigate = useNavigate()
+  const formatDate = useAppDateFormatter()
   type StatusTab = 'all' | 'draft' | 'reported' | 'approved' | 'posted' | 'done' | 'refused'
   const [tab, setTab] = useState<StatusTab>('all')
   const [q, setQ] = useState('')
@@ -75,13 +77,7 @@ export function ExpensesListPage() {
       id: expense.id,
       number: expense.number,
       employee: expense.employeeName,
-      date: expense.expenseDate
-        ? new Date(expense.expenseDate).toLocaleDateString('th-TH', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-          })
-        : '—',
+      date: formatDate(expense.expenseDate),
       total: expense.total,
       status: expense.status,
       currency: expense.currency,

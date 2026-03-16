@@ -122,7 +122,15 @@ export function PurchaseRequestFormPage() {
       navigate(`/purchases/requests/${res.id}`, { replace: true })
     },
     onError: (err) => {
-      const msg = err instanceof Error ? err.message : 'บันทึกคำขอซื้อไม่สำเร็จ'
+      const rawMsg = err instanceof Error ? err.message : 'บันทึกคำขอซื้อไม่สำเร็จ'
+      const lowerMsg = rawMsg.toLowerCase()
+      const msg =
+        lowerMsg.includes('access') ||
+        lowerMsg.includes('permission') ||
+        lowerMsg.includes('forbidden') ||
+        lowerMsg.includes('สิทธิ')
+          ? 'คุณยังไม่มีสิทธิ์สร้างคำขอซื้อ กรุณาตรวจสอบสิทธิ์ผู้ใช้ใน Odoo'
+          : rawMsg
       setErrorText(msg)
       toast.error(msg)
     },

@@ -11,19 +11,55 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
-import { Spinner, Card as BootstrapCard } from 'react-bootstrap'
+import { Alert, Modal, Spinner, Card as BootstrapCard } from 'react-bootstrap'
 import { useEffect, useState, useMemo } from 'react'
 import { extractFieldErrors, type FieldErrors } from '@/lib/formErrors'
 import { clearDraft, loadDraft, loadRecentNotes, pushRecentNote, saveDraft } from '@/lib/formDrafts'
 import { toast } from '@/lib/toastStore'
-import { listPartners, getPartner } from '@/api/services/partners.service'
+import { createPartner, listPartners, getPartner, type PartnerUpsertPayload } from '@/api/services/partners.service'
+import { listTaxes, type TaxListItem } from '@/api/services/taxes.service'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { Combobox, type ComboboxOption } from '@/components/ui/Combobox'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { ProductCombobox } from '@/features/sales/ProductCombobox'
+import { CountrySelector } from '@/features/customers/CountrySelector'
+import { StateSelector } from '@/features/customers/StateSelector'
+import { normalizeVatNumber, sanitizeVatNumber, thaiVatValidationMessage } from '@/lib/vat'
 
 const PURCHASE_ORDER_DRAFT_KEY = 'qf:draft:purchase-order-form:create:v1'
 const PURCHASE_ORDER_RECENT_NOTES_KEY = 'qf:recent-notes:purchase-order:v1'
+
+function roundAmount(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100
+}
+
+function computeLineTotals(
+  line: PurchaseOrderLine,
+  taxById: Map<number, TaxListItem>,
+): PurchaseOrderLine {
+  const quantity = Number.isFinite(line.quantity) ? Number(line.quantity) : 0
+  const unitPrice = Number.isFinite(line.unitPrice) ? Number(line.unitPrice) : 0
+  const subtotal = roundAmount(quantity * unitPrice)
+  const applicableTaxes = (line.taxIds || [])
+    .map((id) => taxById.get(id))
+    .filter((tax): tax is TaxListItem => !!tax)
+  const totalTax = roundAmount(
+    applicableTaxes.reduce((sum, tax) => {
+      if (tax.type === 'percent') return sum + subtotal * (Number(tax.amount || 0) / 100)
+      if (tax.type === 'fixed') return sum + Number(tax.amount || 0)
+      return sum
+    }, 0),
+  )
+
+  return {
+    ...line,
+    quantity,
+    unitPrice,
+    subtotal,
+    totalTax,
+    total: roundAmount(subtotal + totalTax),
+  }
+}
 
 export function PurchaseOrderFormPage() {
   const { id } = useParams<{ id: string }>()
@@ -32,6 +68,7 @@ export function PurchaseOrderFormPage() {
   const [searchParams] = useSearchParams()
   const isEdit = !!id
   const orderId = id ? Number.parseInt(id, 10) : null
+  const thailandId = Number(import.meta.env.VITE_COUNTRY_TH_ID || 219)
   const vendorIdFromQuery = searchParams.get('vendorId')
   const partnerIdFromQuery = searchParams.get('partnerId')
   const vendorIdPrefill = vendorIdFromQuery
@@ -61,6 +98,24 @@ export function PurchaseOrderFormPage() {
   }))
 
   const [vendorSearch, setVendorSearch] = useState('')
+  const [quickVendorOpen, setQuickVendorOpen] = useState(false)
+  const [quickVendorSaving, setQuickVendorSaving] = useState(false)
+  const [quickVendor, setQuickVendor] = useState<PartnerUpsertPayload>({
+    company_type: 'company',
+    name: '',
+    vat: '',
+    phone: '',
+    email: '',
+    street: '',
+    district: '',
+    subDistrict: '',
+    zip: '',
+    countryId: thailandId,
+    stateId: null,
+    vatPriceMode: 'vat_excluded',
+    branchCode: 'สำนักงานใหญ่',
+    active: true,
+  })
   const debouncedVendorSearch = useDebouncedValue(vendorSearch, 250)
   const vendorLimit = 20
 
@@ -103,6 +158,18 @@ export function PurchaseOrderFormPage() {
     staleTime: 30_000,
   })
 
+  const purchaseTaxesQuery = useQuery({
+    queryKey: ['taxes', 'purchase-order', 'purchase'],
+    queryFn: () => listTaxes({ type: 'purchase', active: true, includeVat: false, limit: 200 }),
+    staleTime: 60_000,
+  })
+
+  const purchaseTaxes = purchaseTaxesQuery.data ?? []
+  const purchaseTaxById = useMemo(
+    () => new Map<number, TaxListItem>(purchaseTaxes.map((tax) => [tax.id, tax])),
+    [purchaseTaxes],
+  )
+
   // Hydrate form when editing order is loaded
   useEffect(() => {
     if (!isEdit || !existingOrder) return
@@ -112,7 +179,7 @@ export function PurchaseOrderFormPage() {
         orderDate: existingOrder.orderDate ? existingOrder.orderDate.split('T')[0] : new Date().toISOString().split('T')[0],
         expectedDate: existingOrder.expectedDate ? existingOrder.expectedDate.split('T')[0] : undefined,
         currency: existingOrder.currency || 'THB',
-        lines: existingOrder.lines || [],
+        lines: (existingOrder.lines || []).map((line) => computeLineTotals(line, purchaseTaxById)),
         notes: existingOrder.notes || '',
       })
 
@@ -123,7 +190,7 @@ export function PurchaseOrderFormPage() {
       }
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [isEdit, existingOrder])
+  }, [isEdit, existingOrder, purchaseTaxById])
 
   // Update vendor search text when selected vendor details are loaded (fallback if vendorName was not in existingOrder)
   useEffect(() => {
@@ -181,6 +248,7 @@ export function PurchaseOrderFormPage() {
         pushRecentNote(PURCHASE_ORDER_RECENT_NOTES_KEY, formData.notes || '')
         setRecentNotes(loadRecentNotes(PURCHASE_ORDER_RECENT_NOTES_KEY))
       }
+      queryClient.setQueryData(['purchaseOrder', data.id], data)
       queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] })
       toast.success('สร้างใบสั่งซื้อสำเร็จ')
       navigate(`/purchases/orders/${data.id}`)
@@ -194,11 +262,12 @@ export function PurchaseOrderFormPage() {
 
   const updateMutation = useMutation({
     mutationFn: (payload: PurchaseOrderPayload) => updatePurchaseOrder(orderId!, payload),
-    onSuccess: () => {
+    onSuccess: (data) => {
       if ((formData.notes || '').trim()) {
         pushRecentNote(PURCHASE_ORDER_RECENT_NOTES_KEY, formData.notes || '')
         setRecentNotes(loadRecentNotes(PURCHASE_ORDER_RECENT_NOTES_KEY))
       }
+      queryClient.setQueryData(['purchaseOrder', orderId], data)
       queryClient.invalidateQueries({ queryKey: ['purchaseOrder', orderId] })
       queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] })
       toast.success('อัปเดตใบสั่งซื้อสำเร็จ')
@@ -210,6 +279,65 @@ export function PurchaseOrderFormPage() {
       toast.error('อัปเดตใบสั่งซื้อไม่สำเร็จ', err instanceof Error ? err.message : undefined)
     },
   })
+
+  const resetQuickVendor = () =>
+    setQuickVendor({
+      company_type: 'company',
+      name: '',
+      vat: '',
+      phone: '',
+      email: '',
+      street: '',
+      district: '',
+      subDistrict: '',
+      zip: '',
+      countryId: thailandId,
+      stateId: null,
+      vatPriceMode: 'vat_excluded',
+      branchCode: 'สำนักงานใหญ่',
+      active: true,
+    })
+
+  const submitQuickVendor = async () => {
+    if (!quickVendor.name?.trim()) {
+      toast.error('กรุณากรอกชื่อผู้ขาย')
+      return
+    }
+
+    const vatError = thaiVatValidationMessage(quickVendor.vat)
+    if (vatError) {
+      toast.error(vatError)
+      return
+    }
+
+    try {
+      setQuickVendorSaving(true)
+      const created = await createPartner({
+        ...quickVendor,
+        name: quickVendor.name.trim(),
+        email: quickVendor.email?.trim() || undefined,
+        phone: quickVendor.phone?.trim() || undefined,
+        vat: normalizeVatNumber(quickVendor.vat),
+        street: quickVendor.street?.trim() || undefined,
+        district: quickVendor.district?.trim() || undefined,
+        subDistrict: quickVendor.subDistrict?.trim() || undefined,
+        zip: quickVendor.zip?.trim() || undefined,
+        stateId: quickVendor.stateId ?? undefined,
+      })
+      await queryClient.invalidateQueries({ queryKey: ['partner-selector'] })
+      await queryClient.invalidateQueries({ queryKey: ['partners'] })
+      await queryClient.invalidateQueries({ queryKey: ['partner', created.id] })
+      setFormData((prev) => ({ ...prev, vendorId: created.id }))
+      setVendorSearch(created.displayName || created.name)
+      setQuickVendorOpen(false)
+      resetQuickVendor()
+      toast.success('สร้างผู้ขายใหม่สำเร็จ')
+    } catch (err) {
+      toast.error('สร้างผู้ขายไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+    } finally {
+      setQuickVendorSaving(false)
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -266,13 +394,7 @@ export function PurchaseOrderFormPage() {
       const currentLines = prev.lines || []
       const newLines = [...currentLines]
       if (index >= 0 && index < newLines.length) {
-        newLines[index] = { ...newLines[index], ...updates }
-        // Recalculate totals (simplified - backend will calculate properly)
-        const quantity = newLines[index].quantity || 0
-        const unitPrice = newLines[index].unitPrice || 0
-        newLines[index].subtotal = quantity * unitPrice
-        newLines[index].totalTax = 0 // Simplified - should calculate from taxIds
-        newLines[index].total = newLines[index].subtotal + newLines[index].totalTax
+        newLines[index] = computeLineTotals({ ...newLines[index], ...updates }, purchaseTaxById)
       }
       return { ...prev, lines: newLines }
     })
@@ -347,6 +469,35 @@ export function PurchaseOrderFormPage() {
       ),
     },
     {
+      key: 'taxes',
+      header: 'VAT/ภาษี',
+      className: 'qf-so-col-tax',
+      cell: (r) => (
+        <select
+          className="form-select form-select-sm"
+          multiple
+          value={(r.taxIds || []).map(String)}
+          onChange={(e) =>
+            updateLine(
+              r.id,
+              {
+                taxIds: Array.from(e.target.selectedOptions)
+                  .map((option) => Number(option.value))
+                  .filter((value) => Number.isFinite(value) && value > 0),
+              },
+            )
+          }
+          title="เลือกภาษีจาก backend"
+        >
+          {purchaseTaxes.map((tax) => (
+            <option key={tax.id} value={tax.id}>
+              {tax.name} ({Number(tax.amount || 0).toLocaleString('th-TH', { maximumFractionDigits: 2 })}%)
+            </option>
+          ))}
+        </select>
+      ),
+    },
+    {
       key: 'total',
       header: 'ยอดรวม',
       className: 'text-end qf-so-col-total',
@@ -377,7 +528,9 @@ export function PurchaseOrderFormPage() {
     },
   ]
 
-  const totalAmount = (formData.lines || []).reduce((sum, line) => sum + (line.total || 0), 0)
+  const totalUntaxed = (formData.lines || []).reduce((sum, line) => sum + (line.subtotal || 0), 0)
+  const totalTaxAmount = (formData.lines || []).reduce((sum, line) => sum + (line.totalTax || 0), 0)
+  const totalAmount = roundAmount(totalUntaxed + totalTaxAmount)
   const applyRecentNote = (note: string) => setFormData((prev) => ({ ...prev, notes: note }))
   const appendRecentNote = (note: string) =>
     setFormData((prev) => ({ ...prev, notes: (prev.notes || '').trim() ? `${prev.notes}\n${note}` : note }))
@@ -393,6 +546,7 @@ export function PurchaseOrderFormPage() {
   }
 
   return (
+    <>
     <form onSubmit={handleSubmit}>
       <PageHeader
         title={isEdit ? 'แก้ไขใบสั่งซื้อ' : 'สร้างใบสั่งซื้อ'}
@@ -490,7 +644,14 @@ export function PurchaseOrderFormPage() {
                       .map<ComboboxOption>((p) => ({
                         id: p.id,
                         label: p.name || `Partner #${p.id}`,
-                        meta: p.vat ? `VAT: ${p.vat}` : p.email ? p.email : `ID: ${p.id}`,
+                        meta:
+                          [
+                            p.vat ? `VAT: ${p.vat}` : '',
+                            p.stateName || '',
+                            !p.vat && !p.stateName ? p.email || `ID: ${p.id}` : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' • '),
                       }))}
                     total={vendorTotal}
                     emptyText="ไม่พบผู้ขาย (ลองพิมพ์คำอื่น)"
@@ -501,6 +662,11 @@ export function PurchaseOrderFormPage() {
                   />
                   <div className="small text-muted mt-2">
                     Tip: พิมพ์อย่างน้อย 1 ตัวอักษรเพื่อค้นหา • ใช้ ↑/↓ และ Enter เพื่อเลือก • Esc เพื่อปิด
+                  </div>
+                  <div className="d-flex gap-2 mt-2">
+                    <Button size="sm" variant="ghost" type="button" onClick={() => setQuickVendorOpen(true)}>
+                      + สร้างผู้ขายใหม่
+                    </Button>
                   </div>
 
                   {selectedVendorQuery.data ? (
@@ -633,6 +799,32 @@ export function PurchaseOrderFormPage() {
               <h5 className="mb-0">สรุปยอด</h5>
             </BootstrapCard.Header>
             <BootstrapCard.Body>
+              {purchaseTaxesQuery.isError ? (
+                <div className="alert alert-warning small py-2">
+                  โหลดรายการภาษีจาก backend ไม่สำเร็จ ระบบจะแสดงยอดประมาณการจากรายการปัจจุบันเท่านั้น
+                </div>
+              ) : null}
+              <div className="d-flex justify-content-between">
+                <span className="text-muted">ก่อนภาษี</span>
+                <span className="font-monospace">
+                  {totalUntaxed.toLocaleString('th-TH', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}{' '}
+                  {formData.currency}
+                </span>
+              </div>
+              <div className="d-flex justify-content-between mt-2">
+                <span className="text-muted">ภาษี</span>
+                <span className="font-monospace">
+                  {totalTaxAmount.toLocaleString('th-TH', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}{' '}
+                  {formData.currency}
+                </span>
+              </div>
+              <hr />
               <div className="d-flex justify-content-between">
                 <span className="fw-semibold">ยอดรวมทั้งสิ้น</span>
                 <span className="fw-semibold font-monospace">
@@ -645,8 +837,163 @@ export function PurchaseOrderFormPage() {
               </div>
             </BootstrapCard.Body>
           </BootstrapCard>
+
+          <BootstrapCard className="mt-3">
+            <BootstrapCard.Body className="d-grid gap-2">
+              <Button
+                variant="primary"
+                type="submit"
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                {createMutation.isPending || updateMutation.isPending
+                  ? 'กำลังบันทึก...'
+                  : isEdit
+                    ? 'บันทึกการแก้ไข'
+                    : 'สร้างใบสั่งซื้อ'}
+              </Button>
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => navigate('/purchases/orders')}
+              >
+                ยกเลิก
+              </Button>
+            </BootstrapCard.Body>
+          </BootstrapCard>
         </div>
       </div>
     </form>
+    <Modal show={quickVendorOpen} onHide={() => setQuickVendorOpen(false)} centered>
+      <Modal.Header closeButton>
+        <Modal.Title>สร้างผู้ขายใหม่ (Quick Create)</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <div className="row g-3">
+          <div className="col-12">
+            <Label htmlFor="quick-vendor-name" required>
+              ชื่อผู้ขาย
+            </Label>
+            <Input
+              id="quick-vendor-name"
+              value={quickVendor.name}
+              onChange={(e) => setQuickVendor((prev) => ({ ...prev, name: e.target.value }))}
+            />
+          </div>
+          <div className="col-md-6">
+            <Label htmlFor="quick-vendor-vat">เลขผู้เสียภาษี</Label>
+            <Input
+              id="quick-vendor-vat"
+              value={quickVendor.vat || ''}
+              inputMode="numeric"
+              maxLength={13}
+              onChange={(e) => setQuickVendor((prev) => ({ ...prev, vat: sanitizeVatNumber(e.target.value) }))}
+            />
+            {thaiVatValidationMessage(quickVendor.vat) ? (
+              <div className="small text-danger mt-1">{thaiVatValidationMessage(quickVendor.vat)}</div>
+            ) : null}
+          </div>
+          <div className="col-md-6">
+            <Label htmlFor="quick-vendor-phone">โทรศัพท์</Label>
+            <Input
+              id="quick-vendor-phone"
+              value={quickVendor.phone || ''}
+              onChange={(e) => setQuickVendor((prev) => ({ ...prev, phone: e.target.value }))}
+            />
+          </div>
+          <div className="col-md-6">
+            <Label htmlFor="quick-vendor-email">อีเมล</Label>
+            <Input
+              id="quick-vendor-email"
+              type="email"
+              value={quickVendor.email || ''}
+              onChange={(e) => setQuickVendor((prev) => ({ ...prev, email: e.target.value }))}
+            />
+          </div>
+          <div className="col-md-6">
+            <Label htmlFor="quick-vendor-vat-mode">ประเภทราคา</Label>
+            <select
+              id="quick-vendor-vat-mode"
+              className="form-select"
+              value={quickVendor.vatPriceMode || 'vat_excluded'}
+              onChange={(e) =>
+                setQuickVendor((prev) => ({
+                  ...prev,
+                  vatPriceMode: e.target.value as PartnerUpsertPayload['vatPriceMode'],
+                }))
+              }
+            >
+              <option value="no_vat">ไม่มี VAT</option>
+              <option value="vat_included">รวม VAT</option>
+              <option value="vat_excluded">แยก VAT</option>
+            </select>
+          </div>
+          <div className="col-md-6">
+            <Label htmlFor="quick-vendor-branch">สาขา</Label>
+            <Input
+              id="quick-vendor-branch"
+              value={quickVendor.branchCode || ''}
+              onChange={(e) => setQuickVendor((prev) => ({ ...prev, branchCode: e.target.value }))}
+            />
+          </div>
+          <div className="col-md-6">
+            <CountrySelector
+              value={quickVendor.countryId}
+              onChange={(value) => setQuickVendor((prev) => ({ ...prev, countryId: value, stateId: value ? prev.stateId ?? null : null }))}
+            />
+          </div>
+          <div className="col-md-6">
+            <StateSelector
+              countryId={quickVendor.countryId}
+              value={quickVendor.stateId}
+              onChange={(value) => setQuickVendor((prev) => ({ ...prev, stateId: value }))}
+            />
+          </div>
+          <div className="col-md-6">
+            <Label htmlFor="quick-vendor-subDistrict">แขวง/ตำบล</Label>
+            <Input
+              id="quick-vendor-subDistrict"
+              value={quickVendor.subDistrict || ''}
+              onChange={(e) => setQuickVendor((prev) => ({ ...prev, subDistrict: e.target.value }))}
+            />
+          </div>
+          <div className="col-md-6">
+            <Label htmlFor="quick-vendor-district">เขต/อำเภอ</Label>
+            <Input
+              id="quick-vendor-district"
+              value={quickVendor.district || ''}
+              onChange={(e) => setQuickVendor((prev) => ({ ...prev, district: e.target.value, city: e.target.value }))}
+            />
+          </div>
+          <div className="col-md-6">
+            <Label htmlFor="quick-vendor-zip">รหัสไปรษณีย์</Label>
+            <Input
+              id="quick-vendor-zip"
+              value={quickVendor.zip || ''}
+              onChange={(e) => setQuickVendor((prev) => ({ ...prev, zip: e.target.value }))}
+            />
+          </div>
+          <div className="col-12">
+            <Label htmlFor="quick-vendor-street">ที่อยู่</Label>
+            <Input
+              id="quick-vendor-street"
+              value={quickVendor.street || ''}
+              onChange={(e) => setQuickVendor((prev) => ({ ...prev, street: e.target.value }))}
+            />
+          </div>
+        </div>
+        <Alert variant="info" className="small mt-3 mb-0">
+          ใช้สำหรับสร้างผู้ขายอย่างรวดเร็วจากหน้า PO โดยยังคงบันทึกเป็น <code>res.partner</code> ใน Odoo ตาม flow เดิม
+        </Alert>
+      </Modal.Body>
+      <Modal.Footer>
+        <Button size="sm" variant="secondary" type="button" onClick={() => setQuickVendorOpen(false)}>
+          ยกเลิก
+        </Button>
+        <Button size="sm" type="button" onClick={submitQuickVendor} isLoading={quickVendorSaving}>
+          บันทึกผู้ขาย
+        </Button>
+      </Modal.Footer>
+    </Modal>
+    </>
   )
 }

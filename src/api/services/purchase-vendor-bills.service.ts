@@ -18,6 +18,8 @@ export interface PurchaseVendorBillPayment {
   method?: string
   journal?: string
   reference?: string | null
+  hasWht?: boolean
+  whtCertCount?: number
 }
 
 export interface PurchaseVendorBill {
@@ -32,6 +34,7 @@ export interface PurchaseVendorBill {
   amountUntaxed: number
   totalTax: number
   total: number
+  amountWht?: number
   amountPaid?: number
   amountDue?: number
   notes?: string | null
@@ -88,6 +91,7 @@ function normalizeBill(raw: unknown): PurchaseVendorBill {
     amountUntaxed: n(item.amountUntaxed ?? item.amount_untaxed),
     totalTax: n(item.totalTax ?? item.amount_tax),
     total,
+    amountWht: n(item.amountWht ?? item.amount_wht),
     amountPaid,
     amountDue: amountDue > 0 ? amountDue : Math.max(0, total - amountPaid),
     notes: (item.notes ?? null) as string | null,
@@ -111,6 +115,8 @@ function normalizeBill(raw: unknown): PurchaseVendorBill {
           method: p.method ? String(p.method) : undefined,
           journal: p.journal ? String(p.journal) : undefined,
           reference: p.reference ? String(p.reference) : null,
+          hasWht: !!(p.hasWht ?? p.has_wht),
+          whtCertCount: n(p.whtCertCount ?? p.wht_cert_count),
         }
       })
       .filter((p) => p.id > 0),

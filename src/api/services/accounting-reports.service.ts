@@ -280,7 +280,7 @@ export async function getBankBook(params: Record<string, unknown> = {}) {
 
 export interface VatReportParams {
   companyId?: number
-  taxId: number
+  taxId?: number | null
   taxType: 'sale' | 'purchase'
   dateFrom: string
   dateTo: string
@@ -321,7 +321,7 @@ export async function getVatReport(params: VatReportParams) {
     '/th/v1/tax-reports/vat',
     {
       ...(params.companyId !== undefined ? { company_id: params.companyId } : {}),
-      tax_id: params.taxId,
+      ...(params.taxId !== undefined && params.taxId !== null ? { tax_id: params.taxId } : {}),
       tax_type: params.taxType,
       date_from: params.dateFrom,
       date_to: params.dateTo,

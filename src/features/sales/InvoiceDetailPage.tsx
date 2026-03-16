@@ -13,6 +13,7 @@ import { PromptPayQrModal } from '@/features/sales/PromptPayQrModal'
 import { useEffect, useState } from 'react'
 import { toast } from '@/lib/toastStore'
 import { useSettingsStore as useStudioSettingsStore } from '@/app/core/storage/settingsStore'
+import { useAppDateFormatter } from '@/lib/dateFormat'
 
 const FALLBACK_RS_TPL_TAX_FULL = 'receipt_full_default_v1'
 const FALLBACK_RS_TPL_TAX_SHORT = 'receipt_short_default_v1'
@@ -28,6 +29,7 @@ export function InvoiceDetailPage() {
   const [promptPayOpen, setPromptPayOpen] = useState(false)
   const [printMenuOpen, setPrintMenuOpen] = useState(false)
   const studioSettings = useStudioSettingsStore((s) => s.settings)
+  const formatDate = useAppDateFormatter()
 
   const invoiceId = id ? Number.parseInt(id, 10) : null
   const requestedAction = searchParams.get('action')
@@ -174,6 +176,7 @@ export function InvoiceDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
       queryClient.invalidateQueries({ queryKey: ['invoices'] })
       queryClient.invalidateQueries({ queryKey: ['invoices', 'receipts'] })
+      queryClient.invalidateQueries({ queryKey: ['taxReports'] })
       toast.success('บันทึกรับชำระเงินสำเร็จ')
     },
     onError: (err) => {
@@ -729,11 +732,7 @@ export function InvoiceDetailPage() {
                           {payments.map((payment) => (
                             <tr key={payment.id}>
                               <td className="small">
-                                {new Date(payment.date).toLocaleDateString('th-TH', {
-                                  year: 'numeric',
-                                  month: '2-digit',
-                                  day: '2-digit',
-                                })}
+                                {formatDate(payment.date)}
                               </td>
                               {payments.some((p) => p.journal) && (
                                 <td className="small">

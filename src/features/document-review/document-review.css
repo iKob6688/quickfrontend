@@ -1,0 +1,244 @@
+.document-review__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.document-review__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.document-review__filter-chip,
+.document-review__attachment-chip,
+.document-review__meta-pill {
+  border: 1px solid #d9e2f2;
+  background: linear-gradient(180deg, #ffffff 0%, #f5f8ff 100%);
+  color: #284066;
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.document-review__filter-chip.is-active,
+.document-review__attachment-chip.is-active {
+  background: linear-gradient(135deg, #295fcc 0%, #39a0ed 100%);
+  border-color: #295fcc;
+  color: #fff;
+}
+
+.document-review__search {
+  width: min(360px, 100%);
+}
+
+.document-review__layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr) minmax(300px, 360px);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.document-review__queue,
+.document-review__copilot {
+  position: sticky;
+  top: 6.5rem;
+}
+
+.document-review__section-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.document-review__queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: calc(100vh - 19rem);
+  overflow: auto;
+}
+
+.document-review__queue-item {
+  border: 1px solid #dfe7f4;
+  border-radius: 18px;
+  background: #fff;
+  padding: 1rem;
+  text-align: left;
+  transition: all 0.2s ease;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+}
+
+.document-review__queue-item:hover,
+.document-review__queue-item.is-active {
+  border-color: #3c9bef;
+  box-shadow: 0 14px 32px rgba(60, 155, 239, 0.14);
+  transform: translateY(-1px);
+}
+
+.document-review__meta-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.document-review__pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.document-review__center {
+  min-width: 0;
+}
+
+.document-review__preview {
+  min-height: 360px;
+  border: 1px solid #e3e8f5;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at top left, rgba(60, 155, 239, 0.08), transparent 36%),
+    linear-gradient(180deg, #f9fbff 0%, #edf3fb 100%);
+  overflow: hidden;
+}
+
+.document-review__image,
+.document-review__iframe {
+  width: 100%;
+  min-height: 360px;
+  border: 0;
+  display: block;
+  object-fit: contain;
+  background: #fff;
+}
+
+.document-review__generic-file {
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+}
+
+.document-review__issue {
+  border: 1px solid #e3e8f5;
+  border-radius: 16px;
+  background: #fafcff;
+  padding: 1rem;
+}
+
+.document-review__summary-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.document-review__partner-box {
+  border: 1px solid #e3e8f5;
+  border-radius: 16px;
+  padding: 0.75rem;
+  background: #fbfcff;
+}
+
+.document-review__partner-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.document-review__partner-option {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  border: 1px solid #dfe7f4;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.65rem 0.8rem;
+  text-align: left;
+}
+
+.document-review__partner-option.is-active {
+  border-color: #3c9bef;
+  background: #eff7ff;
+}
+
+.document-review__copilot.is-collapsed {
+  min-height: 180px;
+}
+
+.document-review__copilot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.document-review__copilot-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: calc(100vh - 26rem);
+  overflow: auto;
+  padding-right: 0.25rem;
+}
+
+.document-review__copilot-message {
+  border-radius: 18px;
+  padding: 1rem;
+}
+
+.document-review__copilot-message.is-user {
+  background: linear-gradient(135deg, #2f5fcc 0%, #3578e5 100%);
+  color: #fff;
+}
+
+.document-review__copilot-message.is-assistant {
+  background: linear-gradient(180deg, #fff7ec 0%, #f8fbff 100%);
+  border: 1px solid #e3e8f5;
+}
+
+@media (max-width: 1400px) {
+  .document-review__layout {
+    grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
+  }
+
+  .document-review__copilot {
+    grid-column: 1 / -1;
+    position: static;
+  }
+}
+
+@media (max-width: 992px) {
+  .document-review__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .document-review__queue,
+  .document-review__copilot {
+    position: static;
+  }
+
+  .document-review__queue-list,
+  .document-review__copilot-feed {
+    max-height: none;
+  }
+
+  .document-review__summary-grid {
+    grid-template-columns: 1fr;
+  }
+}

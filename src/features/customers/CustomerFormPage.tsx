@@ -10,6 +10,7 @@ import { Alert, Form } from 'react-bootstrap'
 import { ApiError } from '@/api/response'
 import { extractFieldErrors, useFormErrors } from '@/lib/formErrors'
 import { toast } from '@/lib/toastStore'
+import { normalizeVatNumber, sanitizeVatNumber, thaiVatValidationMessage } from '@/lib/vat'
 import {
   createPartner,
   getPartner,
@@ -18,6 +19,7 @@ import {
   type PartnerUpsertPayload,
 } from '@/api/services/partners.service'
 import { CountrySelector } from '@/features/customers/CountrySelector'
+import { StateSelector } from '@/features/customers/StateSelector'
 
 const DEFAULT_FORM_DATA: PartnerUpsertPayload = {
   company_type: 'company',
@@ -34,6 +36,7 @@ const DEFAULT_FORM_DATA: PartnerUpsertPayload = {
   subDistrict: '',
   zip: '',
   countryId: Number(import.meta.env.VITE_COUNTRY_TH_ID || 219),
+  stateId: null,
   vatPriceMode: 'vat_excluded',
   branchCode: 'สำนักงานใหญ่',
 }
@@ -83,6 +86,7 @@ export function CustomerFormPage() {
       subDistrict: data.subDistrict || extractSubDistrict(data.street2),
       zip: data.zip || '',
       countryId: data.countryId ?? null,
+      stateId: data.stateId ?? null,
       vatPriceMode: data.vatPriceMode || 'vat_excluded',
       branchCode: data.branchCode || 'สำนักงานใหญ่',
     }
@@ -131,10 +135,17 @@ export function CustomerFormPage() {
       return
     }
 
+    const vatError = thaiVatValidationMessage(formData.vat)
+    if (vatError) {
+      setGlobalError(vatError)
+      setFieldErrors({ vat: vatError })
+      return
+    }
+
     await upsertMutation.mutateAsync({
       ...formData,
       name: formData.name.trim(),
-      vat: formData.vat?.trim() || undefined,
+      vat: normalizeVatNumber(formData.vat),
       email: formData.email?.trim() || undefined,
       phone: formData.phone?.trim() || undefined,
       mobile: formData.mobile?.trim() || undefined,
@@ -210,8 +221,12 @@ export function CustomerFormPage() {
                   <Input
                     id="vat"
                     value={formData.vat ?? ''}
-                    onChange={(e) => updateFormData({ vat: e.target.value })}
+                    inputMode="numeric"
+                    maxLength={13}
+                    onChange={(e) => updateFormData({ vat: sanitizeVatNumber(e.target.value) })}
+                    error={Boolean(fieldErrors.vat)}
                   />
+                  {fieldErrors.vat ? <div className="small text-danger mt-1">{fieldErrors.vat}</div> : null}
                 </div>
 
                 <div className="col-md-4">
@@ -288,7 +303,14 @@ export function CustomerFormPage() {
                 <div className="col-md-4">
                   <CountrySelector
                     value={formData.countryId}
-                    onChange={(value) => updateFormData({ countryId: value })}
+                    onChange={(value) => updateFormData({ countryId: value, stateId: value ? formData.stateId ?? null : null })}
+                  />
+                </div>
+                <div className="col-md-4">
+                  <StateSelector
+                    countryId={formData.countryId}
+                    value={formData.stateId}
+                    onChange={(value) => updateFormData({ stateId: value })}
                   />
                 </div>
                 <div className="col-md-4">

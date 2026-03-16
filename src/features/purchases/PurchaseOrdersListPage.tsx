@@ -10,9 +10,11 @@ import { listPurchaseOrders } from '@/api/services/purchases.service'
 import { useNavigate } from 'react-router-dom'
 import { Spinner } from 'react-bootstrap'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
+import { useAppDateFormatter } from '@/lib/dateFormat'
 
 export function PurchaseOrdersListPage() {
   const navigate = useNavigate()
+  const formatDate = useAppDateFormatter()
   type StatusTab = 'all' | 'draft' | 'sent' | 'to_approve' | 'purchase' | 'done' | 'cancel'
   const [tab, setTab] = useState<StatusTab>('all')
   const [q, setQ] = useState('')
@@ -77,20 +79,8 @@ export function PurchaseOrdersListPage() {
       id: order.id ?? 0,
       number: order.number ?? '',
       vendor: order.vendorName ?? '—',
-      date: order.orderDate
-        ? new Date(order.orderDate).toLocaleDateString('th-TH', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-          })
-        : '—',
-      expectedDate: order.expectedDate
-        ? new Date(order.expectedDate).toLocaleDateString('th-TH', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-          })
-        : '—',
+      date: formatDate(order.orderDate),
+      expectedDate: formatDate(order.expectedDate),
       total: typeof order.total === 'number' ? order.total : 0,
       status: order.status ?? 'draft',
       currency: order.currency ?? 'THB',

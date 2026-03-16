@@ -13,6 +13,7 @@ import {
 } from '@/api/services/auth.service'
 import { toApiError } from '@/api/response'
 import { useAuthStore } from '@/features/auth/store'
+import { useSettingsStore } from '@/app/core/storage/settingsStore'
 
 export function BackendConnectionPage() {
   const [companyName, setCompanyName] = useState('')
@@ -22,6 +23,8 @@ export function BackendConnectionPage() {
   const [result, setResult] = useState<RegisterCompanyResponse | null>(null)
 
   const login = useAuthStore((s) => s.login)
+  const settings = useSettingsStore((s) => s.settings)
+  const patchSettings = useSettingsStore((s) => s.patchSettings)
 
   const handleProvision = async (e: FormEvent) => {
     e.preventDefault()
@@ -146,6 +149,58 @@ export function BackendConnectionPage() {
           header={
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-surfaceDark">
+                  การแสดงวันที่ใน React
+                </span>
+              </div>
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-primaryDark">
+                รูปแบบวันที่
+              </label>
+              <select
+                value={settings.dateDisplayFormat}
+                onChange={(e) =>
+                  patchSettings({
+                    dateDisplayFormat: e.target.value as 'DD/MM/YYYY' | 'D MMMM YYYY',
+                  })
+                }
+                className="w-full rounded-2xl border border-primary/25 bg-bgLight/90 px-3 py-2 text-sm text-surfaceDark outline-none ring-primary/40 focus:border-accentGold focus:bg-white focus:ring-2"
+              >
+                <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                <option value="D MMMM YYYY">D MMMM YYYY</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-primaryDark">
+                ปฏิทิน / ปีที่แสดง
+              </label>
+              <select
+                value={settings.dateCalendar}
+                onChange={(e) =>
+                  patchSettings({
+                    dateCalendar: e.target.value as 'gregorian' | 'buddhist',
+                  })
+                }
+                className="w-full rounded-2xl border border-primary/25 bg-bgLight/90 px-3 py-2 text-sm text-surfaceDark outline-none ring-primary/40 focus:border-accentGold focus:bg-white focus:ring-2"
+              >
+                <option value="buddhist">พ.ศ.</option>
+                <option value="gregorian">ค.ศ.</option>
+              </select>
+            </div>
+            <p className="text-[11px] text-surfaceDark/70 mb-0">
+              ใช้กับการแสดงผลวันที่ในหน้า React แบบค่อยเป็นค่อยไป โดยไม่กระทบค่า ISO ที่ส่งเข้า Odoo
+            </p>
+          </div>
+        </Card>
+
+        <Card
+          header={
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
                 <ConnectionStatusIcon status={result ? 'connected' : 'pending'} />
                 <span className="text-sm font-medium text-surfaceDark">
                   ผลการสร้างบริษัท / การเชื่อมต่อ
@@ -188,4 +243,3 @@ export function BackendConnectionPage() {
     </div>
   )
 }
-

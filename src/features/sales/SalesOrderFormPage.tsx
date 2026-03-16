@@ -23,6 +23,7 @@ import {
   type SalesOrderType,
 } from '@/api/services/sales-orders.service'
 import { CountrySelector } from '@/features/customers/CountrySelector'
+import { StateSelector } from '@/features/customers/StateSelector'
 
 const SALES_ORDER_DRAFT_KEY = 'qf:draft:sales-order-form:create:v1'
 const SALES_ORDER_RECENT_NOTES_KEY = 'qf:recent-notes:sales-order:v1'
@@ -90,6 +91,7 @@ export function SalesOrderFormPage() {
     subDistrict: '',
     zip: '',
     countryId: thailandId,
+    stateId: null,
     vatPriceMode: 'vat_excluded',
     branchCode: 'สำนักงานใหญ่',
     active: true,
@@ -291,6 +293,7 @@ export function SalesOrderFormPage() {
         district: quickPartner.district?.trim() || undefined,
         subDistrict: quickPartner.subDistrict?.trim() || undefined,
         zip: quickPartner.zip?.trim() || undefined,
+        stateId: quickPartner.stateId ?? undefined,
       })
       await queryClient.invalidateQueries({ queryKey: ['partner-selector-sales-order'] })
       await queryClient.invalidateQueries({ queryKey: ['partners'] })
@@ -308,6 +311,7 @@ export function SalesOrderFormPage() {
         subDistrict: '',
         zip: '',
         countryId: thailandId,
+        stateId: null,
         vatPriceMode: 'vat_excluded',
         branchCode: 'สำนักงานใหญ่',
         active: true,
@@ -461,7 +465,14 @@ export function SalesOrderFormPage() {
                   options={partnerItems.map<ComboboxOption>((p) => ({
                     id: p.id,
                     label: p.name,
-                    meta: p.vat ? `VAT: ${p.vat}` : p.email ? p.email : `ID: ${p.id}`,
+                    meta:
+                      [
+                        p.vat ? `VAT: ${p.vat}` : '',
+                        p.stateName || '',
+                        !p.vat && !p.stateName ? p.email || `ID: ${p.id}` : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' • '),
                   }))}
                   total={partnerTotal}
                   emptyText="ไม่พบลูกค้า"
@@ -765,7 +776,14 @@ export function SalesOrderFormPage() {
           <div className="col-md-6">
             <CountrySelector
               value={quickPartner.countryId}
-              onChange={(value) => setQuickPartner((prev) => ({ ...prev, countryId: value }))}
+              onChange={(value) => setQuickPartner((prev) => ({ ...prev, countryId: value, stateId: value ? prev.stateId ?? null : null }))}
+            />
+          </div>
+          <div className="col-md-6">
+            <StateSelector
+              countryId={quickPartner.countryId}
+              value={quickPartner.stateId}
+              onChange={(value) => setQuickPartner((prev) => ({ ...prev, stateId: value }))}
             />
           </div>
           <div className="col-md-6">

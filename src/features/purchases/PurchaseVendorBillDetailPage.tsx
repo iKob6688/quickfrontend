@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { useAppDateFormatter } from '@/lib/dateFormat'
 import {
   getPurchaseVendorBill,
   openPurchaseVendorBillPdf,
@@ -21,6 +22,7 @@ export function PurchaseVendorBillDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const formatDate = useAppDateFormatter()
   const billId = id ? Number.parseInt(id, 10) : null
   const [paymentOpen, setPaymentOpen] = useState(false)
 
@@ -35,6 +37,7 @@ export function PurchaseVendorBillDetailPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['purchaseVendorBill', billId] })
       await queryClient.invalidateQueries({ queryKey: ['purchaseOrder'] })
+      await queryClient.invalidateQueries({ queryKey: ['taxReports'] })
       toast.success('ยืนยัน Vendor Bill สำเร็จ')
     },
     onError: (err) => {
@@ -48,6 +51,7 @@ export function PurchaseVendorBillDetailPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['purchaseVendorBill', billId] })
       await queryClient.invalidateQueries({ queryKey: ['purchaseOrder'] })
+      await queryClient.invalidateQueries({ queryKey: ['taxReports'] })
       toast.success('บันทึกการชำระ Vendor Bill สำเร็จ')
       setPaymentOpen(false)
     },
@@ -126,6 +130,7 @@ export function PurchaseVendorBillDetailPage() {
 
   const amountPaid = bill.amountPaid ?? (bill.status === 'paid' ? bill.total : 0)
   const amountDue = bill.amountDue ?? Math.max(0, bill.total - amountPaid)
+  const amountWht = bill.amountWht ?? 0
 
   return (
     <div>
@@ -179,11 +184,11 @@ export function PurchaseVendorBillDetailPage() {
           </div>
           <div className="col-md-4">
             <div className="small text-muted">วันที่เอกสาร</div>
-            <div>{bill.invoiceDate ? new Date(bill.invoiceDate).toLocaleDateString('th-TH') : '—'}</div>
+            <div>{formatDate(bill.invoiceDate)}</div>
           </div>
           <div className="col-md-4">
             <div className="small text-muted">ครบกำหนด</div>
-            <div>{bill.dueDate ? new Date(bill.dueDate).toLocaleDateString('th-TH') : '—'}</div>
+            <div>{formatDate(bill.dueDate)}</div>
           </div>
           {(bill.purchaseOrders?.length || 0) > 0 ? (
             <div className="col-12">
@@ -234,6 +239,12 @@ export function PurchaseVendorBillDetailPage() {
               <span className="text-muted">ภาษี</span>
               <span className="font-monospace">{bill.totalTax.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
+            {amountWht > 0 ? (
+              <div className="d-flex justify-content-between mb-2">
+                <span className="text-muted">หัก ณ ที่จ่าย</span>
+                <span className="font-monospace">{amountWht.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+            ) : null}
             <div className="d-flex justify-content-between mb-2">
               <span className="text-muted">ชำระแล้ว</span>
               <span className="font-monospace">{amountPaid.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -252,6 +263,11 @@ export function PurchaseVendorBillDetailPage() {
           </Card>
         </div>
       </div>
+      {bill.payments?.some((payment) => payment.hasWht || (payment.whtCertCount ?? 0) > 0) ? (
+        <Alert variant="info" className="small">
+          พบการชำระที่มีข้อมูล WHT แล้วในระบบ สามารถตรวจสอบรายละเอียดต่อใน Odoo payment / certificate flow ได้
+        </Alert>
+      ) : null}
       <RegisterPaymentModal
         open={paymentOpen}
         onClose={() => setPaymentOpen(false)}

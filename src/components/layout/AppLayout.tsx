@@ -43,6 +43,7 @@ export function AppLayout() {
     { path: '/purchases/orders', label: 'ใบสั่งซื้อ', scope: 'purchase', icon: 'bi-cart' },
     { path: '/purchases/requests', label: 'คำขอซื้อ', scope: 'purchase', icon: 'bi-clipboard-check' },
     { path: '/expenses', label: 'รายจ่าย', scope: 'expense', icon: 'bi-cash-stack' },
+    { path: '/accounting/document-review', label: 'Review Inbox', scope: 'accounting_reports', icon: 'bi-inboxes' },
     { path: '/excel-import', label: 'Excel', scope: 'excel', icon: 'bi-file-earmark-spreadsheet' },
     { path: '/reports-studio', label: 'Reports Studio', mobileLabel: 'Reports\nStudio', icon: 'bi-layout-text-window-reverse' },
     // Provisioning is an admin/dev feature; keep behind auth scope.

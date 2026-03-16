@@ -70,6 +70,7 @@ function formatTaxRowsForExport(report: any, type: 'vat' | 'wht'): Record<string
   if (type === 'vat') {
     return rows.map((r: any, idx: number) => ({
       ลำดับ: r.rowNumber ?? idx + 1,
+      ประเภทภาษี: r.taxName ?? '',
       เลขที่ใบกำกับ: r.taxInvoiceNumber ?? '',
       วันที่: r.taxDate ?? '',
       คู่ค้า: r.partner?.name ?? '',
@@ -189,15 +190,9 @@ export function VatReportPage() {
     return []
   }, [taxesQuery.data])
 
-  // auto select first tax if none selected
-  useEffect(() => {
-    if (taxId == null && options.length > 0) setTaxId(options[0].id)
-  }, [taxId, options])
-
   const reportQuery = useQuery({
     queryKey: ['taxReports', 'vat', taxType, taxId, dateFrom, dateTo],
-    enabled: taxId != null,
-    queryFn: () => getVatReport({ taxId: taxId!, taxType, dateFrom, dateTo, showCancel: true, format: 'json' }),
+    queryFn: () => getVatReport({ taxId, taxType, dateFrom, dateTo, showCancel: true, format: 'json' }),
     staleTime: 60_000,
     retry: 1,
   })
@@ -296,8 +291,9 @@ export function VatReportPage() {
               className="form-select"
               value={taxId ?? ''}
               onChange={(e) => setTaxId(e.target.value ? Number(e.target.value) : null)}
-              disabled={taxesQuery.isLoading || options.length === 0}
+              disabled={taxesQuery.isLoading}
             >
+              <option value="">VAT ทั้งหมด</option>
               {options.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name} ({t.amount}%)

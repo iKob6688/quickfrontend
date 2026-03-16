@@ -65,6 +65,76 @@ If you see `ECONNREFUSED` when starting the dev server, it means the backend Odo
 - `VITE_API_KEY`: API key from Odoo (ADT API → API Clients)
 - `VITE_ODOO_DB`: Database name (optional, can be set at runtime)
 
+## Document Review Workspace (Phases 3-4)
+
+ERPTH now includes a React-first accountant review workspace for LINE and future document-intake channels.
+
+### What was added
+
+- New React route: `/accounting/document-review`
+- Three-panel review workflow:
+  - left: document queue with filters and paging
+  - center: document preview, extracted fields, validation issues, and suggested action
+  - right: AI Copilot panel for explanations and safe review guidance
+- Typed frontend service layer in `src/api/services/document-review.service.ts`
+- Phase 4 accounting mapping panel for:
+  - suggested vendor
+  - suggested account
+  - suggested tax
+  - suggested journal
+  - suggested analytic account
+  - confidence indicators and explanation text
+- Thin Odoo review API hooks for:
+  - list review items
+  - get document detail
+  - update extracted fields
+  - update accounting suggestions
+  - retry parsing
+  - mark unsupported
+  - create draft record explicitly
+
+### Backend endpoints used
+
+- `POST /api/line/review/items`
+- `POST /api/line/review/detail`
+- `POST /api/line/review/update`
+- `POST /api/line/review/retry`
+- `POST /api/line/review/mark-unsupported`
+- `POST /api/line/review/create-draft`
+- AI copilot uses the existing assistant backend via `POST /api/th/v1/ai/chat`
+
+### Review workflow
+
+1. Open `Accounting > Review Inbox`
+2. Pick a document from the queue
+3. Review the original attachment beside parsed fields
+4. Correct vendor, date, document number, amounts, document type, and partner match
+5. Save corrections so Odoo re-runs matching, validation, and accounting suggestion logic
+6. Review AI accounting mappings and override them when needed
+7. Review blocking/warning issues
+8. Use explicit action to create a draft record when safe
+
+### AI Copilot behavior
+
+- Copilot is assistive only
+- It explains extraction, validation, partner matching, duplicate warnings, and suggested accounting path
+- It does not post or mutate records directly
+- If the backend AI assistant is unavailable, the UI falls back to honest rule-based guidance for the current document
+
+### Current limitations
+
+- Expense draft creation depends on backend `hr_expense` availability and a valid expense product
+- Account/tax/journal/analytic editing is currently driven by backend candidate sets, not full search modals
+- Queue filters are optimized for review operations, not full analytics/search reporting
+- Preview relies on authenticated Odoo attachment access through `/web/content/*`
+
+### Next recommended phase
+
+- Add line-item review and richer tax mapping controls
+- Add richer review APIs for React bulk actions
+- Add document-review specific assistant prompts and trace visibility in Odoo
+- Add dedicated search/picker dialogs for accounts, taxes, journals, and analytic accounts
+
 ## Production-grade runbook (final)
 
 This section is a “do this, don’t debug” guide based on issues we hit during server rollout (Cloudflare + nginx + Odoo multi-DB).

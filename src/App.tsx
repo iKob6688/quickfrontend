@@ -23,6 +23,7 @@ import { PurchaseReceiptDetailPage } from '@/features/purchases/PurchaseReceiptD
 import { ExpensesListPage } from '@/features/expenses/ExpensesListPage'
 import { ExpenseDetailPage } from '@/features/expenses/ExpenseDetailPage'
 import { ExpenseFormPage } from '@/features/expenses/ExpenseFormPage'
+import { DocumentReviewInboxPage } from '@/features/document-review/DocumentReviewInboxPage'
 import { CustomersListPage } from '@/features/customers/CustomersListPage'
 import { CustomerDetailPage } from '@/features/customers/CustomerDetailPage'
 import { CustomerFormPage } from '@/features/customers/CustomerFormPage'
@@ -115,6 +116,7 @@ function AppRoutes() {
           <Route path="/expenses" element={<ExpensesListPage />} />
           <Route path="/expenses/new" element={<ExpenseFormPage />} />
           <Route path="/expenses/:id" element={<ExpenseDetailPage />} />
+          <Route path="/accounting/document-review" element={<DocumentReviewInboxPage />} />
           <Route path="/accounting/reports" element={<AccountingReportsPage />} />
           <Route path="/accounting/reports/profit-loss" element={<ProfitLossReportPage />} />
           <Route path="/accounting/reports/balance-sheet" element={<BalanceSheetReportPage />} />

@@ -7,10 +7,12 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner, Alert } from 'react-bootstrap'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { useAppDateFormatter } from '@/lib/dateFormat'
 
 export function ExpenseDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const formatDate = useAppDateFormatter()
 
   const expenseId = id ? Number.parseInt(id, 10) : null
 
@@ -162,13 +164,7 @@ export function ExpenseDetailPage() {
             <div className="fw-semibold mb-3">{expense.employeeName || '—'}</div>
             <div className="small text-muted mb-1">วันที่รายจ่าย</div>
             <div className="fw-semibold mb-3">
-              {expense.expenseDate
-                ? new Date(expense.expenseDate).toLocaleDateString('th-TH', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })
-                : '—'}
+              {formatDate(expense.expenseDate)}
             </div>
           </Card>
         </div>
@@ -210,4 +206,3 @@ export function ExpenseDetailPage() {
     </div>
   )
 }
-

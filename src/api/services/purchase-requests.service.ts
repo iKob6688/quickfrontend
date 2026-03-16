@@ -47,6 +47,7 @@ export interface PurchaseRequestListItem {
   requiredDate?: string // ISO 8601
   state: 'draft' | 'to_approve' | 'approved' | 'rejected' | 'done' | 'cancel'
   totalEstimatedCost?: number
+  totalQuantity?: number
   purchaseOrderName?: string | null
 }
 
@@ -133,6 +134,7 @@ function normalizePurchaseRequestList(raw: unknown): PurchaseRequestListItem[] {
         requiredDate: r.requiredDate,
         state: r.state,
         totalEstimatedCost: r.totalEstimatedCost,
+        totalQuantity: (r.lines || []).reduce((sum, line) => sum + num(line.quantity), 0),
         purchaseOrderName: r.purchaseOrderName,
       }))
   }

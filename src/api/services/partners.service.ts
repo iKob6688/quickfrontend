@@ -11,6 +11,8 @@ export interface PartnerSummary {
   vat?: string
   phone?: string
   email?: string
+  stateId?: number | null
+  stateName?: string | null
   active: boolean
   companyType: PartnerCompanyType
 }
@@ -52,8 +54,17 @@ export interface PartnerDetail {
   zip?: string
   countryId?: number | null
   countryName?: string | null
+  stateId?: number | null
+  stateName?: string | null
   vatPriceMode?: 'no_vat' | 'vat_included' | 'vat_excluded'
   branchCode?: string
+}
+
+export interface PartnerStateListItem {
+  id: number
+  name: string
+  code?: string
+  countryId?: number | null
 }
 
 export interface PartnerUpsertPayload {
@@ -70,6 +81,7 @@ export interface PartnerUpsertPayload {
   subDistrict?: string
   zip?: string
   countryId?: number | null
+  stateId?: number | null
   tags?: string[]
   payment_term_id?: number
   vatPriceMode?: 'no_vat' | 'vat_included' | 'vat_excluded'
@@ -92,6 +104,8 @@ interface BackendPartnerSummary {
   taxId?: string // Backend alias
   phone?: string
   email?: string
+  stateId?: number | null
+  stateName?: string | null
   active?: boolean
   isCompany?: boolean // Backend field
   companyType?: PartnerCompanyType // Frontend field (may or may not exist)
@@ -125,6 +139,8 @@ interface BackendPartnerDetail {
   zip?: string
   countryId?: number | null
   countryName?: string | null
+  stateId?: number | null
+  stateName?: string | null
   vat_price_mode?: 'no_vat' | 'vat_included' | 'vat_excluded'
   vatPriceMode?: 'no_vat' | 'vat_included' | 'vat_excluded'
   x_vat_price_mode?: 'no_vat' | 'vat_included' | 'vat_excluded'
@@ -156,6 +172,8 @@ function mapBackendPartnerSummaryToFrontend(backend: BackendPartnerSummary): Par
     vat: backend.vat || backend.taxId,
     phone: backend.phone,
     email: backend.email,
+    stateId: backend.stateId ?? null,
+    stateName: backend.stateName ?? null,
     active: backend.active ?? true,
     companyType,
   }
@@ -209,6 +227,8 @@ function mapBackendPartnerDetailToFrontend(backend: BackendPartnerDetail): Partn
     zip: backend.zip,
     countryId: backend.countryId,
     countryName: backend.countryName,
+    stateId: backend.stateId ?? null,
+    stateName: backend.stateName ?? null,
     vatPriceMode,
     branchCode,
   }
@@ -436,6 +456,7 @@ export async function createPartner(payload: PartnerUpsertPayload) {
       subDistrict: payload.subDistrict,
       zip: payload.zip,
       countryId: payload.countryId,
+      stateId: payload.stateId,
       tags: payload.tags,
       payment_term_id: payload.payment_term_id,
       vat_price_mode: payload.vatPriceMode,
@@ -468,6 +489,7 @@ export async function updatePartner(id: number, payload: PartnerUpsertPayload) {
       subDistrict: payload.subDistrict,
       zip: payload.zip,
       countryId: payload.countryId,
+      stateId: payload.stateId,
       tags: payload.tags,
       payment_term_id: payload.payment_term_id,
       vat_price_mode: payload.vatPriceMode,
@@ -524,6 +546,24 @@ export async function setPartnersActive(ids: number[], active: boolean) {
   }
 
   return { ok, failed }
+}
+
+export async function listPartnerStates(params?: { countryId?: number | null; search?: string; limit?: number }) {
+  const response = await apiClient.post(
+    `${basePath}/states`,
+    makeRpc({
+      ...(params?.countryId ? { country_id: params.countryId } : {}),
+      ...(params?.search ? { search: params.search } : {}),
+      ...(params?.limit ? { limit: params.limit } : {}),
+    }),
+  )
+  const data = unwrapResponse<Array<Record<string, unknown>>>(response)
+  return (Array.isArray(data) ? data : []).map((item) => ({
+    id: Number(item.id || 0),
+    name: String(item.name || ''),
+    code: item.code ? String(item.code) : undefined,
+    countryId: item.countryId ? Number(item.countryId) : null,
+  })).filter((item) => item.id > 0 && item.name)
 }
 
 export interface PartnerQuery {
