@@ -166,7 +166,7 @@ export function PurchaseOrderFormPage() {
 
   const purchaseTaxes = purchaseTaxesQuery.data ?? []
   const purchaseTaxById = useMemo(
-    () => new Map<number, TaxListItem>(purchaseTaxes.map((tax) => [tax.id, tax])),
+    () => new Map<number, TaxListItem>(purchaseTaxes.map((tax: TaxListItem) => [tax.id, tax])),
     [purchaseTaxes],
   )
 
@@ -489,7 +489,7 @@ export function PurchaseOrderFormPage() {
           }
           title="เลือกภาษีจาก backend"
         >
-          {purchaseTaxes.map((tax) => (
+          {purchaseTaxes.map((tax: TaxListItem) => (
             <option key={tax.id} value={tax.id}>
               {tax.name} ({Number(tax.amount || 0).toLocaleString('th-TH', { maximumFractionDigits: 2 })}%)
             </option>
