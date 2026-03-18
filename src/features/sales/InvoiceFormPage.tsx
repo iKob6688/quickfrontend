@@ -15,6 +15,7 @@ import { listPartners, getPartner } from '@/api/services/partners.service'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { Combobox, type ComboboxOption } from '@/components/ui/Combobox'
 import { ProductCombobox } from '@/features/sales/ProductCombobox'
+import { useAppDateTimeFormatter } from '@/lib/dateFormat'
 
 function normalizeNotesForTextarea(raw?: string | null): string {
   if (!raw) return ''
@@ -36,6 +37,7 @@ export function InvoiceFormPage() {
   const [searchParams] = useSearchParams()
   const queryClient = useQueryClient()
   const isEdit = !!id
+  const formatDateTime = useAppDateTimeFormatter()
   const invoiceId = id ? Number.parseInt(id, 10) : null
   const customerIdFromQuery = searchParams.get('customerId')
   const partnerIdFromQuery = searchParams.get('partnerId')
@@ -233,7 +235,7 @@ export function InvoiceFormPage() {
           <div className="d-flex align-items-center gap-2">
             {!isEdit && draftSavedAt ? (
               <span className="small text-muted">
-                autosaved {new Date(draftSavedAt).toLocaleTimeString('th-TH')}
+                autosaved {formatDateTime(draftSavedAt)}
               </span>
             ) : null}
             <Button
@@ -254,7 +256,7 @@ export function InvoiceFormPage() {
               <Alert variant="warning" className="small">
                 <div className="fw-semibold mb-1">พบ draft ที่บันทึกไว้</div>
                 <div className="mb-2">
-                  เวลา: {draftUpdatedAt ? new Date(draftUpdatedAt).toLocaleString('th-TH') : 'ไม่ทราบเวลา'}
+                  เวลา: {formatDateTime(draftUpdatedAt, 'ไม่ทราบเวลา')}
                 </div>
                 <div className="d-flex gap-2">
                   <Button

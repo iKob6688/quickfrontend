@@ -47,12 +47,53 @@ export interface RegisterCompanyResponse {
 
 // NOTE: axios baseURL is VITE_API_BASE_URL (= '/api'), so endpoint paths here must NOT start with '/api'
 const basePath = '/th/v1/auth'
-// Local deployments vary:
-// - some expose Odoo web session at /web/session/*
-// - some mount it under /odoo/web/session/*
-// Try root first, then /odoo as fallback.
-const webSessionBaseURLs = ['', '/odoo'] as const
 const AUTH_TIMEOUT_MS = Number(import.meta.env.VITE_AUTH_TIMEOUT_MS || 15000)
+
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return Array.from(new Set(values.filter((value): value is string => Boolean(value && value.trim()))))
+}
+
+function normalizeBaseUrl(value?: string | null) {
+  if (!value) return null
+  const trimmed = value.trim().replace(/\/+$/, '')
+  if (!trimmed) return null
+  return trimmed
+}
+
+function webSessionBaseUrlCandidates() {
+  const apiBase = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL ?? '/api')
+  const proxyTarget = normalizeBaseUrl(import.meta.env.VITE_PROXY_TARGET ?? '')
+
+  const candidates: string[] = []
+
+  const addRootAndOdooVariants = (base: string) => {
+    const normalized = base.replace(/\/+$/, '')
+    candidates.push(normalized)
+    if (/\/api$/i.test(normalized)) {
+      const root = normalized.replace(/\/api$/i, '')
+      candidates.push(root)
+      candidates.push(`${root}/odoo`)
+      return
+    }
+    candidates.push(`${normalized}/odoo`)
+  }
+
+  if (apiBase?.startsWith('http://') || apiBase?.startsWith('https://')) {
+    addRootAndOdooVariants(apiBase)
+  }
+
+  if (proxyTarget) {
+    addRootAndOdooVariants(proxyTarget)
+  }
+
+  // Relative fallback for dev server/nginx proxy setups.
+  if (apiBase?.startsWith('/')) {
+    candidates.push('')
+    candidates.push('/odoo')
+  }
+
+  return uniqueStrings(candidates)
+}
 
 type OdooWebSessionAuthResult = {
   uid?: number
@@ -84,7 +125,8 @@ async function loginViaWebSession(payload: LoginPayload): Promise<LoginResponse>
   let raw: { result?: OdooWebSessionAuthResult; error?: unknown } | undefined
   let result: OdooWebSessionAuthResult | undefined
   let lastErr: unknown = null
-  for (const baseURL of webSessionBaseURLs) {
+  let rootPathErr: unknown = null
+  for (const baseURL of webSessionBaseUrlCandidates()) {
     try {
       response = await apiClient.post(
         '/web/session/authenticate',
@@ -109,12 +151,16 @@ async function loginViaWebSession(payload: LoginPayload): Promise<LoginResponse>
       result = raw?.result
       if (result?.uid) break
     } catch (e) {
+      if (baseURL === '' || /\/api$/i.test(String(import.meta.env.VITE_API_BASE_URL ?? ''))) rootPathErr = e
       lastErr = e
       continue
     }
   }
   if (!response || !result?.uid) {
-    if (lastErr) throw lastErr instanceof Error ? lastErr : new ApiError('Odoo web session login failed')
+    // Prefer the root /web failure when available; many deployments do not mount Odoo under /odoo,
+    // so the trailing /odoo fallback can hide the real topology mismatch.
+    const preferredErr = rootPathErr || lastErr
+    if (preferredErr) throw preferredErr instanceof Error ? preferredErr : new ApiError('Odoo web session login failed')
     throw new ApiError('Odoo web session login failed', { status: response?.status, details: raw })
   }
   const allowedCompanies = Object.values(result.user_companies?.allowed_companies ?? {})
@@ -144,7 +190,8 @@ async function getMeViaWebSession(): Promise<MeResponse> {
   let r: any = null
   let lastRaw: any = null
   let lastErr: unknown = null
-  for (const baseURL of webSessionBaseURLs) {
+  let rootPathErr: unknown = null
+  for (const baseURL of webSessionBaseUrlCandidates()) {
     try {
       response = await apiClient.post(
         '/web/session/get_session_info',
@@ -161,11 +208,13 @@ async function getMeViaWebSession(): Promise<MeResponse> {
       r = raw?.result
       if (r?.uid) break
     } catch (e) {
+      if (baseURL === '' || /\/api$/i.test(String(import.meta.env.VITE_API_BASE_URL ?? ''))) rootPathErr = e
       lastErr = e
     }
   }
   if (!r?.uid) {
-    if (lastErr) throw lastErr instanceof Error ? lastErr : new ApiError('Odoo web session not authenticated')
+    const preferredErr = rootPathErr || lastErr
+    if (preferredErr) throw preferredErr instanceof Error ? preferredErr : new ApiError('Odoo web session not authenticated')
     throw new ApiError('Odoo web session not authenticated', { status: response?.status, details: lastRaw })
   }
   const allowedCompanies = Object.values(r.user_companies?.allowed_companies ?? {})
@@ -187,7 +236,8 @@ async function getMeViaWebSession(): Promise<MeResponse> {
 
 async function logoutViaWebSession() {
   let lastErr: unknown = null
-  for (const baseURL of webSessionBaseURLs) {
+  let rootPathErr: unknown = null
+  for (const baseURL of webSessionBaseUrlCandidates()) {
     try {
       await apiClient.post(
         '/web/session/destroy',
@@ -201,10 +251,12 @@ async function logoutViaWebSession() {
       )
       return
     } catch (e) {
+      if (baseURL === '' || /\/api$/i.test(String(import.meta.env.VITE_API_BASE_URL ?? ''))) rootPathErr = e
       lastErr = e
     }
   }
-  if (lastErr) throw lastErr instanceof Error ? lastErr : new ApiError('Odoo web session logout failed')
+  const preferredErr = rootPathErr || lastErr
+  if (preferredErr) throw preferredErr instanceof Error ? preferredErr : new ApiError('Odoo web session logout failed')
 }
 
 export async function login(payload: LoginPayload) {

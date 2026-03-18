@@ -56,6 +56,10 @@ export interface PartnerDetail {
   countryName?: string | null
   stateId?: number | null
   stateName?: string | null
+  provinceId?: number | null
+  provinceName?: string | null
+  districtId?: number | null
+  subDistrictId?: number | null
   vatPriceMode?: 'no_vat' | 'vat_included' | 'vat_excluded'
   branchCode?: string
 }
@@ -82,6 +86,9 @@ export interface PartnerUpsertPayload {
   zip?: string
   countryId?: number | null
   stateId?: number | null
+  provinceId?: number | null
+  districtId?: number | null
+  subDistrictId?: number | null
   tags?: string[]
   payment_term_id?: number
   vatPriceMode?: 'no_vat' | 'vat_included' | 'vat_excluded'
@@ -141,6 +148,10 @@ interface BackendPartnerDetail {
   countryName?: string | null
   stateId?: number | null
   stateName?: string | null
+  provinceId?: number | null
+  provinceName?: string | null
+  districtId?: number | null
+  subDistrictId?: number | null
   vat_price_mode?: 'no_vat' | 'vat_included' | 'vat_excluded'
   vatPriceMode?: 'no_vat' | 'vat_included' | 'vat_excluded'
   x_vat_price_mode?: 'no_vat' | 'vat_included' | 'vat_excluded'
@@ -229,19 +240,13 @@ function mapBackendPartnerDetailToFrontend(backend: BackendPartnerDetail): Partn
     countryName: backend.countryName,
     stateId: backend.stateId ?? null,
     stateName: backend.stateName ?? null,
+    provinceId: backend.provinceId ?? backend.stateId ?? null,
+    provinceName: backend.provinceName || backend.stateName || undefined,
+    districtId: backend.districtId ?? null,
+    subDistrictId: backend.subDistrictId ?? null,
     vatPriceMode,
     branchCode,
   }
-}
-
-function composeStreet2(street2?: string, subDistrict?: string): string | undefined {
-  const base = (street2 || '').trim()
-  const sub = (subDistrict || '').trim()
-  if (!base && !sub) return undefined
-  if (!sub) return base || undefined
-  if (!base) return `แขวง/ตำบล ${sub}`
-  if (base.includes(sub)) return base
-  return `${base} | แขวง/ตำบล ${sub}`
 }
 
 export async function listPartners(params: PartnerListParams) {
@@ -450,13 +455,16 @@ export async function createPartner(payload: PartnerUpsertPayload) {
       mobile: payload.mobile,
       email: payload.email,
       street: payload.street,
-      street2: composeStreet2(payload.street2, payload.subDistrict),
+      street2: payload.street2,
       city: payload.district || payload.city,
       district: payload.district,
       subDistrict: payload.subDistrict,
       zip: payload.zip,
       countryId: payload.countryId,
       stateId: payload.stateId,
+      provinceId: payload.provinceId,
+      districtId: payload.districtId,
+      subDistrictId: payload.subDistrictId,
       tags: payload.tags,
       payment_term_id: payload.payment_term_id,
       vat_price_mode: payload.vatPriceMode,
@@ -483,13 +491,16 @@ export async function updatePartner(id: number, payload: PartnerUpsertPayload) {
       mobile: payload.mobile,
       email: payload.email,
       street: payload.street,
-      street2: composeStreet2(payload.street2, payload.subDistrict),
+      street2: payload.street2,
       city: payload.district || payload.city,
       district: payload.district,
       subDistrict: payload.subDistrict,
       zip: payload.zip,
       countryId: payload.countryId,
       stateId: payload.stateId,
+      provinceId: payload.provinceId,
+      districtId: payload.districtId,
+      subDistrictId: payload.subDistrictId,
       tags: payload.tags,
       payment_term_id: payload.payment_term_id,
       vat_price_mode: payload.vatPriceMode,

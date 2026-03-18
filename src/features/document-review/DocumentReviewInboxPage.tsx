@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input'
 import { toast } from '@/lib/toastStore'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { toApiError } from '@/api/response'
+import { approvalAction, listApprovalTasks } from '@/api/services/approval.service'
 import { listPartners, type PartnerSummary } from '@/api/services/partners.service'
 import { sendAssistantChat } from '@/api/services/ai-assistant.service'
 import {
@@ -30,6 +31,7 @@ import {
 import './document-review.css'
 
 type FilterKey = 'all' | 'new' | 'needs_review' | 'validation_issue' | 'draft_ready' | 'linked' | 'error'
+type InboxViewMode = 'all' | 'approvals' | 'documents'
 
 type EditorState = {
   vendor_name: string
@@ -290,6 +292,7 @@ export function DocumentReviewInboxPage() {
   const selectedIdParam = searchParams.get('id')
   const initialSelectedId = selectedIdParam ? Number.parseInt(selectedIdParam, 10) : null
   const [selectedId, setSelectedId] = useState<number | null>(Number.isFinite(initialSelectedId) ? initialSelectedId : null)
+  const [viewMode, setViewMode] = useState<InboxViewMode>('all')
   const [filter, setFilter] = useState<FilterKey>('needs_review')
   const [search, setSearch] = useState('')
   const [offset, setOffset] = useState(0)
@@ -309,6 +312,8 @@ export function DocumentReviewInboxPage() {
   const debouncedSearch = useDebouncedValue(search, 300)
   const debouncedPartnerSearch = useDebouncedValue(partnerSearch, 250)
   const currentFilter = FILTER_CONFIG[filter]
+  const shouldShowApprovals = viewMode === 'all' || viewMode === 'approvals'
+  const shouldShowDocuments = viewMode === 'all' || viewMode === 'documents'
 
   const queueQuery = useQuery({
     queryKey: ['document-review', 'items', filter, debouncedSearch, offset],
@@ -320,6 +325,27 @@ export function DocumentReviewInboxPage() {
         review_states: currentFilter.reviewStates,
         search: debouncedSearch || undefined,
       }),
+  })
+
+  const approvalTasksQuery = useQuery({
+    queryKey: ['approvalTasks', 'review-inbox'],
+    queryFn: () => listApprovalTasks(20),
+    staleTime: 20_000,
+  })
+
+  const approvalMutation = useMutation({
+    mutationFn: ({ model, id, action }: { model: string; id: number; action: 'approve' | 'reject' }) =>
+      approvalAction(model, id, action),
+    onSuccess: async (_, variables) => {
+      toast.success(variables.action === 'approve' ? 'อนุมัติรายการสำเร็จ' : 'ปฏิเสธรายการสำเร็จ')
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['approvalTasks'] }),
+        queryClient.invalidateQueries({ queryKey: ['purchaseRequests'] }),
+      ])
+    },
+    onError: (error) => {
+      toast.error('Approval action failed', toApiError(error).message)
+    },
   })
 
   const items = queueQuery.data?.items || []
@@ -581,9 +607,9 @@ export function DocumentReviewInboxPage() {
   return (
     <div>
       <PageHeader
-        title="Document Review Inbox"
-        subtitle="Review parsed intake documents, correct extracted data, and create controlled ERP drafts."
-        breadcrumb="Accounting · Document Review"
+        title="Review Inbox"
+        subtitle="Approval queue and document review stay in one place so pending work can be processed faster."
+        breadcrumb="Accounting · Review Inbox"
         actions={
           <div className="d-flex align-items-center gap-2">
             <Button size="sm" variant="secondary" onClick={() => detailQuery.refetch()} disabled={!selectedId || detailQuery.isFetching}>
@@ -597,6 +623,105 @@ export function DocumentReviewInboxPage() {
       />
 
       <div className="document-review__toolbar">
+        <div className="document-review__filters">
+          {([
+            { key: 'all', label: 'ทั้งหมด' },
+            { key: 'approvals', label: `รออนุมัติ (${approvalTasksQuery.data?.pendingCount || 0})` },
+            { key: 'documents', label: `เอกสาร review (${total})` },
+          ] as Array<{ key: InboxViewMode; label: string }>).map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              className={`document-review__filter-chip ${viewMode === item.key ? 'is-active' : ''}`}
+              onClick={() => setViewMode(item.key)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {shouldShowApprovals ? <Card className="mb-4">
+        <div className="document-review__section-head">
+          <div>
+            <div className="fw-semibold">Approval Queue</div>
+            <div className="small text-muted">งานรออนุมัติจาก backend approval queue เดียวกับ dashboard</div>
+          </div>
+          <Badge tone={(approvalTasksQuery.data?.pendingCount || 0) > 0 ? 'amber' : 'green'}>
+            {approvalTasksQuery.data?.pendingCount || 0}
+          </Badge>
+        </div>
+
+        {approvalTasksQuery.isLoading ? (
+          <div className="small text-muted">กำลังโหลด approval queue...</div>
+        ) : approvalTasksQuery.isError ? (
+          <Alert variant="danger" className="mb-0 mt-3">
+            {toApiError(approvalTasksQuery.error).message}
+          </Alert>
+        ) : (approvalTasksQuery.data?.items.length || 0) === 0 ? (
+          <div className="small text-muted">ไม่มีงานรออนุมัติในขณะนี้</div>
+        ) : (
+          <div className="d-flex flex-column gap-3 mt-3">
+            {approvalTasksQuery.data?.items.map((task) => (
+              <div key={`${task.model}:${task.id}`} className="document-review__issue">
+                <div className="d-flex flex-column flex-lg-row justify-content-between gap-3">
+                  <div>
+                    <div className="d-flex flex-wrap gap-2 mb-2">
+                      <Badge tone="amber">รออนุมัติ</Badge>
+                      <Badge tone="blue">{task.typeLabel || task.type}</Badge>
+                    </div>
+                    <div className="fw-semibold">{task.name}</div>
+                    <div className="small text-muted mt-1">
+                      {task.requestedByName ? `ผู้ขอ: ${task.requestedByName}` : 'ผู้ขอ: -'}
+                      {task.approvalTeamName ? ` • ทีม: ${task.approvalTeamName}` : ''}
+                      {task.company ? ` • บริษัท: ${task.company}` : ''}
+                    </div>
+                    {task.description ? <div className="small mt-2">{task.description}</div> : null}
+                  </div>
+                  <div className="text-lg-end">
+                    <div className="fw-semibold">{asCurrency(task.amountTotal, task.currency || 'THB')}</div>
+                    <div className="small text-muted">มูลค่ารวม</div>
+                  </div>
+                </div>
+                <div className="d-flex flex-wrap gap-2 mt-3">
+                  <Button
+                    size="sm"
+                    onClick={() => approvalMutation.mutate({ model: task.model, id: task.id, action: 'approve' })}
+                    isLoading={
+                      approvalMutation.isPending &&
+                      approvalMutation.variables?.model === task.model &&
+                      approvalMutation.variables?.id === task.id &&
+                      approvalMutation.variables?.action === 'approve'
+                    }
+                  >
+                    อนุมัติ
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => approvalMutation.mutate({ model: task.model, id: task.id, action: 'reject' })}
+                    isLoading={
+                      approvalMutation.isPending &&
+                      approvalMutation.variables?.model === task.model &&
+                      approvalMutation.variables?.id === task.id &&
+                      approvalMutation.variables?.action === 'reject'
+                    }
+                  >
+                    ปฏิเสธ
+                  </Button>
+                  {task.route ? (
+                    <Button size="sm" variant="ghost" onClick={() => navigate(task.route!)}>
+                      เปิดเอกสาร
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card> : null}
+
+      {shouldShowDocuments ? <div className="document-review__toolbar">
         <div className="document-review__filters">
           {(Object.keys(FILTER_CONFIG) as FilterKey[]).map((key) => (
             <button
@@ -623,9 +748,9 @@ export function DocumentReviewInboxPage() {
             leftAdornment={<i className="bi bi-search" />}
           />
         </div>
-      </div>
+      </div> : null}
 
-      <div className="document-review__layout">
+      {shouldShowDocuments ? <div className="document-review__layout">
         <Card className="document-review__queue">
           <div className="document-review__section-head">
             <div>
@@ -1141,7 +1266,7 @@ export function DocumentReviewInboxPage() {
             <div className="small text-muted">Re-open the panel to ask for extraction explanations and review suggestions.</div>
           )}
         </Card>
-      </div>
+      </div> : null}
     </div>
   )
 }

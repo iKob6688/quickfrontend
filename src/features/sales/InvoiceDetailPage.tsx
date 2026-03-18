@@ -1,6 +1,6 @@
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getInvoice, postInvoice, registerPayment, openInvoicePdf, amendInvoice, type RegisterPaymentPayload } from '@/api/services/invoices.service'
+import { getInvoice, postInvoice, registerPayment, updatePayment, openInvoicePdf, amendInvoice, type RegisterPaymentPayload, type PaymentRecord, type UpdatePaymentPayload } from '@/api/services/invoices.service'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -25,6 +25,7 @@ export function InvoiceDetailPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [paymentOpen, setPaymentOpen] = useState(false)
+  const [editingPayment, setEditingPayment] = useState<PaymentRecord | null>(null)
   const [amendOpen, setAmendOpen] = useState(false)
   const [promptPayOpen, setPromptPayOpen] = useState(false)
   const [printMenuOpen, setPrintMenuOpen] = useState(false)
@@ -184,6 +185,20 @@ export function InvoiceDetailPage() {
     },
   })
 
+  const paymentUpdateMutation = useMutation({
+    mutationFn: ({ paymentId, payload }: { paymentId: number; payload: UpdatePaymentPayload }) =>
+      updatePayment(invoiceId!, paymentId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+      queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['invoices', 'receipts'] })
+      toast.success('แก้ไขข้อมูลการชำระเงินสำเร็จ')
+    },
+    onError: (err) => {
+      toast.error('แก้ไขข้อมูลการชำระเงินไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+    },
+  })
+
   const amendMutation = useMutation({
     mutationFn: async (reason: string) => {
       if (!invoiceId) throw new Error('Missing invoice id')
@@ -310,10 +325,10 @@ export function InvoiceDetailPage() {
   ]
 
   const invoiceDateText = invoice.invoiceDate
-    ? new Date(invoice.invoiceDate).toLocaleDateString('th-TH')
+    ? formatDate(invoice.invoiceDate)
     : '—'
   const dueDateText = invoice.dueDate
-    ? new Date(invoice.dueDate).toLocaleDateString('th-TH')
+    ? formatDate(invoice.dueDate)
     : '—'
 
   const amountUntaxed = invoice.amountUntaxed ?? invoice.total - (invoice.totalTax ?? 0)
@@ -726,6 +741,7 @@ export function InvoiceDetailPage() {
                             <th>วิธีชำระ</th>
                             <th className="text-end">ยอดที่รับ</th>
                             {payments.some((p) => p.reference) && <th>อ้างอิง</th>}
+                            <th className="text-end">จัดการ</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -776,6 +792,11 @@ export function InvoiceDetailPage() {
                               {payments.some((p) => p.reference) && (
                                 <td className="small text-muted font-monospace">{payment.reference || '—'}</td>
                               )}
+                              <td className="text-end">
+                                <Button size="sm" variant="ghost" onClick={() => setEditingPayment(payment)}>
+                                  แก้ไข
+                                </Button>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -793,6 +814,7 @@ export function InvoiceDetailPage() {
                                 {currency}
                               </td>
                               {payments.some((p) => p.reference) && <td></td>}
+                              <td></td>
                             </tr>
                           </tfoot>
                         )}
@@ -879,7 +901,35 @@ export function InvoiceDetailPage() {
         defaultAmount={Math.max(0, amountDue)}
         maxAmount={Math.max(0, amountDue)}
         onSubmit={async (payload) => {
-          await paymentMutation.mutateAsync(payload)
+          await paymentMutation.mutateAsync(payload as RegisterPaymentPayload)
+        }}
+      />
+
+      <RegisterPaymentModal
+        open={!!editingPayment}
+        onClose={() => setEditingPayment(null)}
+        currency={invoice.currency}
+        title="แก้ไขข้อมูลการรับชำระ"
+        submitLabel="บันทึกการแก้ไข"
+        initialDate={editingPayment?.date}
+        initialMethod={
+          editingPayment?.method?.toLowerCase().includes('cash')
+            ? 'cash'
+            : editingPayment?.method?.toLowerCase().includes('card')
+              ? 'card'
+              : editingPayment?.method?.toLowerCase().includes('bank')
+                ? 'bank'
+                : 'manual'
+        }
+        initialReference={editingPayment?.reference || ''}
+        allowAmountEdit={false}
+        onSubmit={async (payload) => {
+          if (!editingPayment) return
+          await paymentUpdateMutation.mutateAsync({
+            paymentId: editingPayment.id,
+            payload: payload as UpdatePaymentPayload,
+          })
+          setEditingPayment(null)
         }}
       />
 

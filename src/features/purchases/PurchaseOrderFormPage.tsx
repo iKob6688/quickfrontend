@@ -1,4 +1,4 @@
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import {
   getPurchaseOrder,
@@ -24,7 +24,18 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { ProductCombobox } from '@/features/sales/ProductCombobox'
 import { CountrySelector } from '@/features/customers/CountrySelector'
 import { StateSelector } from '@/features/customers/StateSelector'
+import {
+  ThaiDistrictSelector,
+  ThaiProvinceSelector,
+  ThaiSubDistrictSelector,
+} from '@/features/customers/ThaiAddressSelectors'
+import {
+  listThaiDistricts,
+  listThaiProvinces,
+  listThaiSubDistricts,
+} from '@/api/services/thai-address.service'
 import { normalizeVatNumber, sanitizeVatNumber, thaiVatValidationMessage } from '@/lib/vat'
+import { useAppDateTimeFormatter } from '@/lib/dateFormat'
 
 const PURCHASE_ORDER_DRAFT_KEY = 'qf:draft:purchase-order-form:create:v1'
 const PURCHASE_ORDER_RECENT_NOTES_KEY = 'qf:recent-notes:purchase-order:v1'
@@ -65,12 +76,29 @@ export function PurchaseOrderFormPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const formatDateTime = useAppDateTimeFormatter()
   const [searchParams] = useSearchParams()
+  const location = useLocation()
   const isEdit = !!id
   const orderId = id ? Number.parseInt(id, 10) : null
   const thailandId = Number(import.meta.env.VITE_COUNTRY_TH_ID || 219)
   const vendorIdFromQuery = searchParams.get('vendorId')
   const partnerIdFromQuery = searchParams.get('partnerId')
+  const sourcePurchaseRequest = (location.state as {
+    sourcePurchaseRequest?: {
+      id?: number
+      name?: string
+      origin?: string
+      requiredDate?: string
+      notes?: string
+      lines?: Array<{
+        productId?: number | null
+        description?: string
+        quantity?: number
+        estimatedCost?: number
+      }>
+    }
+  } | null)?.sourcePurchaseRequest
   const vendorIdPrefill = vendorIdFromQuery
     ? Number(vendorIdFromQuery)
     : partnerIdFromQuery
@@ -96,6 +124,7 @@ export function PurchaseOrderFormPage() {
     lines: [],
     notes: '',
   }))
+  const [prPrefillApplied, setPrPrefillApplied] = useState(false)
 
   const [vendorSearch, setVendorSearch] = useState('')
   const [quickVendorOpen, setQuickVendorOpen] = useState(false)
@@ -112,6 +141,9 @@ export function PurchaseOrderFormPage() {
     zip: '',
     countryId: thailandId,
     stateId: null,
+    provinceId: null,
+    districtId: null,
+    subDistrictId: null,
     vatPriceMode: 'vat_excluded',
     branchCode: 'สำนักงานใหญ่',
     active: true,
@@ -191,6 +223,39 @@ export function PurchaseOrderFormPage() {
     }, 0)
     return () => window.clearTimeout(timer)
   }, [isEdit, existingOrder, purchaseTaxById])
+
+  useEffect(() => {
+    if (isEdit) return
+    if (prPrefillApplied) return
+    if (!sourcePurchaseRequest) return
+
+    const prefilledLines = (sourcePurchaseRequest.lines || []).map((line) =>
+      computeLineTotals(
+        {
+          productId: line.productId ?? null,
+          description: line.description || '',
+          quantity: Number(line.quantity || 0) || 1,
+          unitPrice: Number(line.estimatedCost || 0),
+          taxIds: [],
+          subtotal: 0,
+          totalTax: 0,
+          total: 0,
+        },
+        purchaseTaxById,
+      ),
+    )
+
+    setFormData((prev) => ({
+      ...prev,
+      expectedDate: sourcePurchaseRequest.requiredDate || prev.expectedDate,
+      notes:
+        [sourcePurchaseRequest.name, sourcePurchaseRequest.origin, sourcePurchaseRequest.notes]
+          .filter((value) => typeof value === 'string' && value.trim())
+          .join(' | ') || prev.notes,
+      lines: prefilledLines.length > 0 ? prefilledLines : prev.lines,
+    }))
+    setPrPrefillApplied(true)
+  }, [isEdit, prPrefillApplied, purchaseTaxById, sourcePurchaseRequest])
 
   // Update vendor search text when selected vendor details are loaded (fallback if vendorName was not in existingOrder)
   useEffect(() => {
@@ -293,10 +358,61 @@ export function PurchaseOrderFormPage() {
       zip: '',
       countryId: thailandId,
       stateId: null,
+      provinceId: null,
+      districtId: null,
+      subDistrictId: null,
       vatPriceMode: 'vat_excluded',
       branchCode: 'สำนักงานใหญ่',
       active: true,
     })
+
+  const isQuickVendorThai = (quickVendor.countryId ?? thailandId) === thailandId
+
+  const handleQuickVendorProvinceChange = async (provinceId: number | null) => {
+    const selected = provinceId ? (await listThaiProvinces()).find((item) => item.id === provinceId) : null
+    setQuickVendor((prev) => ({
+      ...prev,
+      provinceId,
+      stateId: selected?.stateId ?? null,
+      districtId: null,
+      subDistrictId: null,
+      district: '',
+      city: '',
+      subDistrict: '',
+      zip: '',
+    }))
+  }
+
+  const handleQuickVendorDistrictChange = async (districtId: number | null) => {
+    const selected = districtId
+      ? (await listThaiDistricts({ provinceId: quickVendor.provinceId ?? null })).find((item) => item.id === districtId)
+      : null
+    setQuickVendor((prev) => ({
+      ...prev,
+      districtId,
+      subDistrictId: null,
+      district: selected?.name || '',
+      city: selected?.name || '',
+      subDistrict: '',
+      zip: '',
+    }))
+  }
+
+  const handleQuickVendorSubDistrictChange = async (subDistrictId: number | null) => {
+    if (!subDistrictId) {
+      setQuickVendor((prev) => ({ ...prev, subDistrictId: null, subDistrict: '', zip: '' }))
+      return
+    }
+    const selected = (await listThaiSubDistricts({ districtId: quickVendor.districtId ?? null })).find(
+      (item) => item.id === subDistrictId,
+    )
+    setQuickVendor((prev) => ({
+      ...prev,
+      subDistrictId,
+      subDistrict: selected?.name || '',
+      zip: selected?.zipCode || '',
+    }))
+  }
 
   const submitQuickVendor = async () => {
     if (!quickVendor.name?.trim()) {
@@ -556,7 +672,7 @@ export function PurchaseOrderFormPage() {
           <div className="d-flex align-items-center gap-2">
             {!isEdit && draftSavedAt ? (
               <span className="small text-muted">
-                autosaved {new Date(draftSavedAt).toLocaleTimeString('th-TH')}
+                autosaved {formatDateTime(draftSavedAt)}
               </span>
             ) : null}
             <Button
@@ -587,7 +703,7 @@ export function PurchaseOrderFormPage() {
         <div className="alert alert-warning small">
           <div className="fw-semibold mb-1">พบ draft ใบสั่งซื้อที่บันทึกไว้</div>
           <div className="mb-2">
-            เวลา: {draftUpdatedAt ? new Date(draftUpdatedAt).toLocaleString('th-TH') : 'ไม่ทราบเวลา'}
+            เวลา: {formatDateTime(draftUpdatedAt, 'ไม่ทราบเวลา')}
           </div>
           <div className="d-flex gap-2">
             <Button
@@ -938,32 +1054,80 @@ export function PurchaseOrderFormPage() {
           <div className="col-md-6">
             <CountrySelector
               value={quickVendor.countryId}
-              onChange={(value) => setQuickVendor((prev) => ({ ...prev, countryId: value, stateId: value ? prev.stateId ?? null : null }))}
+              onChange={(value) =>
+                setQuickVendor((prev) => ({
+                  ...prev,
+                  countryId: value,
+                  stateId: value === thailandId ? prev.stateId ?? null : null,
+                  provinceId: value === thailandId ? prev.provinceId ?? null : null,
+                  districtId: value === thailandId ? prev.districtId ?? null : null,
+                  subDistrictId: value === thailandId ? prev.subDistrictId ?? null : null,
+                }))
+              }
             />
           </div>
-          <div className="col-md-6">
-            <StateSelector
-              countryId={quickVendor.countryId}
-              value={quickVendor.stateId}
-              onChange={(value) => setQuickVendor((prev) => ({ ...prev, stateId: value }))}
-            />
-          </div>
-          <div className="col-md-6">
-            <Label htmlFor="quick-vendor-subDistrict">แขวง/ตำบล</Label>
-            <Input
-              id="quick-vendor-subDistrict"
-              value={quickVendor.subDistrict || ''}
-              onChange={(e) => setQuickVendor((prev) => ({ ...prev, subDistrict: e.target.value }))}
-            />
-          </div>
-          <div className="col-md-6">
-            <Label htmlFor="quick-vendor-district">เขต/อำเภอ</Label>
-            <Input
-              id="quick-vendor-district"
-              value={quickVendor.district || ''}
-              onChange={(e) => setQuickVendor((prev) => ({ ...prev, district: e.target.value, city: e.target.value }))}
-            />
-          </div>
+          {isQuickVendorThai ? (
+            <>
+              <div className="col-md-6">
+                <ThaiProvinceSelector
+                  value={quickVendor.provinceId}
+                  onChange={(value) => {
+                    handleQuickVendorProvinceChange(value).catch(() => {
+                      setQuickVendor((prev) => ({ ...prev, provinceId: value }))
+                    })
+                  }}
+                />
+              </div>
+              <div className="col-md-6">
+                <ThaiDistrictSelector
+                  provinceId={quickVendor.provinceId}
+                  value={quickVendor.districtId}
+                  onChange={(value) => {
+                    handleQuickVendorDistrictChange(value).catch(() => {
+                      setQuickVendor((prev) => ({ ...prev, districtId: value }))
+                    })
+                  }}
+                />
+              </div>
+              <div className="col-md-6">
+                <ThaiSubDistrictSelector
+                  districtId={quickVendor.districtId}
+                  value={quickVendor.subDistrictId}
+                  onChange={(value) => {
+                    handleQuickVendorSubDistrictChange(value).catch(() => {
+                      setQuickVendor((prev) => ({ ...prev, subDistrictId: value }))
+                    })
+                  }}
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="col-md-6">
+                <StateSelector
+                  countryId={quickVendor.countryId}
+                  value={quickVendor.stateId}
+                  onChange={(value) => setQuickVendor((prev) => ({ ...prev, stateId: value }))}
+                />
+              </div>
+              <div className="col-md-6">
+                <Label htmlFor="quick-vendor-district">เขต/อำเภอ</Label>
+                <Input
+                  id="quick-vendor-district"
+                  value={quickVendor.district || ''}
+                  onChange={(e) => setQuickVendor((prev) => ({ ...prev, district: e.target.value, city: e.target.value }))}
+                />
+              </div>
+              <div className="col-md-6">
+                <Label htmlFor="quick-vendor-subDistrict">แขวง/ตำบล</Label>
+                <Input
+                  id="quick-vendor-subDistrict"
+                  value={quickVendor.subDistrict || ''}
+                  onChange={(e) => setQuickVendor((prev) => ({ ...prev, subDistrict: e.target.value }))}
+                />
+              </div>
+            </>
+          )}
           <div className="col-md-6">
             <Label htmlFor="quick-vendor-zip">รหัสไปรษณีย์</Label>
             <Input

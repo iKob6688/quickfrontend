@@ -10,11 +10,13 @@ import { Badge } from '@/components/ui/Badge'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { listSalesOrders, type SalesOrderStatus } from '@/api/services/sales-orders.service'
+import { useAppDateFormatter } from '@/lib/dateFormat'
 
 type StatusTab = 'all' | SalesOrderStatus
 
 export function SalesOrdersListPage() {
   const navigate = useNavigate()
+  const formatDate = useAppDateFormatter()
   const [searchParams] = useSearchParams()
   const typeParam = searchParams.get('type')
   const forcedOrderType = typeParam === 'sale' ? 'sale' : typeParam === 'quotation' ? 'quotation' : undefined
@@ -83,17 +85,11 @@ export function SalesOrdersListPage() {
         number: order.number,
         orderType: order.orderType,
         customer: order.partnerName,
-        date: order.orderDate
-          ? new Date(order.orderDate).toLocaleDateString('th-TH', {
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit',
-            })
-          : '—',
+        date: formatDate(order.orderDate),
         total: order.total,
         status: order.status,
       })),
-    [filteredOrders],
+    [filteredOrders, formatDate],
   )
 
   const columns: Column<(typeof rows)[number]>[] = [

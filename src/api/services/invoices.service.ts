@@ -90,6 +90,12 @@ export interface RegisterPaymentPayload {
   reference?: string
 }
 
+export interface UpdatePaymentPayload {
+  date: string
+  method: string
+  reference?: string
+}
+
 // NOTE: backend reality (adt_th_api): invoices are exposed under /api/th/v1/sales/invoices/*
 const basePath = '/th/v1/sales/invoices'
 
@@ -307,6 +313,13 @@ export async function postInvoice(id: number) {
 export async function registerPayment(id: number, payload: RegisterPaymentPayload) {
   const body = makeRpc({ id, ...payload })
   const response = await apiClient.post(`${basePath}/${id}/register-payment`, body)
+  const data = unwrapResponse<unknown>(response)
+  return normalizeInvoice(data)
+}
+
+export async function updatePayment(id: number, paymentId: number, payload: UpdatePaymentPayload) {
+  const body = makeRpc({ id, paymentId, ...payload })
+  const response = await apiClient.post(`${basePath}/${id}/payments/${paymentId}/update`, body)
   const data = unwrapResponse<unknown>(response)
   return normalizeInvoice(data)
 }

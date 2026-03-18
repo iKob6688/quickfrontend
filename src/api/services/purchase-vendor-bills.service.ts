@@ -146,6 +146,11 @@ export async function registerPurchaseVendorBillPayment(id: number, payload: Reg
   return unwrapResponse<{ payment_id: number; payment_name?: string; bill_id: number; new_payment_state?: string }>(response)
 }
 
+export async function generatePurchaseVendorBillWht(id: number) {
+  const response = await apiClient.post(`${basePath}/${id}/generate-wht`, makeRpc({ id }))
+  return normalizeBill((unwrapResponse<unknown>(response) as Raw).bill ?? unwrapResponse<unknown>(response))
+}
+
 export async function fetchPurchaseVendorBillPdf(id: number) {
   const response = await apiClient.get(`${basePath}/${id}/pdf`, {
     responseType: 'arraybuffer',
@@ -160,6 +165,25 @@ export async function fetchPurchaseVendorBillPdf(id: number) {
 
 export async function openPurchaseVendorBillPdf(id: number) {
   const blob = await fetchPurchaseVendorBillPdf(id)
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank', 'noopener,noreferrer')
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}
+
+export async function fetchPurchaseVendorBillWhtPdf(id: number) {
+  const response = await apiClient.get(`${basePath}/${id}/wht-pdf`, {
+    responseType: 'arraybuffer',
+    headers: { Accept: 'application/pdf,application/json' },
+  })
+  const contentType = String(response.headers?.['content-type'] ?? '')
+  if (contentType.includes('application/pdf')) {
+    return new Blob([response.data], { type: 'application/pdf' })
+  }
+  throw new Error('WHT PDF response is not a PDF document')
+}
+
+export async function openPurchaseVendorBillWhtPdf(id: number) {
+  const blob = await fetchPurchaseVendorBillWhtPdf(id)
   const url = URL.createObjectURL(blob)
   window.open(url, '_blank', 'noopener,noreferrer')
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000)

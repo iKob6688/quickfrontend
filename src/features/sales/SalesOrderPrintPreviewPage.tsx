@@ -5,9 +5,12 @@ import { Alert, Spinner } from 'react-bootstrap'
 import { Button } from '@/components/ui/Button'
 import { getSalesOrder } from '@/api/services/sales-orders.service'
 import { getPartner } from '@/api/services/partners.service'
+import { useAppDateFormatter, useAppDateTimeFormatter } from '@/lib/dateFormat'
 
 export function SalesOrderPrintPreviewPage() {
   const navigate = useNavigate()
+  const formatDate = useAppDateFormatter()
+  const formatDateTime = useAppDateTimeFormatter()
   const params = useParams()
   const id = useMemo(() => Number(params.id), [params.id])
 
@@ -76,8 +79,8 @@ export function SalesOrderPrintPreviewPage() {
             <div className="text-muted">{order.number || `#${order.id}`}</div>
           </div>
           <div className="text-end small">
-            <div>วันที่เอกสาร: {order.orderDate ? new Date(order.orderDate).toLocaleDateString('th-TH') : '-'}</div>
-            <div>วันหมดอายุ: {order.validityDate ? new Date(order.validityDate).toLocaleDateString('th-TH') : '-'}</div>
+            <div>วันที่เอกสาร: {formatDate(order.orderDate, '-')}</div>
+            <div>วันหมดอายุ: {formatDate(order.validityDate, '-')}</div>
             <div>สถานะ: {order.status}</div>
           </div>
         </div>
@@ -150,7 +153,7 @@ export function SalesOrderPrintPreviewPage() {
         </div>
         <div className="mt-4 pt-3 border-top small text-muted d-flex justify-content-between">
           <div>Ref: {order.number || `#${order.id}`}</div>
-          <div>Printed: {new Date().toLocaleString('th-TH')}</div>
+          <div>Printed: {formatDateTime(new Date())}</div>
         </div>
       </div>
     </div>

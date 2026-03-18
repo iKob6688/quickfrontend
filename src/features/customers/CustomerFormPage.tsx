@@ -11,6 +11,7 @@ import { ApiError } from '@/api/response'
 import { extractFieldErrors, useFormErrors } from '@/lib/formErrors'
 import { toast } from '@/lib/toastStore'
 import { normalizeVatNumber, sanitizeVatNumber, thaiVatValidationMessage } from '@/lib/vat'
+import { lookupDbdByTaxId, type DbdLookupResult } from '@/api/services/dbd.service'
 import {
   createPartner,
   getPartner,
@@ -18,8 +19,18 @@ import {
   type PartnerCompanyType,
   type PartnerUpsertPayload,
 } from '@/api/services/partners.service'
+import {
+  listThaiDistricts,
+  listThaiProvinces,
+  listThaiSubDistricts,
+} from '@/api/services/thai-address.service'
 import { CountrySelector } from '@/features/customers/CountrySelector'
 import { StateSelector } from '@/features/customers/StateSelector'
+import {
+  ThaiDistrictSelector,
+  ThaiProvinceSelector,
+  ThaiSubDistrictSelector,
+} from '@/features/customers/ThaiAddressSelectors'
 
 const DEFAULT_FORM_DATA: PartnerUpsertPayload = {
   company_type: 'company',
@@ -37,6 +48,9 @@ const DEFAULT_FORM_DATA: PartnerUpsertPayload = {
   zip: '',
   countryId: Number(import.meta.env.VITE_COUNTRY_TH_ID || 219),
   stateId: null,
+  provinceId: null,
+  districtId: null,
+  subDistrictId: null,
   vatPriceMode: 'vat_excluded',
   branchCode: 'สำนักงานใหญ่',
 }
@@ -67,6 +81,7 @@ export function CustomerFormPage() {
   })
 
   const [draftOverrides, setDraftOverrides] = useState<Partial<PartnerUpsertPayload>>({})
+  const [dbdPreview, setDbdPreview] = useState<DbdLookupResult | null>(null)
 
   const existingFormData = useMemo<PartnerUpsertPayload | null>(() => {
     const data = existingQuery.data
@@ -87,6 +102,9 @@ export function CustomerFormPage() {
       zip: data.zip || '',
       countryId: data.countryId ?? null,
       stateId: data.stateId ?? null,
+      provinceId: data.provinceId ?? data.stateId ?? null,
+      districtId: data.districtId ?? null,
+      subDistrictId: data.subDistrictId ?? null,
       vatPriceMode: data.vatPriceMode || 'vat_excluded',
       branchCode: data.branchCode || 'สำนักงานใหญ่',
     }
@@ -122,6 +140,31 @@ export function CustomerFormPage() {
       setGlobalError(apiErr.message)
       setFieldErrors(extractFieldErrors(apiErr) ?? {})
       toast.error(apiErr.message)
+    },
+  })
+
+  const dbdLookupMutation = useMutation({
+    mutationFn: async () => {
+      const vatError = thaiVatValidationMessage(formData.vat)
+      if (vatError) throw new Error(vatError)
+      return lookupDbdByTaxId(normalizeVatNumber(formData.vat) || '')
+    },
+    onSuccess: (result) => {
+      setDbdPreview(result)
+      if (result.lookupStatus === 'ok') {
+        toast.success(result.message || 'ดึงข้อมูล DBD สำเร็จ')
+      } else {
+        toast.error(result.message || 'ไม่พบข้อมูล DBD')
+      }
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : 'DBD lookup failed'
+      setDbdPreview({
+        taxId: normalizeVatNumber(formData.vat) || '',
+        lookupStatus: 'error',
+        message,
+      })
+      toast.error(message)
     },
   })
 
@@ -162,6 +205,107 @@ export function CustomerFormPage() {
 
   const setCompanyType = (t: PartnerCompanyType) =>
     updateFormData({ company_type: t })
+
+  const thailandId = Number(import.meta.env.VITE_COUNTRY_TH_ID || 219)
+  const isThaiAddress = (formData.countryId ?? thailandId) === thailandId
+
+  const handleProvinceChange = async (provinceId: number | null) => {
+    const selected = provinceId
+      ? (await listThaiProvinces()).find((item) => item.id === provinceId)
+      : null
+    updateFormData({
+      provinceId,
+      stateId: selected?.stateId ?? null,
+      districtId: null,
+      subDistrictId: null,
+      district: '',
+      city: '',
+      subDistrict: '',
+      zip: '',
+    })
+  }
+
+  const handleDistrictChange = async (districtId: number | null) => {
+    const selected = districtId
+      ? (await listThaiDistricts({ provinceId: formData.provinceId ?? null })).find((item) => item.id === districtId)
+      : null
+    updateFormData({
+      districtId,
+      subDistrictId: null,
+      district: selected?.name || '',
+      city: selected?.name || '',
+      subDistrict: '',
+      zip: '',
+    })
+  }
+
+  const handleSubDistrictChange = async (subDistrictId: number | null) => {
+    if (!subDistrictId) {
+      updateFormData({ subDistrictId: null, subDistrict: '', zip: '' })
+      return
+    }
+    const items = await listThaiSubDistricts({ districtId: formData.districtId ?? null })
+    const selected = items.find((item) => item.id === subDistrictId)
+    updateFormData({
+      subDistrictId,
+      subDistrict: selected?.name || '',
+      zip: selected?.zipCode || '',
+    })
+  }
+
+  const applyDbdPreview = async () => {
+    if (!dbdPreview || dbdPreview.lookupStatus !== 'ok') return
+
+    const thailandId = Number(import.meta.env.VITE_COUNTRY_TH_ID || 219)
+    let provinceId: number | null = formData.provinceId ?? null
+    let stateId: number | null = formData.stateId ?? null
+    let districtId: number | null = formData.districtId ?? null
+    let subDistrictId: number | null = formData.subDistrictId ?? null
+
+    if (dbdPreview.provinceName) {
+      const provinces = await listThaiProvinces()
+      const province = provinces.find(
+        (item) => item.name === dbdPreview.provinceName || item.nameTh === dbdPreview.provinceName,
+      )
+      provinceId = province?.id ?? null
+      stateId = province?.stateId ?? null
+
+      if (provinceId && dbdPreview.districtName) {
+        const districts = await listThaiDistricts({ provinceId })
+        const district = districts.find(
+          (item) => item.name === dbdPreview.districtName || item.nameTh === dbdPreview.districtName,
+        )
+        districtId = district?.id ?? null
+
+        if (districtId && dbdPreview.subDistrictName) {
+          const subDistricts = await listThaiSubDistricts({ districtId })
+          const subDistrict = subDistricts.find(
+            (item) =>
+              item.name === dbdPreview.subDistrictName || item.nameTh === dbdPreview.subDistrictName,
+          )
+          subDistrictId = subDistrict?.id ?? null
+        }
+      }
+    }
+
+    updateFormData({
+      company_type: 'company',
+      name: dbdPreview.companyNameTh || formData.name,
+      vat: dbdPreview.taxId || formData.vat,
+      street: dbdPreview.addressText || formData.street,
+      countryId: thailandId,
+      stateId,
+      provinceId,
+      districtId,
+      subDistrictId,
+      district: dbdPreview.districtName || formData.district,
+      city: dbdPreview.districtName || formData.city,
+      subDistrict: dbdPreview.subDistrictName || formData.subDistrict,
+      zip: dbdPreview.zipcode || formData.zip,
+    })
+
+    toast.success('นำข้อมูล DBD มาใส่ในฟอร์มแล้ว')
+  }
 
   return (
     <div>
@@ -227,6 +371,18 @@ export function CustomerFormPage() {
                     error={Boolean(fieldErrors.vat)}
                   />
                   {fieldErrors.vat ? <div className="small text-danger mt-1">{fieldErrors.vat}</div> : null}
+                  <div className="d-flex align-items-center gap-2 mt-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => dbdLookupMutation.mutate()}
+                      isLoading={dbdLookupMutation.isPending}
+                    >
+                      Lookup DBD
+                    </Button>
+                    <div className="small text-muted">ใช้ backend lookup เท่านั้น และต้องมี credential ฝั่ง Odoo</div>
+                  </div>
                 </div>
 
                 <div className="col-md-4">
@@ -277,22 +433,6 @@ export function CustomerFormPage() {
                   />
                 </div>
                 <div className="col-md-4">
-                  <Label htmlFor="subDistrict">แขวง/ตำบล</Label>
-                  <Input
-                    id="subDistrict"
-                    value={formData.subDistrict ?? ''}
-                    onChange={(e) => updateFormData({ subDistrict: e.target.value })}
-                  />
-                </div>
-                <div className="col-md-4">
-                  <Label htmlFor="district">เขต/อำเภอ</Label>
-                  <Input
-                    id="district"
-                    value={formData.district ?? ''}
-                    onChange={(e) => updateFormData({ district: e.target.value, city: e.target.value })}
-                  />
-                </div>
-                <div className="col-md-4">
                   <Label htmlFor="zip">รหัสไปรษณีย์</Label>
                   <Input
                     id="zip"
@@ -303,16 +443,79 @@ export function CustomerFormPage() {
                 <div className="col-md-4">
                   <CountrySelector
                     value={formData.countryId}
-                    onChange={(value) => updateFormData({ countryId: value, stateId: value ? formData.stateId ?? null : null })}
+                    onChange={(value) =>
+                      updateFormData({
+                        countryId: value,
+                        stateId: value === thailandId ? formData.stateId ?? null : null,
+                        provinceId: value === thailandId ? formData.provinceId ?? null : null,
+                        districtId: value === thailandId ? formData.districtId ?? null : null,
+                        subDistrictId: value === thailandId ? formData.subDistrictId ?? null : null,
+                      })
+                    }
                   />
                 </div>
-                <div className="col-md-4">
-                  <StateSelector
-                    countryId={formData.countryId}
-                    value={formData.stateId}
-                    onChange={(value) => updateFormData({ stateId: value })}
-                  />
-                </div>
+                {isThaiAddress ? (
+                  <>
+                    <div className="col-md-4">
+                      <ThaiProvinceSelector
+                        value={formData.provinceId}
+                        onChange={(value) => {
+                          handleProvinceChange(value).catch(() => {
+                            updateFormData({ provinceId: value, districtId: null, subDistrictId: null })
+                          })
+                        }}
+                      />
+                    </div>
+                    <div className="col-md-4">
+                      <ThaiDistrictSelector
+                        provinceId={formData.provinceId}
+                        value={formData.districtId}
+                        onChange={(value) => {
+                          handleDistrictChange(value).catch(() => {
+                            updateFormData({ districtId: value, subDistrictId: null })
+                          })
+                        }}
+                      />
+                    </div>
+                    <div className="col-md-4">
+                      <ThaiSubDistrictSelector
+                        districtId={formData.districtId}
+                        value={formData.subDistrictId}
+                        onChange={(value) => {
+                          handleSubDistrictChange(value).catch(() => {
+                            updateFormData({ subDistrictId: value })
+                          })
+                        }}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="col-md-4">
+                      <StateSelector
+                        countryId={formData.countryId}
+                        value={formData.stateId}
+                        onChange={(value) => updateFormData({ stateId: value })}
+                      />
+                    </div>
+                    <div className="col-md-4">
+                      <Label htmlFor="district">เขต/อำเภอ</Label>
+                      <Input
+                        id="district"
+                        value={formData.district ?? ''}
+                        onChange={(e) => updateFormData({ district: e.target.value, city: e.target.value })}
+                      />
+                    </div>
+                    <div className="col-md-4">
+                      <Label htmlFor="subDistrict">แขวง/ตำบล</Label>
+                      <Input
+                        id="subDistrict"
+                        value={formData.subDistrict ?? ''}
+                        onChange={(e) => updateFormData({ subDistrict: e.target.value })}
+                      />
+                    </div>
+                  </>
+                )}
                 <div className="col-md-4">
                   <Label htmlFor="vatPriceMode">ประเภทราคา</Label>
                   <select
@@ -341,6 +544,73 @@ export function CustomerFormPage() {
                 </div>
               </div>
             </Card>
+
+            {dbdPreview ? (
+              <Card className="p-4 mt-4">
+                <div className="d-flex justify-content-between align-items-start gap-3 mb-3">
+                  <div>
+                    <div className="qf-section-title">DBD Preview</div>
+                    <div className="small text-muted">ตรวจผล lookup ก่อนนำข้อมูลมาใส่ในฟอร์ม</div>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => applyDbdPreview().catch((error) => {
+                      toast.error(error instanceof Error ? error.message : 'นำข้อมูล DBD ไม่สำเร็จ')
+                    })}
+                    disabled={dbdPreview.lookupStatus !== 'ok'}
+                  >
+                    Apply to form
+                  </Button>
+                </div>
+                <Alert variant={dbdPreview.lookupStatus === 'ok' ? 'success' : 'warning'} className="small mb-3">
+                  {dbdPreview.message || (dbdPreview.lookupStatus === 'ok' ? 'พร้อมนำข้อมูลมาใช้' : 'ยังไม่สามารถใช้ข้อมูลนี้ได้')}
+                </Alert>
+                <div className="row g-3 small">
+                  <div className="col-md-6">
+                    <strong>ชื่อบริษัท (TH)</strong>
+                    <div>{dbdPreview.companyNameTh || '-'}</div>
+                  </div>
+                  <div className="col-md-6">
+                    <strong>ชื่อบริษัท (EN)</strong>
+                    <div>{dbdPreview.companyNameEn || '-'}</div>
+                  </div>
+                  <div className="col-md-4">
+                    <strong>สถานะ</strong>
+                    <div>{dbdPreview.status || '-'}</div>
+                  </div>
+                  <div className="col-md-4">
+                    <strong>นิติบุคคล</strong>
+                    <div>{dbdPreview.juristicType || '-'}</div>
+                  </div>
+                  <div className="col-md-4">
+                    <strong>ทุนจดทะเบียน</strong>
+                    <div>{dbdPreview.registeredCapital != null ? dbdPreview.registeredCapital.toLocaleString('en-US') : '-'}</div>
+                  </div>
+                  <div className="col-md-12">
+                    <strong>ที่อยู่ตามทะเบียน</strong>
+                    <div>{dbdPreview.addressText || '-'}</div>
+                  </div>
+                  <div className="col-md-3">
+                    <strong>จังหวัด</strong>
+                    <div>{dbdPreview.provinceName || '-'}</div>
+                  </div>
+                  <div className="col-md-3">
+                    <strong>อำเภอ/เขต</strong>
+                    <div>{dbdPreview.districtName || '-'}</div>
+                  </div>
+                  <div className="col-md-3">
+                    <strong>ตำบล/แขวง</strong>
+                    <div>{dbdPreview.subDistrictName || '-'}</div>
+                  </div>
+                  <div className="col-md-3">
+                    <strong>รหัสไปรษณีย์</strong>
+                    <div>{dbdPreview.zipcode || '-'}</div>
+                  </div>
+                </div>
+              </Card>
+            ) : null}
           </div>
 
           <div className="col-lg-4">

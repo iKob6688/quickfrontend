@@ -1,15 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Modal, Form } from 'react-bootstrap'
 import { Button } from '@/components/ui/Button'
-import type { RegisterPaymentPayload } from '@/api/services/invoices.service'
+import type { RegisterPaymentPayload, UpdatePaymentPayload } from '@/api/services/invoices.service'
 
 interface Props {
   open: boolean
   onClose: () => void
-  onSubmit: (payload: RegisterPaymentPayload) => Promise<void> | void
+  onSubmit: (payload: RegisterPaymentPayload | UpdatePaymentPayload) => Promise<void> | void
   defaultAmount?: number
   maxAmount?: number
   currency?: string
+  title?: string
+  submitLabel?: string
+  initialDate?: string
+  initialMethod?: string
+  initialReference?: string
+  allowAmountEdit?: boolean
 }
 
 function todayIso(): string {
@@ -23,6 +29,12 @@ export function RegisterPaymentModal({
   defaultAmount,
   maxAmount,
   currency,
+  title,
+  submitLabel,
+  initialDate,
+  initialMethod,
+  initialReference,
+  allowAmountEdit = true,
 }: Props) {
   const [amount, setAmount] = useState<string>('')
   const [date, setDate] = useState<string>(todayIso())
@@ -35,16 +47,16 @@ export function RegisterPaymentModal({
     if (!open) return
     setError(null)
     setIsSubmitting(false)
-    setDate(todayIso())
-    setMethod('manual')
-    setReference('')
+    setDate(initialDate || todayIso())
+    setMethod(initialMethod || 'cash')
+    setReference(initialReference || '')
     // Format amount to 2 decimal places if provided
     setAmount(
       defaultAmount != null
         ? defaultAmount.toFixed(2)
         : ''
     )
-  }, [open, defaultAmount])
+  }, [open, defaultAmount, initialDate, initialMethod, initialReference])
 
   const parsedAmount = useMemo(() => {
     const n = Number.parseFloat(amount)
@@ -53,11 +65,11 @@ export function RegisterPaymentModal({
 
   const handleSubmit = async () => {
     setError(null)
-    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+    if (allowAmountEdit && (!Number.isFinite(parsedAmount) || parsedAmount <= 0)) {
       setError('กรุณาระบุจำนวนเงินที่ถูกต้อง')
       return
     }
-    if (maxAmount != null && parsedAmount - maxAmount > 0.00001) {
+    if (allowAmountEdit && maxAmount != null && parsedAmount - maxAmount > 0.00001) {
       setError('จำนวนเงินรับชำระต้องไม่เกินยอดคงเหลือ')
       return
     }
@@ -68,12 +80,20 @@ export function RegisterPaymentModal({
 
     setIsSubmitting(true)
     try {
-      await onSubmit({
-        amount: parsedAmount,
-        date,
-        method,
-        reference: reference.trim() || undefined,
-      })
+      if (allowAmountEdit) {
+        await onSubmit({
+          amount: parsedAmount,
+          date,
+          method,
+          reference: reference.trim() || undefined,
+        })
+      } else {
+        await onSubmit({
+          date,
+          method,
+          reference: reference.trim() || undefined,
+        })
+      }
       onClose()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'เกิดข้อผิดพลาด')
@@ -86,7 +106,7 @@ export function RegisterPaymentModal({
     <Modal show={open} onHide={onClose} centered>
       <Modal.Header closeButton>
         <Modal.Title className="h6 fw-semibold mb-0">
-          รับชำระเงิน {currency ? `(${currency})` : ''}
+          {title || `รับชำระเงิน ${currency ? `(${currency})` : ''}`}
         </Modal.Title>
       </Modal.Header>
       <Modal.Body>
@@ -97,22 +117,24 @@ export function RegisterPaymentModal({
         )}
 
         <Form>
-          <div className="mb-3">
-            <Form.Label className="small fw-semibold">จำนวนเงิน</Form.Label>
-            <Form.Control
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              min={0}
-              step="0.01"
-            />
-            {maxAmount != null ? (
-              <div className="form-text">
-                ยอดคงเหลือ {maxAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency || ''}
-              </div>
-            ) : null}
-          </div>
+          {allowAmountEdit ? (
+            <div className="mb-3">
+              <Form.Label className="small fw-semibold">จำนวนเงิน</Form.Label>
+              <Form.Control
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                min={0}
+                step="0.01"
+              />
+              {maxAmount != null ? (
+                <div className="form-text">
+                  ยอดคงเหลือ {maxAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency || ''}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
           <div className="mb-3">
             <Form.Label className="small fw-semibold">วันที่ชำระเงิน</Form.Label>
@@ -126,13 +148,13 @@ export function RegisterPaymentModal({
           <div className="mb-3">
             <Form.Label className="small fw-semibold">วิธีชำระเงิน</Form.Label>
             <Form.Select value={method} onChange={(e) => setMethod(e.target.value)}>
-              <option value="manual">Manual</option>
-              <option value="cash">Cash</option>
-              <option value="bank">Bank Transfer</option>
-              <option value="card">Card</option>
+              <option value="cash">เงินสด</option>
+              <option value="bank">โอนเงิน</option>
+              <option value="card">บัตร</option>
+              <option value="manual">อื่นๆ</option>
             </Form.Select>
             <div className="form-text">
-              ใช้เป็นข้อมูลประกอบการรับชำระ ฝั่งบัญชีจริงอ้างอิง journal/payment method ของ Odoo
+              ระบบจะพยายามเลือก journal ฝั่ง Odoo ให้สอดคล้องกับวิธีที่เลือกมากที่สุด
             </div>
           </div>
 
@@ -151,10 +173,9 @@ export function RegisterPaymentModal({
           ยกเลิก
         </Button>
         <Button onClick={handleSubmit} isLoading={isSubmitting}>
-          บันทึกการชำระเงิน
+          {submitLabel || 'บันทึกการชำระเงิน'}
         </Button>
       </Modal.Footer>
     </Modal>
   )
 }
-

@@ -848,6 +848,100 @@ body {
   }
 }
 
+.qf-pr-line-card {
+  background: rgba(255, 255, 255, 0.58);
+  border-color: rgba(148, 163, 184, 0.28) !important;
+}
+
+.qf-pr-line-title {
+  font-size: 1rem;
+  color: #1e293b;
+}
+
+.qf-pr-line-numbers {
+  align-items: end;
+}
+
+.qf-pr-line-numbers--stacked {
+  padding-top: 0.15rem;
+  border-top: 1px solid rgba(226, 232, 240, 0.9);
+  margin-top: 0.15rem;
+}
+
+.qf-pr-line-number-input {
+  min-height: 44px;
+  font-variant-numeric: tabular-nums;
+}
+
+.qf-pr-line-number-input::-webkit-outer-spin-button,
+.qf-pr-line-number-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.qf-pr-line-number-input {
+  -moz-appearance: textfield;
+}
+
+.qf-pr-line-price-input {
+  font-weight: 600;
+}
+
+.qf-pr-line-currency {
+  min-width: 2.25rem;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.qf-pr-line-number-help {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  line-height: 1.45;
+}
+
+.qf-pr-line-inline-summary {
+  margin-top: 0.15rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed rgba(148, 163, 184, 0.35);
+  color: #334155;
+  font-size: 0.95rem;
+}
+
+.qf-pr-summary-card {
+  position: sticky;
+  top: 1rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 250, 252, 0.9));
+}
+
+.qf-pr-summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.qf-pr-summary-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.96rem;
+  color: #334155;
+}
+
+.qf-pr-summary-row strong {
+  text-align: right;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.qf-pr-summary-meta {
+  padding-top: 1rem;
+  border-top: 1px solid rgba(226, 232, 240, 0.9);
+}
+
 /* Ensure content isn't hidden behind fixed bottom nav on phones */
 @media (max-width: 575.98px) {
   .qf-app .qf-header--mobile-form {
@@ -924,5 +1018,28 @@ body {
 
   .qf-app .qf-so-page {
     padding-bottom: 4rem;
+  }
+
+  .qf-pr-line-card {
+    padding: 0.9rem !important;
+  }
+
+  .qf-pr-line-numbers {
+    row-gap: 0.85rem;
+  }
+
+  .qf-pr-line-number-help {
+    min-height: auto;
+    align-items: flex-start;
+  }
+
+  .qf-pr-summary-card {
+    position: static;
+  }
+
+  .qf-pr-summary-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.15rem;
   }
 }

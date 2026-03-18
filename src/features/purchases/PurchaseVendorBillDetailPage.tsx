@@ -11,7 +11,9 @@ import { useAppDateFormatter } from '@/lib/dateFormat'
 import {
   getPurchaseVendorBill,
   openPurchaseVendorBillPdf,
+  openPurchaseVendorBillWhtPdf,
   postPurchaseVendorBill,
+  generatePurchaseVendorBillWht,
   registerPurchaseVendorBillPayment,
   type PurchaseVendorBillLine,
 } from '@/api/services/purchase-vendor-bills.service'
@@ -57,6 +59,18 @@ export function PurchaseVendorBillDetailPage() {
     },
     onError: (err) => {
       toast.error('ชำระ Vendor Bill ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+    },
+  })
+
+  const generateWhtMutation = useMutation({
+    mutationFn: () => generatePurchaseVendorBillWht(billId!),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['purchaseVendorBill', billId] })
+      await queryClient.invalidateQueries({ queryKey: ['taxReports'] })
+      toast.success('สร้างข้อมูล WHT สำเร็จ')
+    },
+    onError: (err) => {
+      toast.error('สร้าง WHT ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
     },
   })
 
@@ -131,6 +145,7 @@ export function PurchaseVendorBillDetailPage() {
   const amountPaid = bill.amountPaid ?? (bill.status === 'paid' ? bill.total : 0)
   const amountDue = bill.amountDue ?? Math.max(0, bill.total - amountPaid)
   const amountWht = bill.amountWht ?? 0
+  const hasAnyWht = amountWht > 0 || bill.payments?.some((payment) => payment.hasWht || (payment.whtCertCount ?? 0) > 0)
 
   return (
     <div>
@@ -149,6 +164,20 @@ export function PurchaseVendorBillDetailPage() {
               <Button size="sm" variant="secondary" onClick={() => setPaymentOpen(true)}>
                 Confirm → Payment
               </Button>
+            ) : null}
+            {hasAnyWht ? (
+              <>
+                <Button size="sm" variant="secondary" onClick={() => generateWhtMutation.mutate()} disabled={generateWhtMutation.isPending}>
+                  {generateWhtMutation.isPending ? 'กำลังสร้าง WHT...' : 'Generate WHT'}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => openPurchaseVendorBillWhtPdf(bill.id).catch((err) => toast.error('เปิด WHT PDF ไม่สำเร็จ', err instanceof Error ? err.message : undefined))}
+                >
+                  Print WHT
+                </Button>
+              </>
             ) : null}
             <Button
               size="sm"
@@ -265,14 +294,14 @@ export function PurchaseVendorBillDetailPage() {
       </div>
       {bill.payments?.some((payment) => payment.hasWht || (payment.whtCertCount ?? 0) > 0) ? (
         <Alert variant="info" className="small">
-          พบการชำระที่มีข้อมูล WHT แล้วในระบบ สามารถตรวจสอบรายละเอียดต่อใน Odoo payment / certificate flow ได้
+          พบการชำระที่มีข้อมูล WHT แล้วในระบบ สามารถกด Generate WHT หรือ Print WHT จากหน้านี้ได้
         </Alert>
       ) : null}
       <RegisterPaymentModal
         open={paymentOpen}
         onClose={() => setPaymentOpen(false)}
         onSubmit={async (payload) => {
-          await paymentMutation.mutateAsync(payload)
+          await paymentMutation.mutateAsync(payload as any)
         }}
         defaultAmount={Math.max(0, amountDue)}
         currency={bill.currency}

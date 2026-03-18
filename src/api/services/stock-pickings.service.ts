@@ -43,3 +43,21 @@ export async function validatePurchaseReceipt(id: number) {
   return unwrapResponse<StockPickingDetail>(response)
 }
 
+export async function fetchSalesDeliveryPdf(id: number) {
+  const response = await apiClient.get(`/th/v1/sales/deliveries/${id}/pdf`, {
+    responseType: 'arraybuffer',
+    headers: { Accept: 'application/pdf,application/json' },
+  })
+  const contentType = String(response.headers?.['content-type'] ?? '')
+  if (contentType.includes('application/pdf')) {
+    return new Blob([response.data], { type: 'application/pdf' })
+  }
+  throw new Error('Delivery PDF response is not a PDF document')
+}
+
+export async function openSalesDeliveryPdf(id: number) {
+  const blob = await fetchSalesDeliveryPdf(id)
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank', 'noopener,noreferrer')
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}

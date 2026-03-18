@@ -8,11 +8,13 @@ import { Badge } from '@/components/ui/Badge'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { getPurchaseReceipt, validatePurchaseReceipt, type StockPickingMoveLine } from '@/api/services/stock-pickings.service'
 import { toast } from '@/lib/toastStore'
+import { useAppDateTimeFormatter } from '@/lib/dateFormat'
 
 export function PurchaseReceiptDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const formatDateTime = useAppDateTimeFormatter()
   const receiptId = id ? Number.parseInt(id, 10) : null
 
   const { data, isLoading, error } = useQuery({
@@ -79,8 +81,8 @@ export function PurchaseReceiptDetailPage() {
         </div>
         <div className="row g-3">
           <div className="col-md-4"><div className="small text-muted">คู่ค้า</div><div>{data.partnerName || '—'}</div></div>
-          <div className="col-md-4"><div className="small text-muted">กำหนดรับ</div><div>{data.scheduledDate ? new Date(data.scheduledDate).toLocaleString('th-TH') : '—'}</div></div>
-          <div className="col-md-4"><div className="small text-muted">เสร็จสิ้น</div><div>{data.dateDone ? new Date(data.dateDone).toLocaleString('th-TH') : '—'}</div></div>
+          <div className="col-md-4"><div className="small text-muted">กำหนดรับ</div><div>{formatDateTime(data.scheduledDate)}</div></div>
+          <div className="col-md-4"><div className="small text-muted">เสร็จสิ้น</div><div>{formatDateTime(data.dateDone)}</div></div>
         </div>
       </Card>
       <Card className="p-3">
@@ -90,4 +92,3 @@ export function PurchaseReceiptDetailPage() {
     </div>
   )
 }
-

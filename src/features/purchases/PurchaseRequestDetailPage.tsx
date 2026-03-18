@@ -53,6 +53,8 @@ export function PurchaseRequestDetailPage() {
   }
 
   const req = detailQuery.data
+  const canCreatePo = req.state === 'approved' || req.state === 'done'
+  const hasPurchaseOrder = Boolean(req.purchaseOrderId)
   const stateTone =
     req.state === 'done'
       ? 'green'
@@ -84,6 +86,21 @@ export function PurchaseRequestDetailPage() {
     { key: 'total', header: 'รวม', className: 'text-end', cell: (r) => <span className="fw-semibold">{r.total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> },
   ]
 
+  const openPurchaseOrderDraft = () => {
+    navigate('/purchases/orders/new', {
+      state: {
+        sourcePurchaseRequest: {
+          id: req.id,
+          name: req.name,
+          origin: req.origin,
+          requiredDate: req.requiredDate,
+          notes: req.notes,
+          lines: req.lines || [],
+        },
+      },
+    })
+  }
+
   return (
     <div>
       <PageHeader
@@ -108,6 +125,15 @@ export function PurchaseRequestDetailPage() {
                 ยกเลิก
               </Button>
             ) : null}
+            {hasPurchaseOrder ? (
+              <Button size="sm" onClick={() => navigate(`/purchases/orders/${req.purchaseOrderId}`)}>
+                เปิด PO
+              </Button>
+            ) : canCreatePo ? (
+              <Button size="sm" onClick={openPurchaseOrderDraft}>
+                Create PO
+              </Button>
+            ) : null}
           </div>
         }
       />
@@ -125,12 +151,23 @@ export function PurchaseRequestDetailPage() {
             Approval
           </Badge>
           <span className="text-muted small">→</span>
-          <Badge tone={req.state === 'done' ? 'blue' : 'gray'}>Create PO</Badge>
+          <Badge tone={hasPurchaseOrder || req.state === 'done' ? 'blue' : canCreatePo ? 'amber' : 'gray'}>Create PO</Badge>
         </div>
         <div className="d-flex align-items-center justify-content-between">
           <div>
             <div className="small text-muted">ผู้ขอซื้อ</div>
             <div className="fw-semibold">{req.requestorName || '—'}</div>
+            <div className="small text-muted mt-2">Approval Team</div>
+            <div className="fw-semibold">{req.approvalTeamName || '—'}</div>
+            <div className="small text-muted mt-2">Approver</div>
+            <div className="fw-semibold">{req.assignedToName || '—'}</div>
+            <div className="small text-muted mt-2">Approval Status</div>
+            <div className="fw-semibold">{req.approvalRequestState || req.state || '—'}</div>
+            {req.purchaseOrderName ? (
+              <div className="small text-muted mt-2">
+                PO ที่สร้างแล้ว: <span className="fw-semibold">{req.purchaseOrderName}</span>
+              </div>
+            ) : null}
           </div>
           <Badge tone={stateTone}>
             {req.state}

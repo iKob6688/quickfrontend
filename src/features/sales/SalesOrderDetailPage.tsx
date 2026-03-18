@@ -12,9 +12,11 @@ import { getPartner, listPartners } from '@/api/services/partners.service'
 import { useSettingsStore as useStudioSettingsStore } from '@/app/core/storage/settingsStore'
 import { useTemplateStore } from '@/app/core/storage/templateStore'
 import { toast } from '@/lib/toastStore'
+import { useAppDateFormatter } from '@/lib/dateFormat'
 
 export function SalesOrderDetailPage() {
   const navigate = useNavigate()
+  const formatDate = useAppDateFormatter()
   const params = useParams()
   const id = useMemo(() => Number(params.id), [params.id])
   const queryClient = useQueryClient()
@@ -352,10 +354,10 @@ export function SalesOrderDetailPage() {
           <div className="col-lg-4">
             <Card className="p-4">
               <div className="small text-muted mb-1">วันที่เอกสาร</div>
-              <div className="fw-semibold mb-3">{query.data.orderDate ? new Date(query.data.orderDate).toLocaleDateString('th-TH') : '—'}</div>
+              <div className="fw-semibold mb-3">{formatDate(query.data.orderDate)}</div>
 
               <div className="small text-muted mb-1">วันหมดอายุ</div>
-              <div className="fw-semibold mb-3">{query.data.validityDate ? new Date(query.data.validityDate).toLocaleDateString('th-TH') : '—'}</div>
+              <div className="fw-semibold mb-3">{formatDate(query.data.validityDate)}</div>
 
               <div className="small text-muted mb-1">ยอดรวม</div>
               <div className="h5 fw-bold font-monospace mb-0">

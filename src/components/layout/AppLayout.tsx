@@ -6,6 +6,8 @@ import { useAuthStore } from '@/features/auth/store'
 import { hasScope } from '@/lib/scopes'
 import { ConfigBanner } from '@/components/system/ConfigBanner'
 import { AvatarAssistant } from '@/features/assistant/AvatarAssistant'
+import { listApprovalTasks } from '@/api/services/approval.service'
+import { useQuery } from '@tanstack/react-query'
 
 type NavItem = { path: string; label: string; scope?: string }
 
@@ -24,6 +26,13 @@ export function AppLayout() {
     /\/sales\/invoices\/\d+\/edit(?:\/)?$/.test(location.pathname) ||
     /\/purchases\/orders\/new(?:\/)?$/.test(location.pathname) ||
     /\/purchases\/orders\/\d+\/edit(?:\/)?$/.test(location.pathname)
+
+  const approvalTasksQuery = useQuery({
+    queryKey: ['approvalTasks', 'nav'],
+    queryFn: () => listApprovalTasks(20),
+    staleTime: 20_000,
+  })
+  const approvalBadgeCount = approvalTasksQuery.data?.pendingCount ?? 0
 
   // Scope gating (prod-grade): only hide items that would 403 consistently.
   // Dashboard stays visible even if KPI scope is missing; page will degrade gracefully.
@@ -150,7 +159,12 @@ export function AppLayout() {
                         : undefined
                     }
                   >
-                    {item.label}
+                    <span className="d-inline-flex align-items-center gap-2">
+                      <span>{item.label}</span>
+                      {item.path === '/accounting/document-review' && approvalBadgeCount > 0 ? (
+                        <span className="badge rounded-pill bg-danger">{approvalBadgeCount}</span>
+                      ) : null}
+                    </span>
                   </button>
                 )
               })}
@@ -200,7 +214,12 @@ export function AppLayout() {
                   title={!allowed && item.scope ? `ต้องเปิด scope: ${item.scope} (คลิกเพื่อลองเข้าดู - Backend จะ enforce scopes)` : undefined}
                 >
                   <i className={`bi ${item.icon} qf-mobile-nav__icon`} aria-hidden="true" />
-                  <span className="qf-mobile-nav__label">{item.mobileLabel ?? item.label}</span>
+                  <span className="qf-mobile-nav__label">
+                    {item.mobileLabel ?? item.label}
+                    {item.path === '/accounting/document-review' && approvalBadgeCount > 0 ? (
+                      <span className="badge rounded-pill bg-danger ms-1">{approvalBadgeCount}</span>
+                    ) : null}
+                  </span>
                 </button>
               )
             })}

@@ -3,7 +3,8 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/features/auth/store'
 import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Alert } from 'react-bootstrap'
 import { ping } from '@/api/services/system.service'
 import { getDashboardKpis } from '@/api/services/dashboard.service'
 import { listInvoices } from '@/api/services/invoices.service'
@@ -12,10 +13,12 @@ import { listPurchaseRequests } from '@/api/services/purchase-requests.service'
 import { listProducts } from '@/api/services/products.service'
 import { getProfitLoss } from '@/api/services/accounting-reports.service'
 import { getAssistantTasks } from '@/api/services/ai-assistant.service'
+import { approvalAction, listApprovalTasks } from '@/api/services/approval.service'
 import { hasScope } from '@/lib/scopes'
 import { getAssistantLanguage, setAssistantLanguage, type AssistantLanguage } from '@/lib/assistantLanguage'
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts'
+import { toast } from '@/lib/toastStore'
 
 function formatLocalISODate(d: Date) {
   const y = d.getFullYear()
@@ -82,6 +85,7 @@ type DashboardCardKey =
   | 'accounting'
   | 'purchaseOrders'
   | 'purchaseRequests'
+  | 'approvals'
   | 'ai'
   | 'excel'
   | 'backend'
@@ -97,6 +101,7 @@ const DASHBOARD_CARD_DEFAULTS: Record<DashboardCardKey, boolean> = {
   accounting: true,
   purchaseOrders: true,
   purchaseRequests: true,
+  approvals: true,
   ai: true,
   excel: true,
   backend: true,
@@ -117,6 +122,7 @@ function loadDashboardCardPrefs(): Record<DashboardCardKey, boolean> {
 
 export function DashboardPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const instancePublicId = useAuthStore((s) => s.instancePublicId)
   const canSeeKpis = hasScope('dashboard')
   const canSeeReports = hasScope('reports')
@@ -203,6 +209,26 @@ export function DashboardPage() {
     queryKey: ['ai', 'tasks', 'dashboard'],
     queryFn: () => getAssistantTasks(5),
     staleTime: 30_000,
+  })
+
+  const approvalTasksQuery = useQuery({
+    queryKey: ['approvalTasks', 'dashboard'],
+    queryFn: () => listApprovalTasks(8),
+    staleTime: 20_000,
+  })
+
+  const approvalMutation = useMutation({
+    mutationFn: ({ model, id, action }: { model: string; id: number; action: 'approve' | 'reject' }) =>
+      approvalAction(model, id, action),
+    onSuccess: async (_, variables) => {
+      await queryClient.invalidateQueries({ queryKey: ['approvalTasks', 'dashboard'] })
+      await queryClient.invalidateQueries({ queryKey: ['purchaseRequests'] })
+      await queryClient.invalidateQueries({ queryKey: ['purchaseRequests', 'dashboard'] })
+      toast.success(variables.action === 'approve' ? 'อนุมัติรายการสำเร็จ' : 'ปฏิเสธรายการสำเร็จ')
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'ดำเนินการอนุมัติไม่สำเร็จ')
+    },
   })
 
   const accountingSnapshot = useMemo(() => {
@@ -403,6 +429,7 @@ export function DashboardPage() {
                   ['accounting', 'รายงานบัญชี'],
                   ['purchaseOrders', 'Purchase Orders'],
                   ['purchaseRequests', 'Purchase Requests'],
+                  ['approvals', 'Approval Inbox'],
                   ['ai', 'ERPTH AI'],
                   ['excel', 'Excel Import'],
                   ['backend', 'Backend'],
@@ -430,6 +457,27 @@ export function DashboardPage() {
           </Card>
         </div>
       )}
+
+      {cardVisibility.approvals && (approvalTasksQuery.data?.pendingCount || 0) > 0 ? (
+        <div className="mb-3">
+          <Alert variant="warning" className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-0">
+            <div>
+              <div className="fw-semibold">มีงานรออนุมัติ {approvalTasksQuery.data?.pendingCount} รายการ</div>
+              <div className="small">
+                คุณสามารถกดอนุมัติหรือปฏิเสธจากหน้า dashboard ได้ทันที หรือเปิด Review Inbox เพื่อดูรายละเอียดทั้งหมด
+              </div>
+            </div>
+            <div className="d-flex gap-2">
+              <Button size="sm" variant="secondary" onClick={() => navigate('/purchases/requests?state=to_approve')}>
+                เปิดคำขอซื้อรออนุมัติ
+              </Button>
+              <Button size="sm" onClick={() => navigate('/accounting/document-review')}>
+                ไปที่ Review Inbox
+              </Button>
+            </div>
+          </Alert>
+        </div>
+      ) : null}
 
       <div className="row g-4">
         {canSeeKpis && cardVisibility.kpis && (
@@ -695,6 +743,97 @@ export function DashboardPage() {
             </p>
           </Card>
         </div>}
+        {cardVisibility.approvals && (
+          <div className="col-12 col-xl-6">
+            <Card className="h-100">
+              <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
+                <div>
+                  <p className="small fw-medium text-muted mb-1">Approval Inbox</p>
+                  <p className="h6 fw-semibold mb-1">งานรออนุมัติของฉัน</p>
+                  <p className="small text-muted mb-0">ผูกกับ backend approval queue และ process ได้จากหน้าหลัก</p>
+                </div>
+                <Button size="sm" variant="ghost" onClick={() => navigate('/accounting/document-review')}>
+                  เปิด Review Inbox
+                </Button>
+              </div>
+
+              {approvalTasksQuery.isLoading ? (
+                <div className="small text-muted">กำลังโหลดงานอนุมัติ...</div>
+              ) : approvalTasksQuery.isError ? (
+                <div className="small text-danger">โหลด approval inbox ไม่สำเร็จ</div>
+              ) : (approvalTasksQuery.data?.items.length || 0) === 0 ? (
+                <div className="small text-muted">ไม่มีงานรออนุมัติในขณะนี้</div>
+              ) : (
+                <div className="d-flex flex-column gap-3">
+                  {approvalTasksQuery.data?.items.map((task) => (
+                    <div key={`${task.model}:${task.id}`} className="border rounded-3 p-3 bg-light-subtle">
+                      <div className="d-flex flex-column flex-lg-row align-items-lg-start justify-content-between gap-3">
+                        <div className="flex-grow-1">
+                          <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
+                            <span className="badge text-bg-warning">รออนุมัติ</span>
+                            <span className="badge text-bg-light">{task.typeLabel || task.type}</span>
+                            {task.approvalTeamName ? <span className="badge text-bg-info">{task.approvalTeamName}</span> : null}
+                          </div>
+                          <div className="fw-semibold">{task.name}</div>
+                          <div className="small text-muted mt-1">
+                            {task.requestedByName ? `ผู้ขอ: ${task.requestedByName}` : 'ผู้ขอ: -'}
+                            {task.company ? ` • บริษัท: ${task.company}` : ''}
+                            {task.requestedDate ? ` • วันที่: ${task.requestedDate}` : ''}
+                          </div>
+                          {task.description ? (
+                            <div className="small mt-2 text-body-secondary">{task.description}</div>
+                          ) : null}
+                        </div>
+                        <div className="text-lg-end">
+                          <div className="fw-semibold">
+                            {(task.amountTotal || 0).toLocaleString('th-TH', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}{' '}
+                            {task.currency || 'THB'}
+                          </div>
+                          <div className="small text-muted">มูลค่ารวมโดยประมาณ</div>
+                        </div>
+                      </div>
+                      <div className="d-flex flex-wrap gap-2 mt-3">
+                        <Button
+                          size="sm"
+                          onClick={() => approvalMutation.mutate({ model: task.model, id: task.id, action: 'approve' })}
+                          isLoading={
+                            approvalMutation.isPending &&
+                            approvalMutation.variables?.model === task.model &&
+                            approvalMutation.variables?.id === task.id &&
+                            approvalMutation.variables?.action === 'approve'
+                          }
+                        >
+                          อนุมัติ
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => approvalMutation.mutate({ model: task.model, id: task.id, action: 'reject' })}
+                          isLoading={
+                            approvalMutation.isPending &&
+                            approvalMutation.variables?.model === task.model &&
+                            approvalMutation.variables?.id === task.id &&
+                            approvalMutation.variables?.action === 'reject'
+                          }
+                        >
+                          ปฏิเสธ
+                        </Button>
+                        {task.route ? (
+                          <Button size="sm" variant="ghost" onClick={() => navigate(task.route || '/accounting/document-review')}>
+                            เปิดเอกสาร
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
+        )}
         {cardVisibility.ai && <div className="col-md-6 col-xl-3">
           <Card
             onClick={() => navigate('/agent')}

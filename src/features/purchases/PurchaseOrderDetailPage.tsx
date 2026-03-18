@@ -14,11 +14,13 @@ import { Spinner, Alert, Modal, Card as BootstrapCard } from 'react-bootstrap'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { useState } from 'react'
 import { toast } from '@/lib/toastStore'
+import { useAppDateFormatter } from '@/lib/dateFormat'
 
 export function PurchaseOrderDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const formatDate = useAppDateFormatter()
   const [cancelModalOpen, setCancelModalOpen] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
 
@@ -355,26 +357,12 @@ export function PurchaseOrderDetailPage() {
                 </div>
                 <div className="col-md-6">
                   <label className="form-label text-muted small">วันที่สั่งซื้อ</label>
-                  <div>
-                    {order.orderDate
-                      ? new Date(order.orderDate).toLocaleDateString('th-TH', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })
-                      : '—'}
-                  </div>
+                  <div>{formatDate(order.orderDate)}</div>
                 </div>
                 {order.expectedDate && (
                   <div className="col-md-6">
                     <label className="form-label text-muted small">วันที่ส่งมอบ</label>
-                    <div>
-                      {new Date(order.expectedDate).toLocaleDateString('th-TH', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
-                    </div>
+                    <div>{formatDate(order.expectedDate)}</div>
                   </div>
                 )}
                 {order.notes && (

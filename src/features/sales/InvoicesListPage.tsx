@@ -10,6 +10,7 @@ import { listInvoices } from '@/api/services/invoices.service'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Spinner } from 'react-bootstrap'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
+import { useAppDateFormatter } from '@/lib/dateFormat'
 
 interface InvoicesListPageProps {
   mode?: 'invoices' | 'receipts'
@@ -17,6 +18,7 @@ interface InvoicesListPageProps {
 
 export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
   const navigate = useNavigate()
+  const formatDate = useAppDateFormatter()
   const [searchParams, setSearchParams] = useSearchParams()
   type StatusTab = 'all' | 'draft' | 'posted' | 'paid' | 'cancelled' | 'due'
   const [tab, setTab] = useState<StatusTab>(
@@ -98,13 +100,7 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
       id: inv.id,
       number: inv.number,
       customer: inv.customerName,
-      date: inv.invoiceDate
-        ? new Date(inv.invoiceDate).toLocaleDateString('th-TH', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-          })
-        : '—',
+      date: formatDate(inv.invoiceDate),
       total: inv.total,
       status: inv.status,
       paymentState: inv.paymentState,
@@ -114,7 +110,7 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
       hasPaymentReceipt: inv.hasPaymentReceipt,
       hasFinalReceipt: inv.hasFinalReceipt,
     }))
-  }, [invoices, isReceiptMode, tab])
+  }, [invoices, isReceiptMode, tab, formatDate])
 
   const columns: Column<(typeof rows)[number]>[] = [
     {

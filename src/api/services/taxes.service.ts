@@ -122,6 +122,7 @@ export async function validateVatNumber(params: {
   countryCode?: string // Default: "TH"
 }) {
   const body = makeRpc({
+    vat: params.vatNumber,
     vat_number: params.vatNumber,
     ...(params.countryCode && { country_code: params.countryCode }),
   })

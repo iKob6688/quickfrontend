@@ -14,6 +14,7 @@ import { extractFieldErrors, type FieldErrors } from '@/lib/formErrors'
 import { clearDraft, loadDraft, loadRecentNotes, pushRecentNote, saveDraft } from '@/lib/formDrafts'
 import { toast } from '@/lib/toastStore'
 import { createPartner, listPartners, getPartner, type PartnerUpsertPayload } from '@/api/services/partners.service'
+import { listTaxAdminItems, type TaxAdminListItem } from '@/api/services/taxes.service'
 import {
   createSalesOrder,
   getSalesOrder,
@@ -24,6 +25,18 @@ import {
 } from '@/api/services/sales-orders.service'
 import { CountrySelector } from '@/features/customers/CountrySelector'
 import { StateSelector } from '@/features/customers/StateSelector'
+import {
+  ThaiDistrictSelector,
+  ThaiProvinceSelector,
+  ThaiSubDistrictSelector,
+} from '@/features/customers/ThaiAddressSelectors'
+import {
+  listThaiDistricts,
+  listThaiProvinces,
+  listThaiSubDistricts,
+} from '@/api/services/thai-address.service'
+import { normalizeVatNumber, sanitizeVatNumber, thaiVatValidationMessage } from '@/lib/vat'
+import { useAppDateTimeFormatter } from '@/lib/dateFormat'
 
 const SALES_ORDER_DRAFT_KEY = 'qf:draft:sales-order-form:create:v1'
 const SALES_ORDER_RECENT_NOTES_KEY = 'qf:recent-notes:sales-order:v1'
@@ -32,6 +45,7 @@ export function SalesOrderFormPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const formatDateTime = useAppDateTimeFormatter()
   const [searchParams] = useSearchParams()
 
   const isEdit = !!id
@@ -92,6 +106,9 @@ export function SalesOrderFormPage() {
     zip: '',
     countryId: thailandId,
     stateId: null,
+    provinceId: null,
+    districtId: null,
+    subDistrictId: null,
     vatPriceMode: 'vat_excluded',
     branchCode: 'สำนักงานใหญ่',
     active: true,
@@ -139,6 +156,19 @@ export function SalesOrderFormPage() {
   const [draftUpdatedAt, setDraftUpdatedAt] = useState<string | null>(null)
   const [draftGateResolved, setDraftGateResolved] = useState(false)
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
+
+  const salesTaxesQuery = useQuery({
+    queryKey: ['tax-admin', 'sales-order-form', 'sale'],
+    queryFn: () => listTaxAdminItems({ typeTaxUse: 'sale', activeOnly: true, vatOnly: true, limit: 500 }),
+    staleTime: 60_000,
+  })
+
+  const saleTaxOptions = useMemo(() => salesTaxesQuery.data?.items ?? [], [salesTaxesQuery.data])
+  const saleTaxMap = useMemo(() => new Map<number, TaxAdminListItem>(saleTaxOptions.map((tax) => [tax.id, tax])), [saleTaxOptions])
+  const defaultSaleTaxId = useMemo(() => {
+    const vat7 = saleTaxOptions.find((tax) => Math.abs(Number(tax.amount || 0) - 7) < 0.00001)
+    return vat7?.id ?? saleTaxOptions[0]?.id ?? null
+  }, [saleTaxOptions])
 
   useEffect(() => {
     setRecentNotes(loadRecentNotes(SALES_ORDER_RECENT_NOTES_KEY))
@@ -234,12 +264,27 @@ export function SalesOrderFormPage() {
       const unitPrice = merged.unitPrice || 0
       const discountPercent = merged.discount || 0
       const subtotalBeforeDiscount = quantity * unitPrice
-      const subtotal = subtotalBeforeDiscount - (subtotalBeforeDiscount * discountPercent) / 100
+      const discountedSubtotal = subtotalBeforeDiscount - (subtotalBeforeDiscount * discountPercent) / 100
+      const firstTaxId = Array.isArray(merged.taxIds) ? Number(merged.taxIds[0] || 0) : 0
+      const firstTax = firstTaxId > 0 ? saleTaxMap.get(firstTaxId) : undefined
+      let subtotal = discountedSubtotal
+      let totalTax = 0
+      if (firstTax && String(firstTax.amountType || firstTax.type || 'percent') === 'percent') {
+        const rate = Number(firstTax.amount || 0)
+        if (rate > 0) {
+          if (firstTax.priceInclude) {
+            subtotal = discountedSubtotal / (1 + rate / 100)
+            totalTax = discountedSubtotal - subtotal
+          } else {
+            totalTax = subtotal * (rate / 100)
+          }
+        }
+      }
       lines[index] = {
         ...merged,
         subtotal,
-        totalTax: merged.totalTax || 0,
-        total: subtotal + (merged.totalTax || 0),
+        totalTax,
+        total: subtotal + totalTax,
       }
       return { ...prev, lines }
     })
@@ -256,7 +301,7 @@ export function SalesOrderFormPage() {
           quantity: 1,
           unitPrice: 0,
           discount: 0,
-          taxIds: [],
+          taxIds: defaultSaleTaxId ? [defaultSaleTaxId] : [],
           subtotal: 0,
           totalTax: 0,
           total: 0,
@@ -264,6 +309,21 @@ export function SalesOrderFormPage() {
       ],
     }))
   }
+
+  useEffect(() => {
+    if (!defaultSaleTaxId) return
+    setFormData((prev) => {
+      if (!prev.lines.some((line) => !Array.isArray(line.taxIds) || line.taxIds.length === 0)) return prev
+      return {
+        ...prev,
+        lines: prev.lines.map((line) =>
+          !Array.isArray(line.taxIds) || line.taxIds.length === 0
+            ? { ...line, taxIds: [defaultSaleTaxId] }
+            : line,
+        ),
+      }
+    })
+  }, [defaultSaleTaxId])
 
   const removeLine = (index: number) => {
     const ok = window.confirm('ยืนยันการลบรายการนี้?')
@@ -275,10 +335,62 @@ export function SalesOrderFormPage() {
   }
 
   const totalAmount = formData.lines.reduce((sum, line) => sum + (line.total || 0), 0)
+  const isQuickPartnerThai = (quickPartner.countryId ?? thailandId) === thailandId
+
+  const handleQuickPartnerProvinceChange = async (provinceId: number | null) => {
+    const selected = provinceId ? (await listThaiProvinces()).find((item) => item.id === provinceId) : null
+    setQuickPartner((prev) => ({
+      ...prev,
+      provinceId,
+      stateId: selected?.stateId ?? null,
+      districtId: null,
+      subDistrictId: null,
+      district: '',
+      city: '',
+      subDistrict: '',
+      zip: '',
+    }))
+  }
+
+  const handleQuickPartnerDistrictChange = async (districtId: number | null) => {
+    const selected = districtId
+      ? (await listThaiDistricts({ provinceId: quickPartner.provinceId ?? null })).find((item) => item.id === districtId)
+      : null
+    setQuickPartner((prev) => ({
+      ...prev,
+      districtId,
+      subDistrictId: null,
+      district: selected?.name || '',
+      city: selected?.name || '',
+      subDistrict: '',
+      zip: '',
+    }))
+  }
+
+  const handleQuickPartnerSubDistrictChange = async (subDistrictId: number | null) => {
+    if (!subDistrictId) {
+      setQuickPartner((prev) => ({ ...prev, subDistrictId: null, subDistrict: '', zip: '' }))
+      return
+    }
+    const selected = (await listThaiSubDistricts({ districtId: quickPartner.districtId ?? null })).find(
+      (item) => item.id === subDistrictId,
+    )
+    setQuickPartner((prev) => ({
+      ...prev,
+      subDistrictId,
+      subDistrict: selected?.name || '',
+      zip: selected?.zipCode || '',
+    }))
+  }
 
   const submitQuickPartner = async () => {
     if (!quickPartner.name?.trim()) {
       toast.error('กรุณากรอกชื่อรายชื่อติดต่อ')
+      return
+    }
+    const vatError = thaiVatValidationMessage(quickPartner.vat)
+    if (vatError) {
+      toast.error(vatError)
       return
     }
     try {
@@ -288,7 +400,7 @@ export function SalesOrderFormPage() {
         name: quickPartner.name.trim(),
         email: quickPartner.email?.trim() || undefined,
         phone: quickPartner.phone?.trim() || undefined,
-        vat: quickPartner.vat?.trim() || undefined,
+        vat: normalizeVatNumber(quickPartner.vat),
         street: quickPartner.street?.trim() || undefined,
         district: quickPartner.district?.trim() || undefined,
         subDistrict: quickPartner.subDistrict?.trim() || undefined,
@@ -312,6 +424,9 @@ export function SalesOrderFormPage() {
         zip: '',
         countryId: thailandId,
         stateId: null,
+        provinceId: null,
+        districtId: null,
+        subDistrictId: null,
         vatPriceMode: 'vat_excluded',
         branchCode: 'สำนักงานใหญ่',
         active: true,
@@ -364,7 +479,7 @@ export function SalesOrderFormPage() {
           <div className="d-flex align-items-center gap-2 qf-so-actions">
             {!isEdit && draftSavedAt ? (
               <span className="small text-muted">
-                autosaved {new Date(draftSavedAt).toLocaleTimeString('th-TH')}
+                autosaved {formatDateTime(draftSavedAt)}
               </span>
             ) : null}
             <Button size="sm" variant="ghost" onClick={() => navigate('/products')}>
@@ -386,7 +501,7 @@ export function SalesOrderFormPage() {
             <Alert variant="warning" className="small">
               <div className="fw-semibold mb-1">พบ draft ที่บันทึกไว้</div>
               <div className="mb-2">
-                เวลา: {draftUpdatedAt ? new Date(draftUpdatedAt).toLocaleString('th-TH') : 'ไม่ทราบเวลา'}
+                เวลา: {formatDateTime(draftUpdatedAt, 'ไม่ทราบเวลา')}
               </div>
               <div className="d-flex gap-2">
                 <Button
@@ -574,7 +689,7 @@ export function SalesOrderFormPage() {
                                 productId: product.id,
                                 description: (line.description || '').trim() ? line.description : product.name,
                                 unitPrice: typeof product.listPrice === 'number' ? product.listPrice : line.unitPrice,
-                                taxIds: productTaxIds,
+                                taxIds: productTaxIds.length > 0 ? productTaxIds : defaultSaleTaxId ? [defaultSaleTaxId] : [],
                               })
                             }}
                           />
@@ -616,6 +731,26 @@ export function SalesOrderFormPage() {
                             min="0"
                             step="0.01"
                           />
+                        </div>
+
+                        <div className="qf-so-line__field qf-so-line__field--discount">
+                          <Label htmlFor={`so-tax-${idx}`}>VAT/ภาษี</Label>
+                          <select
+                            id={`so-tax-${idx}`}
+                            className="form-select"
+                            value={line.taxIds?.[0] ?? ''}
+                            onChange={(e) => {
+                              const taxId = e.target.value ? Number(e.target.value) : null
+                              updateLine(idx, { taxIds: taxId ? [taxId] : [] })
+                            }}
+                          >
+                            <option value="">ไม่กำหนดภาษี</option>
+                            {saleTaxOptions.map((tax) => (
+                              <option key={`so-tax-option-${tax.id}`} value={tax.id}>
+                                {tax.name} ({Number(tax.amount || 0)}%)
+                              </option>
+                            ))}
+                          </select>
                         </div>
 
                         <div className="qf-so-line__field qf-so-line__field--discount">
@@ -727,8 +862,13 @@ export function SalesOrderFormPage() {
             <Input
               id="quick-partner-vat"
               value={quickPartner.vat || ''}
-              onChange={(e) => setQuickPartner((prev) => ({ ...prev, vat: e.target.value }))}
+              inputMode="numeric"
+              maxLength={13}
+              onChange={(e) => setQuickPartner((prev) => ({ ...prev, vat: sanitizeVatNumber(e.target.value) }))}
             />
+            {thaiVatValidationMessage(quickPartner.vat) ? (
+              <div className="small text-danger mt-1">{thaiVatValidationMessage(quickPartner.vat)}</div>
+            ) : null}
           </div>
           <div className="col-md-6">
             <Label htmlFor="quick-partner-phone">โทรศัพท์</Label>
@@ -776,32 +916,80 @@ export function SalesOrderFormPage() {
           <div className="col-md-6">
             <CountrySelector
               value={quickPartner.countryId}
-              onChange={(value) => setQuickPartner((prev) => ({ ...prev, countryId: value, stateId: value ? prev.stateId ?? null : null }))}
+              onChange={(value) =>
+                setQuickPartner((prev) => ({
+                  ...prev,
+                  countryId: value,
+                  stateId: value === thailandId ? prev.stateId ?? null : null,
+                  provinceId: value === thailandId ? prev.provinceId ?? null : null,
+                  districtId: value === thailandId ? prev.districtId ?? null : null,
+                  subDistrictId: value === thailandId ? prev.subDistrictId ?? null : null,
+                }))
+              }
             />
           </div>
-          <div className="col-md-6">
-            <StateSelector
-              countryId={quickPartner.countryId}
-              value={quickPartner.stateId}
-              onChange={(value) => setQuickPartner((prev) => ({ ...prev, stateId: value }))}
-            />
-          </div>
-          <div className="col-md-6">
-            <Label htmlFor="quick-partner-subDistrict">แขวง/ตำบล</Label>
-            <Input
-              id="quick-partner-subDistrict"
-              value={quickPartner.subDistrict || ''}
-              onChange={(e) => setQuickPartner((prev) => ({ ...prev, subDistrict: e.target.value }))}
-            />
-          </div>
-          <div className="col-md-6">
-            <Label htmlFor="quick-partner-district">เขต/อำเภอ</Label>
-            <Input
-              id="quick-partner-district"
-              value={quickPartner.district || ''}
-              onChange={(e) => setQuickPartner((prev) => ({ ...prev, district: e.target.value, city: e.target.value }))}
-            />
-          </div>
+          {isQuickPartnerThai ? (
+            <>
+              <div className="col-md-6">
+                <ThaiProvinceSelector
+                  value={quickPartner.provinceId}
+                  onChange={(value) => {
+                    handleQuickPartnerProvinceChange(value).catch(() => {
+                      setQuickPartner((prev) => ({ ...prev, provinceId: value }))
+                    })
+                  }}
+                />
+              </div>
+              <div className="col-md-6">
+                <ThaiDistrictSelector
+                  provinceId={quickPartner.provinceId}
+                  value={quickPartner.districtId}
+                  onChange={(value) => {
+                    handleQuickPartnerDistrictChange(value).catch(() => {
+                      setQuickPartner((prev) => ({ ...prev, districtId: value }))
+                    })
+                  }}
+                />
+              </div>
+              <div className="col-md-6">
+                <ThaiSubDistrictSelector
+                  districtId={quickPartner.districtId}
+                  value={quickPartner.subDistrictId}
+                  onChange={(value) => {
+                    handleQuickPartnerSubDistrictChange(value).catch(() => {
+                      setQuickPartner((prev) => ({ ...prev, subDistrictId: value }))
+                    })
+                  }}
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="col-md-6">
+                <StateSelector
+                  countryId={quickPartner.countryId}
+                  value={quickPartner.stateId}
+                  onChange={(value) => setQuickPartner((prev) => ({ ...prev, stateId: value }))}
+                />
+              </div>
+              <div className="col-md-6">
+                <Label htmlFor="quick-partner-district">เขต/อำเภอ</Label>
+                <Input
+                  id="quick-partner-district"
+                  value={quickPartner.district || ''}
+                  onChange={(e) => setQuickPartner((prev) => ({ ...prev, district: e.target.value, city: e.target.value }))}
+                />
+              </div>
+              <div className="col-md-6">
+                <Label htmlFor="quick-partner-subDistrict">แขวง/ตำบล</Label>
+                <Input
+                  id="quick-partner-subDistrict"
+                  value={quickPartner.subDistrict || ''}
+                  onChange={(e) => setQuickPartner((prev) => ({ ...prev, subDistrict: e.target.value }))}
+                />
+              </div>
+            </>
+          )}
           <div className="col-md-6">
             <Label htmlFor="quick-partner-zip">รหัสไปรษณีย์</Label>
             <Input

@@ -6,13 +6,15 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { DataTable, type Column } from '@/components/ui/DataTable'
-import { getSalesDelivery, validateSalesDelivery, type StockPickingMoveLine } from '@/api/services/stock-pickings.service'
+import { getSalesDelivery, openSalesDeliveryPdf, validateSalesDelivery, type StockPickingMoveLine } from '@/api/services/stock-pickings.service'
 import { toast } from '@/lib/toastStore'
+import { useAppDateTimeFormatter } from '@/lib/dateFormat'
 
 export function SalesDeliveryDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const formatDateTime = useAppDateTimeFormatter()
   const deliveryId = id ? Number.parseInt(id, 10) : null
 
   const { data, isLoading, error } = useQuery({
@@ -66,6 +68,9 @@ export function SalesDeliveryDetailPage() {
                 {validateMutation.isPending ? 'กำลังยืนยัน...' : 'Confirm → Delivery'}
               </Button>
             ) : null}
+            <Button size="sm" variant="secondary" onClick={() => openSalesDeliveryPdf(data.id)}>
+              พิมพ์ใบส่งสินค้า
+            </Button>
             <Button size="sm" variant="secondary" onClick={() => window.open(`/web#id=${data.id}&model=stock.picking&view_type=form`, '_blank', 'noopener,noreferrer')}>
               เปิดใน Odoo
             </Button>
@@ -81,8 +86,8 @@ export function SalesDeliveryDetailPage() {
         </div>
         <div className="row g-3">
           <div className="col-md-4"><div className="small text-muted">คู่ค้า</div><div>{data.partnerName || '—'}</div></div>
-          <div className="col-md-4"><div className="small text-muted">กำหนดส่ง</div><div>{data.scheduledDate ? new Date(data.scheduledDate).toLocaleString('th-TH') : '—'}</div></div>
-          <div className="col-md-4"><div className="small text-muted">เสร็จสิ้น</div><div>{data.dateDone ? new Date(data.dateDone).toLocaleString('th-TH') : '—'}</div></div>
+          <div className="col-md-4"><div className="small text-muted">กำหนดส่ง</div><div>{formatDateTime(data.scheduledDate)}</div></div>
+          <div className="col-md-4"><div className="small text-muted">เสร็จสิ้น</div><div>{formatDateTime(data.dateDone)}</div></div>
         </div>
       </Card>
       <Card className="p-3">
@@ -92,4 +97,3 @@ export function SalesDeliveryDetailPage() {
     </div>
   )
 }
-
