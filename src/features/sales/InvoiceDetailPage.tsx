@@ -1,6 +1,7 @@
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getInvoice, postInvoice, registerPayment, updatePayment, openInvoicePdf, amendInvoice, type RegisterPaymentPayload, type PaymentRecord, type UpdatePaymentPayload } from '@/api/services/invoices.service'
+import { createSalesCreditNote, createSalesDebitNote } from '@/api/services/sales-notes.service'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -10,6 +11,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { RegisterPaymentModal } from '@/features/sales/RegisterPaymentModal'
 import { AmendInvoiceModal } from '@/features/sales/AmendInvoiceModal'
 import { PromptPayQrModal } from '@/features/sales/PromptPayQrModal'
+import { CreateNoteModal } from '@/components/notes/CreateNoteModal'
 import { useEffect, useState } from 'react'
 import { toast } from '@/lib/toastStore'
 import { useSettingsStore as useStudioSettingsStore } from '@/app/core/storage/settingsStore'
@@ -27,6 +29,8 @@ export function InvoiceDetailPage() {
   const [paymentOpen, setPaymentOpen] = useState(false)
   const [editingPayment, setEditingPayment] = useState<PaymentRecord | null>(null)
   const [amendOpen, setAmendOpen] = useState(false)
+  const [creditNoteOpen, setCreditNoteOpen] = useState(false)
+  const [debitNoteOpen, setDebitNoteOpen] = useState(false)
   const [promptPayOpen, setPromptPayOpen] = useState(false)
   const [printMenuOpen, setPrintMenuOpen] = useState(false)
   const studioSettings = useStudioSettingsStore((s) => s.settings)
@@ -233,6 +237,39 @@ export function InvoiceDetailPage() {
     },
   })
 
+  const createCreditNoteMutation = useMutation({
+    mutationFn: async (payload: { reason: string; mode: 'full' | 'delta'; lines: any[] }) => {
+      if (!invoiceId) throw new Error('Missing invoice id')
+      return await createSalesCreditNote(invoiceId, {
+        reason: payload.reason,
+        mode: payload.mode,
+        ...(payload.mode === 'delta' ? { lines: payload.lines } : {}),
+      })
+    },
+    onSuccess: async (res) => {
+      const noteId = res.noteId
+      toast.success('สร้าง Credit Note สำเร็จ')
+      if (noteId) navigate(`/sales/notes/${noteId}`)
+    },
+    onError: (err) => toast.error('สร้าง Credit Note ไม่สำเร็จ', err instanceof Error ? err.message : undefined),
+  })
+
+  const createDebitNoteMutation = useMutation({
+    mutationFn: async (payload: { reason: string; lines: any[] }) => {
+      if (!invoiceId) throw new Error('Missing invoice id')
+      return await createSalesDebitNote(invoiceId, {
+        reason: payload.reason,
+        lines: payload.lines,
+      })
+    },
+    onSuccess: async (res) => {
+      const noteId = res.noteId
+      toast.success('สร้าง Debit Note สำเร็จ')
+      if (noteId) navigate(`/sales/notes/${noteId}`)
+    },
+    onError: (err) => toast.error('สร้าง Debit Note ไม่สำเร็จ', err instanceof Error ? err.message : undefined),
+  })
+
   if (isLoading) {
     return (
       <div className="d-flex justify-content-center align-items-center py-5">
@@ -410,13 +447,13 @@ export function InvoiceDetailPage() {
     },
     {
       key: 'receipt-partial',
-      title: 'ใบรับชำระ / ใบเสร็จแบบเต็ม',
+      title: 'ใบเสร็จรับเงิน / ใบกำกับภาษี',
       badge: receiptRecordId ? 'พร้อมพิมพ์' : 'ยังไม่พร้อม',
       badgeTone: receiptRecordId ? ('green' as const) : ('gray' as const),
-      description: 'สำหรับรับชำระบางส่วนหรือชำระครบ',
+      description: 'สำหรับออกใบเสร็จรับเงิน (บางส่วนหรือครบ)',
       enabled: Boolean(receiptRecordId),
-      printLabel: 'พิมพ์เอกสารรับชำระ',
-      pdfLabel: 'PDF เอกสารรับชำระ',
+      printLabel: 'พิมพ์ใบเสร็จรับเงิน',
+      pdfLabel: 'PDF ใบเสร็จรับเงิน',
       templateLabel: 'แก้ไข Template แบบเต็ม',
       helperText: receiptRecordId ? 'ใช้ข้อมูลรับชำระล่าสุด' : 'ต้องมีรายการรับชำระก่อน',
       onPrint: () => {
@@ -469,8 +506,55 @@ export function InvoiceDetailPage() {
             <Button size="sm" variant="secondary" onClick={() => navigate('/sales/invoices')}>
               กลับ
             </Button>
+            <Button size="sm" variant="secondary" onClick={() => navigate('/sales/notes')}>
+              ใบเพิ่ม/ลดหนี้
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={invoice.status !== 'posted'}
+              onClick={() => setCreditNoteOpen(true)}
+              title={invoice.status !== 'posted' ? 'ต้องโพสต์ใบแจ้งหนี้ก่อน' : 'สร้าง Credit Note'}
+            >
+              ใบลดหนี้
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={invoice.status !== 'posted'}
+              onClick={() => setDebitNoteOpen(true)}
+              title={invoice.status !== 'posted' ? 'ต้องโพสต์ใบแจ้งหนี้ก่อน' : 'สร้าง Debit Note'}
+            >
+              ใบเพิ่มหนี้
+            </Button>
           </div>
         }
+      />
+
+      <CreateNoteModal
+        open={creditNoteOpen}
+        onClose={() => setCreditNoteOpen(false)}
+        kind="credit"
+        initialLines={(invoice.lines || []).map((l) => ({
+          productId: l.productId ?? null,
+          description: l.description,
+          quantity: l.quantity ?? 0,
+          unitPrice: l.unitPrice ?? 0,
+          taxRate: l.taxRate ?? 0,
+        }))}
+        onSubmit={async ({ reason, mode, lines }) => {
+          await createCreditNoteMutation.mutateAsync({ reason, mode, lines })
+        }}
+      />
+
+      <CreateNoteModal
+        open={debitNoteOpen}
+        onClose={() => setDebitNoteOpen(false)}
+        kind="debit"
+        initialLines={[]}
+        onSubmit={async ({ reason, lines }) => {
+          await createDebitNoteMutation.mutateAsync({ reason, lines })
+        }}
       />
 
       {/* Summary header (desktop-first) */}
@@ -566,7 +650,7 @@ export function InvoiceDetailPage() {
                 variant="ghost"
                 onClick={() => setPrintMenuOpen(true)}
               >
-                {hasFinalReceipt ? 'เปิดเอกสารรับชำระ' : 'เอกสารรับชำระ'}
+                {hasFinalReceipt ? 'เปิดใบเสร็จรับเงิน' : 'ใบเสร็จรับเงิน'}
               </Button>
             )}
             {/* Professional + reliable on mobile: split button + action-sheet modal (avoids dropdown stacking issues) */}
@@ -597,7 +681,7 @@ export function InvoiceDetailPage() {
           <span className="text-muted small">→</span>
           <Badge tone={invoice.paymentState === 'paid' ? 'green' : amountPaid > 0 ? 'amber' : 'gray'}>{paymentStageText}</Badge>
           <span className="text-muted small">→</span>
-          <Badge tone={hasPaymentReceipt ? 'green' : 'gray'}>เอกสารรับชำระ</Badge>
+          <Badge tone={hasPaymentReceipt ? 'green' : 'gray'}>ใบเสร็จรับเงิน</Badge>
           <span className="text-muted small">→</span>
           <Badge tone={hasFinalReceipt ? 'green' : 'gray'}>ใบเสร็จ/ใบกำกับภาษี</Badge>
           {payments.length > 1 ? (

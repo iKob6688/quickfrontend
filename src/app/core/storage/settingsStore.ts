@@ -6,12 +6,20 @@ const defaultTemplateIdByDocTypeSchema = z
   .object({
     quotation: z.string().trim().default('quotation_default_v1'),
     invoice: z.string().trim().default('invoice_default_v1'),
+    sales_credit_note: z.string().trim().default('sales_credit_note_default_v1'),
+    sales_debit_note: z.string().trim().default('sales_debit_note_default_v1'),
+    purchase_credit_note: z.string().trim().default('purchase_credit_note_default_v1'),
+    purchase_debit_note: z.string().trim().default('purchase_debit_note_default_v1'),
     receipt_full: z.string().trim().default('receipt_full_default_v1'),
     receipt_short: z.string().trim().default('receipt_short_default_v1'),
   })
   .default({
     quotation: 'quotation_default_v1',
     invoice: 'invoice_default_v1',
+    sales_credit_note: 'sales_credit_note_default_v1',
+    sales_debit_note: 'sales_debit_note_default_v1',
+    purchase_credit_note: 'purchase_credit_note_default_v1',
+    purchase_debit_note: 'purchase_debit_note_default_v1',
     receipt_full: 'receipt_full_default_v1',
     receipt_short: 'receipt_short_default_v1',
   })

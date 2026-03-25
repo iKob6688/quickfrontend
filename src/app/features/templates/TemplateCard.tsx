@@ -31,7 +31,7 @@ export function TemplateCard({ tpl }: { tpl: TemplateV1 }) {
     const map = settings.defaultTemplateIdByDocType
     if (!map) return false
     if (tpl.docType === 'trf_receipt') return false
-    return map[tpl.docType as 'quotation' | 'invoice' | 'receipt_full' | 'receipt_short'] === tpl.id
+    return map[tpl.docType] === tpl.id
   }, [settings.defaultTemplateIdByDocType, tpl.docType, tpl.id])
 
   return (
@@ -122,4 +122,3 @@ export function TemplateCard({ tpl }: { tpl: TemplateV1 }) {
     </div>
   )
 }
-

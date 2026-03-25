@@ -7,18 +7,18 @@ import { cn } from '@/app/lib/utils'
 type PaletteItem = { type: AnyBlock['type']; label: string; forDocTypes: DocType[] }
 
 const palette: PaletteItem[] = [
-  { type: 'header', label: 'Header', forDocTypes: ['quotation', 'invoice', 'receipt_full', 'receipt_short', 'trf_receipt'] },
-  { type: 'title', label: 'Title', forDocTypes: ['quotation', 'invoice', 'receipt_full', 'receipt_short', 'trf_receipt'] },
-  { type: 'customerInfo', label: 'Customer Info', forDocTypes: ['quotation', 'invoice', 'receipt_full', 'receipt_short'] },
-  { type: 'docMeta', label: 'Doc Meta', forDocTypes: ['quotation', 'invoice', 'receipt_full', 'receipt_short', 'trf_receipt'] },
-  { type: 'itemsTable', label: 'Items / Fixed Rows', forDocTypes: ['quotation', 'invoice', 'receipt_full', 'receipt_short', 'trf_receipt'] },
-  { type: 'summaryTotals', label: 'Summary Totals', forDocTypes: ['quotation', 'invoice', 'receipt_full', 'receipt_short'] },
-  { type: 'amountInWords', label: 'Amount in Words', forDocTypes: ['quotation', 'invoice', 'receipt_full', 'trf_receipt'] },
+  { type: 'header', label: 'Header', forDocTypes: ['quotation', 'invoice', 'sales_credit_note', 'sales_debit_note', 'purchase_credit_note', 'purchase_debit_note', 'receipt_full', 'receipt_short', 'trf_receipt'] },
+  { type: 'title', label: 'Title', forDocTypes: ['quotation', 'invoice', 'sales_credit_note', 'sales_debit_note', 'purchase_credit_note', 'purchase_debit_note', 'receipt_full', 'receipt_short', 'trf_receipt'] },
+  { type: 'customerInfo', label: 'Customer Info', forDocTypes: ['quotation', 'invoice', 'sales_credit_note', 'sales_debit_note', 'purchase_credit_note', 'purchase_debit_note', 'receipt_full', 'receipt_short'] },
+  { type: 'docMeta', label: 'Doc Meta', forDocTypes: ['quotation', 'invoice', 'sales_credit_note', 'sales_debit_note', 'purchase_credit_note', 'purchase_debit_note', 'receipt_full', 'receipt_short', 'trf_receipt'] },
+  { type: 'itemsTable', label: 'Items / Fixed Rows', forDocTypes: ['quotation', 'invoice', 'sales_credit_note', 'sales_debit_note', 'purchase_credit_note', 'purchase_debit_note', 'receipt_full', 'receipt_short', 'trf_receipt'] },
+  { type: 'summaryTotals', label: 'Summary Totals', forDocTypes: ['quotation', 'invoice', 'sales_credit_note', 'sales_debit_note', 'purchase_credit_note', 'purchase_debit_note', 'receipt_full', 'receipt_short'] },
+  { type: 'amountInWords', label: 'Amount in Words', forDocTypes: ['quotation', 'invoice', 'sales_credit_note', 'sales_debit_note', 'purchase_credit_note', 'purchase_debit_note', 'receipt_full', 'trf_receipt'] },
   { type: 'paymentMethod', label: 'Payment Method', forDocTypes: ['receipt_full', 'receipt_short', 'trf_receipt'] },
   { type: 'journalItems', label: 'Journal Items', forDocTypes: ['trf_receipt'] },
-  { type: 'signature', label: 'Signatures', forDocTypes: ['quotation', 'invoice', 'receipt_full', 'receipt_short', 'trf_receipt'] },
-  { type: 'stamp', label: 'Stamp', forDocTypes: ['quotation', 'invoice', 'receipt_full'] },
-  { type: 'notes', label: 'Notes', forDocTypes: ['quotation', 'invoice', 'receipt_full'] },
+  { type: 'signature', label: 'Signatures', forDocTypes: ['quotation', 'invoice', 'sales_credit_note', 'sales_debit_note', 'purchase_credit_note', 'purchase_debit_note', 'receipt_full', 'receipt_short', 'trf_receipt'] },
+  { type: 'stamp', label: 'Stamp', forDocTypes: ['quotation', 'invoice', 'sales_credit_note', 'sales_debit_note', 'purchase_credit_note', 'purchase_debit_note', 'receipt_full'] },
+  { type: 'notes', label: 'Notes', forDocTypes: ['quotation', 'invoice', 'sales_credit_note', 'sales_debit_note', 'purchase_credit_note', 'purchase_debit_note', 'receipt_full'] },
 ]
 
 function PaletteDragItem({ item }: { item: PaletteItem }) {
@@ -59,4 +59,3 @@ export function BlockPalette({ docType }: { docType: DocType }) {
     </div>
   )
 }
-

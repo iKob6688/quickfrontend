@@ -114,7 +114,8 @@ export function EditorPage() {
   }
 
   const isReadOnly = !!tpl.isDefault
-  const currentDefaultId = settings.defaultTemplateIdByDocType?.[tpl.docType as 'quotation' | 'invoice' | 'receipt_full' | 'receipt_short']
+  const currentDefaultId =
+    tpl.docType === 'trf_receipt' ? undefined : settings.defaultTemplateIdByDocType?.[tpl.docType]
   const isCurrentDefault = currentDefaultId === tpl.id
 
   return (
@@ -313,4 +314,3 @@ export function EditorPage() {
     </div>
   )
 }
-

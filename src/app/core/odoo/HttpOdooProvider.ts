@@ -40,6 +40,14 @@ function endpointFor(docType: DocType, recordId: string): string {
       return `/api/th/v1/erpth/docs/quotation/${encodeURIComponent(recordId)}`
     case 'invoice':
       return `/api/th/v1/erpth/docs/invoice/${encodeURIComponent(recordId)}`
+    case 'sales_credit_note':
+      return `/api/th/v1/erpth/docs/sales-credit-note/${encodeURIComponent(recordId)}`
+    case 'sales_debit_note':
+      return `/api/th/v1/erpth/docs/sales-debit-note/${encodeURIComponent(recordId)}`
+    case 'purchase_credit_note':
+      return `/api/th/v1/erpth/docs/purchase-credit-note/${encodeURIComponent(recordId)}`
+    case 'purchase_debit_note':
+      return `/api/th/v1/erpth/docs/purchase-debit-note/${encodeURIComponent(recordId)}`
     case 'receipt_full':
       return `/api/th/v1/erpth/docs/receipt/full/${encodeURIComponent(recordId)}`
     case 'receipt_short':

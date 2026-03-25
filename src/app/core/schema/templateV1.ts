@@ -8,6 +8,10 @@ export const docTypeSchema = z.enum([
   'receipt_full',
   'receipt_short',
   'trf_receipt',
+  'sales_credit_note',
+  'sales_debit_note',
+  'purchase_credit_note',
+  'purchase_debit_note',
 ])
 
 export const blockStyleSchema = z

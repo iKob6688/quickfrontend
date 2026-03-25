@@ -1,4 +1,13 @@
-export type DocType = 'quotation' | 'invoice' | 'receipt_full' | 'receipt_short' | 'trf_receipt'
+export type DocType =
+  | 'quotation'
+  | 'invoice'
+  | 'receipt_full'
+  | 'receipt_short'
+  | 'trf_receipt'
+  | 'sales_credit_note'
+  | 'sales_debit_note'
+  | 'purchase_credit_note'
+  | 'purchase_debit_note'
 
 export type Money = number
 
@@ -108,6 +117,14 @@ export type InvoiceDTO = BaseDocumentDTO & {
   docType: 'invoice'
 }
 
+export type NoteDTO = BaseDocumentDTO & {
+  docType:
+    | 'sales_credit_note'
+    | 'sales_debit_note'
+    | 'purchase_credit_note'
+    | 'purchase_debit_note'
+}
+
 export type TRFReceiptDTO = Omit<BaseDocumentDTO, 'items'> & {
   docType: 'trf_receipt'
   fixedRows: TRFFixedRowsDTO
@@ -115,4 +132,4 @@ export type TRFReceiptDTO = Omit<BaseDocumentDTO, 'items'> & {
   payment?: ReceiptPaymentDTO
 }
 
-export type AnyDocumentDTO = QuotationDTO | InvoiceDTO | ReceiptDTO | TRFReceiptDTO
+export type AnyDocumentDTO = QuotationDTO | InvoiceDTO | NoteDTO | ReceiptDTO | TRFReceiptDTO

@@ -19,6 +19,8 @@ import {
 } from '@/api/services/purchase-vendor-bills.service'
 import { toast } from '@/lib/toastStore'
 import { RegisterPaymentModal } from '@/features/sales/RegisterPaymentModal'
+import { CreateNoteModal } from '@/components/notes/CreateNoteModal'
+import { createPurchaseCreditNote, createPurchaseDebitNote } from '@/api/services/purchase-notes.service'
 
 export function PurchaseVendorBillDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -27,6 +29,8 @@ export function PurchaseVendorBillDetailPage() {
   const formatDate = useAppDateFormatter()
   const billId = id ? Number.parseInt(id, 10) : null
   const [paymentOpen, setPaymentOpen] = useState(false)
+  const [creditNoteOpen, setCreditNoteOpen] = useState(false)
+  const [debitNoteOpen, setDebitNoteOpen] = useState(false)
 
   const { data: bill, isLoading, error } = useQuery({
     queryKey: ['purchaseVendorBill', billId],
@@ -72,6 +76,39 @@ export function PurchaseVendorBillDetailPage() {
     onError: (err) => {
       toast.error('สร้าง WHT ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
     },
+  })
+
+  const createCreditNoteMutation = useMutation({
+    mutationFn: async (payload: { reason: string; mode: 'full' | 'delta'; lines: any[] }) => {
+      if (!billId) throw new Error('Missing bill id')
+      return await createPurchaseCreditNote(billId, {
+        reason: payload.reason,
+        mode: payload.mode,
+        ...(payload.mode === 'delta' ? { lines: payload.lines } : {}),
+      })
+    },
+    onSuccess: async (res) => {
+      const noteId = res.noteId
+      toast.success('สร้าง Purchase Credit Note สำเร็จ')
+      if (noteId) navigate(`/purchases/notes/${noteId}`)
+    },
+    onError: (err) => toast.error('สร้าง Purchase Credit Note ไม่สำเร็จ', err instanceof Error ? err.message : undefined),
+  })
+
+  const createDebitNoteMutation = useMutation({
+    mutationFn: async (payload: { reason: string; lines: any[] }) => {
+      if (!billId) throw new Error('Missing bill id')
+      return await createPurchaseDebitNote(billId, {
+        reason: payload.reason,
+        lines: payload.lines,
+      })
+    },
+    onSuccess: async (res) => {
+      const noteId = res.noteId
+      toast.success('สร้าง Purchase Debit Note สำเร็จ')
+      if (noteId) navigate(`/purchases/notes/${noteId}`)
+    },
+    onError: (err) => toast.error('สร้าง Purchase Debit Note ไม่สำเร็จ', err instanceof Error ? err.message : undefined),
   })
 
   if (isLoading) {
@@ -186,18 +223,58 @@ export function PurchaseVendorBillDetailPage() {
             >
               PDF
             </Button>
+            <Button size="sm" variant="secondary" onClick={() => navigate('/purchases/notes')}>
+              ใบเพิ่ม/ลดหนี้ซื้อ
+            </Button>
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => window.open(`/web#id=${bill.id}&model=account.move&view_type=form`, '_blank', 'noopener,noreferrer')}
+              disabled={!(bill.status === 'posted' || bill.status === 'paid')}
+              onClick={() => setCreditNoteOpen(true)}
+              title={!(bill.status === 'posted' || bill.status === 'paid') ? 'ต้องยืนยัน Vendor Bill ก่อน' : 'สร้าง Credit Note'}
             >
-              เปิดใน Odoo
+              ใบลดหนี้ซื้อ
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={!(bill.status === 'posted' || bill.status === 'paid')}
+              onClick={() => setDebitNoteOpen(true)}
+              title={!(bill.status === 'posted' || bill.status === 'paid') ? 'ต้องยืนยัน Vendor Bill ก่อน' : 'สร้าง Debit Note'}
+            >
+              ใบเพิ่มหนี้ซื้อ
             </Button>
             <Button size="sm" variant="ghost" onClick={() => navigate('/purchases/orders')}>
               กลับ
             </Button>
           </div>
         }
+      />
+
+      <CreateNoteModal
+        open={creditNoteOpen}
+        onClose={() => setCreditNoteOpen(false)}
+        kind="credit"
+        initialLines={(bill.lines || []).map((l) => ({
+          productId: l.productId ?? null,
+          description: l.description,
+          quantity: l.quantity ?? 0,
+          unitPrice: l.unitPrice ?? 0,
+          taxRate: 0,
+        }))}
+        onSubmit={async ({ reason, mode, lines }) => {
+          await createCreditNoteMutation.mutateAsync({ reason, mode, lines })
+        }}
+      />
+
+      <CreateNoteModal
+        open={debitNoteOpen}
+        onClose={() => setDebitNoteOpen(false)}
+        kind="debit"
+        initialLines={[]}
+        onSubmit={async ({ reason, lines }) => {
+          await createDebitNoteMutation.mutateAsync({ reason, lines })
+        }}
       />
 
       <Card className="p-4 mb-4">

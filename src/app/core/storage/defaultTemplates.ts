@@ -144,6 +144,122 @@ export const DEFAULT_TEMPLATES: TemplateV1[] = [
     ],
   }),
 
+
+  mkDefaultTemplate({
+    id: 'invoice_tax_invoice_default_v1',
+    name: 'Tax Invoice - ใบแจ้งหนี้ / ใบกำกับภาษี',
+    docType: 'invoice',
+    theme: { ...baseTheme, headerBarColor: '#111111', tableHeaderBgColor: '#111111' },
+    page: basePage,
+    blocks: [
+      { id: nanoid(), type: 'header', props: { showLogo: true, showTaxId: true, showContactLines: true } },
+      {
+        id: nanoid(),
+        type: 'title',
+        props: {
+          titleEn: 'TAX INVOICE',
+          titleTh: 'ใบแจ้งหนี้ / ใบกำกับภาษี',
+          subtitleRight: 'ต้นฉบับ / Original',
+          showOriginalBadge: true,
+        },
+      },
+      { id: nanoid(), type: 'customerInfo', props: { showAddress: true, showTaxId: true, showTel: false, label: 'Customer / ลูกค้า' } },
+      { id: nanoid(), type: 'docMeta', props: { fields: ['number', 'date', 'salesperson', 'creditTerm', 'contact', 'reference'] } },
+      { id: nanoid(), type: 'itemsTable', props: { compact: false, showUnit: true, showDiscount: true, currency: 'THB' } },
+      { id: nanoid(), type: 'summaryTotals', props: { showVat: true, showDiscount: true } },
+      { id: nanoid(), type: 'amountInWords', props: { label: 'จำนวนเงิน (ตัวอักษร) / Amount' } },
+      { id: nanoid(), type: 'signature', props: { leftLabel: 'ผู้รับ / Customer Signature', rightLabel: 'ผู้มีอำนาจลงนาม / Authorized Signature' } },
+    ],
+  }),
+
+  mkDefaultTemplate({
+    id: 'sales_credit_note_default_v1',
+    name: 'Sales Credit Note (Default v1)',
+    docType: 'sales_credit_note',
+    theme: { ...baseTheme, headerBarColor: '#111111', tableHeaderBgColor: '#111111' },
+    page: basePage,
+    blocks: [
+      { id: nanoid(), type: 'header', props: { showLogo: true, showTaxId: true, showContactLines: true } },
+      {
+        id: nanoid(),
+        type: 'title',
+        props: { titleEn: 'CREDIT NOTE', titleTh: 'ใบลดหนี้', subtitleRight: 'ต้นฉบับ / Original', showOriginalBadge: true },
+      },
+      { id: nanoid(), type: 'customerInfo', props: { showAddress: true, showTaxId: true, showTel: false, label: 'Customer / ลูกค้า' } },
+      { id: nanoid(), type: 'docMeta', props: { fields: ['number', 'date', 'reference', 'salesperson', 'creditTerm', 'contact'] } },
+      { id: nanoid(), type: 'itemsTable', props: { compact: false, showUnit: true, showDiscount: true, currency: 'THB' } },
+      { id: nanoid(), type: 'summaryTotals', props: { showVat: true, showDiscount: true } },
+      { id: nanoid(), type: 'amountInWords', props: { label: 'จำนวนเงิน (ตัวอักษร) / Amount' } },
+      { id: nanoid(), type: 'signature', props: { leftLabel: 'ผู้รับ / Customer Signature', rightLabel: 'ผู้มีอำนาจลงนาม / Authorized Signature' } },
+    ],
+  }),
+
+  mkDefaultTemplate({
+    id: 'sales_debit_note_default_v1',
+    name: 'Sales Debit Note (Default v1)',
+    docType: 'sales_debit_note',
+    theme: { ...baseTheme, headerBarColor: '#111111', tableHeaderBgColor: '#111111' },
+    page: basePage,
+    blocks: [
+      { id: nanoid(), type: 'header', props: { showLogo: true, showTaxId: true, showContactLines: true } },
+      {
+        id: nanoid(),
+        type: 'title',
+        props: { titleEn: 'DEBIT NOTE', titleTh: 'ใบเพิ่มหนี้', subtitleRight: 'ต้นฉบับ / Original', showOriginalBadge: true },
+      },
+      { id: nanoid(), type: 'customerInfo', props: { showAddress: true, showTaxId: true, showTel: false, label: 'Customer / ลูกค้า' } },
+      { id: nanoid(), type: 'docMeta', props: { fields: ['number', 'date', 'reference', 'salesperson', 'creditTerm', 'contact'] } },
+      { id: nanoid(), type: 'itemsTable', props: { compact: false, showUnit: true, showDiscount: true, currency: 'THB' } },
+      { id: nanoid(), type: 'summaryTotals', props: { showVat: true, showDiscount: true } },
+      { id: nanoid(), type: 'amountInWords', props: { label: 'จำนวนเงิน (ตัวอักษร) / Amount' } },
+      { id: nanoid(), type: 'signature', props: { leftLabel: 'ผู้รับ / Customer Signature', rightLabel: 'ผู้มีอำนาจลงนาม / Authorized Signature' } },
+    ],
+  }),
+
+  mkDefaultTemplate({
+    id: 'purchase_credit_note_default_v1',
+    name: 'Purchase Credit Note (Default v1)',
+    docType: 'purchase_credit_note',
+    theme: { ...baseTheme, headerBarColor: '#111111', tableHeaderBgColor: '#111111' },
+    page: basePage,
+    blocks: [
+      { id: nanoid(), type: 'header', props: { showLogo: true, showTaxId: true, showContactLines: true } },
+      {
+        id: nanoid(),
+        type: 'title',
+        props: { titleEn: 'PURCHASE CREDIT NOTE', titleTh: 'ใบลดหนี้ซื้อ', subtitleRight: 'ต้นฉบับ / Original', showOriginalBadge: true },
+      },
+      { id: nanoid(), type: 'customerInfo', props: { showAddress: true, showTaxId: true, showTel: false, label: 'Vendor / ผู้ขาย' } },
+      { id: nanoid(), type: 'docMeta', props: { fields: ['number', 'date', 'reference', 'contact'] } },
+      { id: nanoid(), type: 'itemsTable', props: { compact: false, showUnit: true, showDiscount: true, currency: 'THB' } },
+      { id: nanoid(), type: 'summaryTotals', props: { showVat: true, showDiscount: true } },
+      { id: nanoid(), type: 'amountInWords', props: { label: 'จำนวนเงิน (ตัวอักษร) / Amount' } },
+      { id: nanoid(), type: 'signature', props: { leftLabel: 'ผู้รับ / Receiver', rightLabel: 'ผู้มีอำนาจลงนาม / Authorized' } },
+    ],
+  }),
+
+  mkDefaultTemplate({
+    id: 'purchase_debit_note_default_v1',
+    name: 'Purchase Debit Note (Default v1)',
+    docType: 'purchase_debit_note',
+    theme: { ...baseTheme, headerBarColor: '#111111', tableHeaderBgColor: '#111111' },
+    page: basePage,
+    blocks: [
+      { id: nanoid(), type: 'header', props: { showLogo: true, showTaxId: true, showContactLines: true } },
+      {
+        id: nanoid(),
+        type: 'title',
+        props: { titleEn: 'PURCHASE DEBIT NOTE', titleTh: 'ใบเพิ่มหนี้ซื้อ', subtitleRight: 'ต้นฉบับ / Original', showOriginalBadge: true },
+      },
+      { id: nanoid(), type: 'customerInfo', props: { showAddress: true, showTaxId: true, showTel: false, label: 'Vendor / ผู้ขาย' } },
+      { id: nanoid(), type: 'docMeta', props: { fields: ['number', 'date', 'reference', 'contact'] } },
+      { id: nanoid(), type: 'itemsTable', props: { compact: false, showUnit: true, showDiscount: true, currency: 'THB' } },
+      { id: nanoid(), type: 'summaryTotals', props: { showVat: true, showDiscount: true } },
+      { id: nanoid(), type: 'amountInWords', props: { label: 'จำนวนเงิน (ตัวอักษร) / Amount' } },
+      { id: nanoid(), type: 'signature', props: { leftLabel: 'ผู้รับ / Receiver', rightLabel: 'ผู้มีอำนาจลงนาม / Authorized' } },
+    ],
+  }),
+
   mkDefaultTemplate({
     id: 'receipt_full_default_v1',
     name: 'Tax Invoice (Full) (Default v1)',
@@ -156,6 +272,35 @@ export const DEFAULT_TEMPLATES: TemplateV1[] = [
         id: nanoid(),
         type: 'title',
         props: { titleEn: 'TAX INVOICE', titleTh: 'ใบกำกับภาษี', subtitleRight: undefined, showOriginalBadge: false },
+      },
+      { id: nanoid(), type: 'customerInfo', props: { showAddress: true, showTaxId: true, showTel: true, label: 'Customer / ลูกค้า' } },
+      { id: nanoid(), type: 'docMeta', props: { fields: ['number', 'date', 'reference'] } },
+      { id: nanoid(), type: 'itemsTable', props: { compact: false, showUnit: true, showDiscount: false, currency: 'THB' } },
+      { id: nanoid(), type: 'summaryTotals', props: { showVat: true, showDiscount: true } },
+      { id: nanoid(), type: 'amountInWords', props: { label: 'จำนวนเงิน (ตัวอักษร) / Amount' } },
+      { id: nanoid(), type: 'paymentMethod', props: { style: 'checkboxes', showBank: true, showDate: true, showChequeNo: true } },
+      { id: nanoid(), type: 'signature', props: { leftLabel: 'ผู้รับ / Receiver', rightLabel: 'ผู้มีอำนาจลงนาม / Authorized' } },
+    ],
+  }),
+
+
+  mkDefaultTemplate({
+    id: 'receipt_tax_invoice_default_v1',
+    name: 'Receipt/Tax Invoice - ใบเสร็จรับเงิน / ใบกำกับภาษี',
+    docType: 'receipt_full',
+    theme: { ...baseTheme, headerBarColor: '#111111', tableHeaderBgColor: '#111111' },
+    page: basePage,
+    blocks: [
+      { id: nanoid(), type: 'header', props: { showLogo: true, showTaxId: true, showContactLines: true } },
+      {
+        id: nanoid(),
+        type: 'title',
+        props: {
+          titleEn: 'RECEIPT / TAX INVOICE',
+          titleTh: 'ใบเสร็จรับเงิน / ใบกำกับภาษี',
+          subtitleRight: undefined,
+          showOriginalBadge: false,
+        },
       },
       { id: nanoid(), type: 'customerInfo', props: { showAddress: true, showTaxId: true, showTel: true, label: 'Customer / ลูกค้า' } },
       { id: nanoid(), type: 'docMeta', props: { fields: ['number', 'date', 'reference'] } },
@@ -207,4 +352,3 @@ export const DEFAULT_TEMPLATES: TemplateV1[] = [
     ],
   }),
 ]
-

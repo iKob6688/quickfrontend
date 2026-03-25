@@ -246,7 +246,7 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
         if (hasPaymentReceipt || hasFinalReceipt) {
           return (
             <Button size="sm" variant="ghost" onClick={() => navigate(`/sales/invoices/${r.id}?action=receipt`)}>
-              {hasFinalReceipt ? 'ดูใบเสร็จ' : 'ดูเอกสารรับชำระ'}
+              {hasFinalReceipt ? 'ดูใบเสร็จรับเงิน' : 'ดูใบเสร็จรับเงิน'}
             </Button>
           )
         }

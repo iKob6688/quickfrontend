@@ -115,6 +115,74 @@ export class MockOdooProvider implements OdooProvider {
           totals,
         }
       }
+      case 'sales_credit_note': {
+        const items = sampleItems(3)
+        const totals = calcTotals(items)
+        return {
+          docType,
+          company: sampleCompany(),
+          partner: samplePartnerFull(),
+          document: {
+            number: 'CN-2025-0001',
+            date: '2025-12-21',
+            reference: 'INV-2025-0001',
+            notes: 'Credit note for INV-2025-0001',
+          },
+          items,
+          totals,
+        }
+      }
+      case 'sales_debit_note': {
+        const items = sampleItems(2)
+        const totals = calcTotals(items)
+        return {
+          docType,
+          company: sampleCompany(),
+          partner: samplePartnerFull(),
+          document: {
+            number: 'DN-2025-0001',
+            date: '2025-12-21',
+            reference: 'INV-2025-0001',
+            notes: 'Debit note for INV-2025-0001',
+          },
+          items,
+          totals,
+        }
+      }
+      case 'purchase_credit_note': {
+        const items = sampleItems(2)
+        const totals = calcTotals(items)
+        return {
+          docType,
+          company: sampleCompany(),
+          partner: { ...samplePartnerFull(), name: 'Vendor Co., Ltd.' },
+          document: {
+            number: 'PCN-2025-0001',
+            date: '2025-12-21',
+            reference: 'BILL-2025-0001',
+            notes: 'Purchase credit note for BILL-2025-0001',
+          },
+          items,
+          totals,
+        }
+      }
+      case 'purchase_debit_note': {
+        const items = sampleItems(1)
+        const totals = calcTotals(items)
+        return {
+          docType,
+          company: sampleCompany(),
+          partner: { ...samplePartnerFull(), name: 'Vendor Co., Ltd.' },
+          document: {
+            number: 'PDN-2025-0001',
+            date: '2025-12-21',
+            reference: 'BILL-2025-0001',
+            notes: 'Purchase debit note for BILL-2025-0001',
+          },
+          items,
+          totals,
+        }
+      }
       case 'receipt_full': {
         const items = sampleItems(5)
         const totals = calcTotals(items)
@@ -181,4 +249,3 @@ export class MockOdooProvider implements OdooProvider {
     }
   }
 }
-
