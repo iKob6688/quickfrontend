@@ -165,12 +165,13 @@ export function BackendConnectionPage() {
                 value={settings.dateDisplayFormat}
                 onChange={(e) =>
                   patchSettings({
-                    dateDisplayFormat: e.target.value as 'DD/MM/YYYY' | 'D MMMM YYYY',
+                    dateDisplayFormat: e.target.value as 'DD/MM/YYYY' | 'DD-MM-YYYY' | 'D MMMM YYYY',
                   })
                 }
                 className="w-full rounded-2xl border border-primary/25 bg-bgLight/90 px-3 py-2 text-sm text-surfaceDark outline-none ring-primary/40 focus:border-accentGold focus:bg-white focus:ring-2"
               >
                 <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                <option value="DD-MM-YYYY">DD-MM-YYYY</option>
                 <option value="D MMMM YYYY">D MMMM YYYY</option>
               </select>
             </div>

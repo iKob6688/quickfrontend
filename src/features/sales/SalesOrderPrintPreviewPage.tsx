@@ -5,12 +5,12 @@ import { Alert, Spinner } from 'react-bootstrap'
 import { Button } from '@/components/ui/Button'
 import { getSalesOrder } from '@/api/services/sales-orders.service'
 import { getPartner } from '@/api/services/partners.service'
-import { useAppDateFormatter, useAppDateTimeFormatter } from '@/lib/dateFormat'
+import { formatAppDate, formatAppDateTime } from '@/lib/dateFormat'
+import { useSettingsStore } from '@/app/core/storage/settingsStore'
 
 export function SalesOrderPrintPreviewPage() {
   const navigate = useNavigate()
-  const formatDate = useAppDateFormatter()
-  const formatDateTime = useAppDateTimeFormatter()
+  const settings = useSettingsStore((state) => state.settings)
   const params = useParams()
   const id = useMemo(() => Number(params.id), [params.id])
 
@@ -56,13 +56,18 @@ export function SalesOrderPrintPreviewPage() {
 
   const order = query.data
   const documentLabel = order.orderType === 'sale' ? 'Sale Order' : 'ใบเสนอราคา'
+  const formatPrintDate = (value?: string | Date | null, fallback = '-') =>
+    formatAppDate(value, { ...settings, dateDisplayFormat: 'DD-MM-YYYY' }, fallback)
+  const formatPrintDateTime = (value?: string | Date | null, fallback = '-') =>
+    formatAppDateTime(value, { ...settings, dateDisplayFormat: 'DD-MM-YYYY' }, fallback)
   const partner = partnerQuery.data
   const partnerAddress = [partner?.street, partner?.street2, [partner?.city, partner?.zip].filter(Boolean).join(' '), partner?.countryName]
     .filter(Boolean)
     .join(' ')
+  const firstLineLabel = (order.lines || []).find((line) => line.description?.trim())?.description || '-'
 
   return (
-    <div className="container py-4">
+    <div className="container py-4 qf-so-print">
       <div className="d-flex gap-2 justify-content-end mb-3 d-print-none">
         <Button size="sm" variant="secondary" onClick={() => navigate(`/sales/orders/${id}`)}>
           กลับหน้ารายละเอียด
@@ -73,15 +78,30 @@ export function SalesOrderPrintPreviewPage() {
       </div>
 
       <div className="bg-white border rounded-3 p-4 p-md-5" style={{ maxWidth: 980, margin: '0 auto' }}>
+        <style>
+          {`@media print {
+            .qf-so-print table tr, .qf-so-print table td, .qf-so-print table th { break-inside: avoid; page-break-inside: avoid; }
+            .qf-so-print .qf-so-print__summary { break-inside: avoid; page-break-inside: avoid; }
+            .qf-so-print .qf-so-print__meta { break-inside: avoid; page-break-inside: avoid; }
+          }`}
+        </style>
         <div className="d-flex justify-content-between align-items-start mb-4">
           <div>
             <h1 className="h3 mb-1">{documentLabel}</h1>
             <div className="text-muted">{order.number || `#${order.id}`}</div>
           </div>
           <div className="text-end small">
-            <div>วันที่เอกสาร: {formatDate(order.orderDate, '-')}</div>
-            <div>วันหมดอายุ: {formatDate(order.validityDate, '-')}</div>
+            <div>วันที่เอกสาร: {formatPrintDate(order.orderDate, '-')}</div>
+            <div>วันหมดอายุ: {formatPrintDate(order.validityDate, '-')}</div>
             <div>สถานะ: {order.status}</div>
+          </div>
+        </div>
+
+        <div className="rounded border p-2 small mb-3 qf-so-print__meta">
+          <div className="row g-2">
+            <div className="col-md-4"><span className="text-muted">เลขที่เอกสาร:</span> <span className="font-monospace fw-semibold">{order.number || `#${order.id}`}</span></div>
+            <div className="col-md-4"><span className="text-muted">เลขที่ใบเสนอราคา:</span> <span className="font-monospace fw-semibold">{order.number || `#${order.id}`}</span></div>
+            <div className="col-md-4"><span className="text-muted">สินค้า/บริการ:</span> <span className="fw-semibold">{firstLineLabel}</span></div>
           </div>
         </div>
 
@@ -135,7 +155,7 @@ export function SalesOrderPrintPreviewPage() {
           </tbody>
         </table>
 
-        <div className="d-flex justify-content-end mt-3">
+        <div className="d-flex justify-content-end mt-3 qf-so-print__summary">
           <div style={{ minWidth: 320 }}>
             <div className="d-flex justify-content-between py-1 border-bottom">
               <span>ยอดก่อนภาษี</span>
@@ -153,7 +173,7 @@ export function SalesOrderPrintPreviewPage() {
         </div>
         <div className="mt-4 pt-3 border-top small text-muted d-flex justify-content-between">
           <div>Ref: {order.number || `#${order.id}`}</div>
-          <div>Printed: {formatDateTime(new Date())}</div>
+          <div>Printed: {formatPrintDateTime(new Date())}</div>
         </div>
       </div>
     </div>

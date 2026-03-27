@@ -7,8 +7,8 @@ import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { InvoicesListPage } from '@/features/sales/InvoicesListPage'
 import { InvoiceDetailPage } from '@/features/sales/InvoiceDetailPage'
 import { InvoiceFormPage } from '@/features/sales/InvoiceFormPage'
-import { SalesNotesListPage } from '@/features/sales/SalesNotesListPage'
 import { SalesNoteDetailPage } from '@/features/sales/SalesNoteDetailPage'
+import { NotesListPage } from '@/features/notes/NotesListPage'
 import { SalesOrdersListPage } from '@/features/sales/SalesOrdersListPage'
 import { SalesOrderDetailPage } from '@/features/sales/SalesOrderDetailPage'
 import { SalesOrderFormPage } from '@/features/sales/SalesOrderFormPage'
@@ -21,7 +21,6 @@ import { PurchaseRequestsListPage } from '@/features/purchases/PurchaseRequestsL
 import { PurchaseRequestFormPage } from '@/features/purchases/PurchaseRequestFormPage'
 import { PurchaseRequestDetailPage } from '@/features/purchases/PurchaseRequestDetailPage'
 import { PurchaseVendorBillDetailPage } from '@/features/purchases/PurchaseVendorBillDetailPage'
-import { PurchaseNotesListPage } from '@/features/purchases/PurchaseNotesListPage'
 import { PurchaseNoteDetailPage } from '@/features/purchases/PurchaseNoteDetailPage'
 import { PurchaseReceiptDetailPage } from '@/features/purchases/PurchaseReceiptDetailPage'
 import { ExpensesListPage } from '@/features/expenses/ExpensesListPage'
@@ -102,7 +101,8 @@ function AppRoutes() {
           <Route path="/sales/invoices/new" element={<InvoiceFormPage />} />
           <Route path="/sales/invoices/:id" element={<InvoiceDetailPage />} />
           <Route path="/sales/invoices/:id/edit" element={<InvoiceFormPage />} />
-          <Route path="/sales/notes" element={<SalesNotesListPage />} />
+          <Route path="/notes" element={<NotesListPage />} />
+          <Route path="/sales/notes" element={<Navigate to="/notes?domain=sales" replace />} />
           <Route path="/sales/notes/:id" element={<SalesNoteDetailPage />} />
           <Route path="/sales/orders" element={<SalesOrdersListPage />} />
           <Route path="/sales/orders/new" element={<SalesOrderFormPage />} />
@@ -115,7 +115,7 @@ function AppRoutes() {
           <Route path="/purchases/orders/:id/edit" element={<PurchaseOrderFormPage />} />
           <Route path="/purchases/receipts/:id" element={<PurchaseReceiptDetailPage />} />
           <Route path="/purchases/bills/:id" element={<PurchaseVendorBillDetailPage />} />
-          <Route path="/purchases/notes" element={<PurchaseNotesListPage />} />
+          <Route path="/purchases/notes" element={<Navigate to="/notes?domain=purchase" replace />} />
           <Route path="/purchases/notes/:id" element={<PurchaseNoteDetailPage />} />
           <Route path="/purchases/requests" element={<PurchaseRequestsListPage />} />
           <Route path="/purchases/requests/new" element={<PurchaseRequestFormPage />} />

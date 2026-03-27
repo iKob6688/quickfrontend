@@ -115,7 +115,7 @@ export function SalesNoteDetailPage() {
         <Alert variant="danger" className="small">
           {error instanceof Error ? error.message : 'Unknown error'}
         </Alert>
-        <Button onClick={() => navigate('/sales/notes')}>กลับไปหน้ารายการ</Button>
+        <Button onClick={() => navigate('/notes?domain=sales')}>กลับไปหน้ารายการ</Button>
       </div>
     )
   }
@@ -131,7 +131,7 @@ export function SalesNoteDetailPage() {
         breadcrumb="รายรับ · ใบเพิ่ม/ลดหนี้"
         actions={
           <div className="d-flex align-items-center gap-2">
-            <Button size="sm" variant="secondary" onClick={() => navigate('/sales/notes')}>
+            <Button size="sm" variant="secondary" onClick={() => navigate('/notes?domain=sales')}>
               กลับ
             </Button>
           </div>

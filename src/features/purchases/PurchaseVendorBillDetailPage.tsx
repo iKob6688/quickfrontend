@@ -223,7 +223,7 @@ export function PurchaseVendorBillDetailPage() {
             >
               PDF
             </Button>
-            <Button size="sm" variant="secondary" onClick={() => navigate('/purchases/notes')}>
+            <Button size="sm" variant="secondary" onClick={() => navigate('/notes?domain=purchase')}>
               ใบเพิ่ม/ลดหนี้ซื้อ
             </Button>
             <Button

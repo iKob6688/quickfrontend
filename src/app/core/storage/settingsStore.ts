@@ -29,7 +29,7 @@ const settingsSchema = z.object({
   apiToken: z.string().trim().default(''),
   pdfServiceUrl: z.string().trim().default('/api/print/pdf'),
   defaultTemplateIdByDocType: defaultTemplateIdByDocTypeSchema,
-  dateDisplayFormat: z.enum(['DD/MM/YYYY', 'D MMMM YYYY']).default('DD/MM/YYYY'),
+  dateDisplayFormat: z.enum(['DD/MM/YYYY', 'DD-MM-YYYY', 'D MMMM YYYY']).default('DD/MM/YYYY'),
   dateCalendar: z.enum(['gregorian', 'buddhist']).default('buddhist'),
 })
 

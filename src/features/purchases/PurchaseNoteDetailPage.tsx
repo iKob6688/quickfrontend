@@ -115,7 +115,7 @@ export function PurchaseNoteDetailPage() {
         <Alert variant="danger" className="small">
           {error instanceof Error ? error.message : 'Unknown error'}
         </Alert>
-        <Button onClick={() => navigate('/purchases/notes')}>กลับไปหน้ารายการ</Button>
+        <Button onClick={() => navigate('/notes?domain=purchase')}>กลับไปหน้ารายการ</Button>
       </div>
     )
   }
@@ -131,7 +131,7 @@ export function PurchaseNoteDetailPage() {
         breadcrumb="รายจ่าย · ใบเพิ่ม/ลดหนี้"
         actions={
           <div className="d-flex align-items-center gap-2">
-            <Button size="sm" variant="secondary" onClick={() => navigate('/purchases/notes')}>
+            <Button size="sm" variant="secondary" onClick={() => navigate('/notes?domain=purchase')}>
               กลับ
             </Button>
           </div>
@@ -185,4 +185,3 @@ export function PurchaseNoteDetailPage() {
     </div>
   )
 }
-

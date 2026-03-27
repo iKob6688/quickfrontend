@@ -122,6 +122,21 @@ function composeLineDescription(productName: string, description: string): strin
   return `${p} - ${d}`
 }
 
+function isInvoiceLikeText(value: unknown, dto: AnyDocumentDTO): boolean {
+  const text = s(value).toLowerCase()
+  if (!text) return false
+  const docNo = s(dto.document?.number).toLowerCase()
+  const refs = [dto.document?.reference, dto.document?.invoiceRefTop, dto.document?.quotationNo]
+    .map((v) => s(v).toLowerCase())
+    .filter(Boolean)
+  return (
+    text === docNo ||
+    text.includes(docNo) ||
+    text.startsWith('invoice ') ||
+    refs.some((ref) => text === ref || text.includes(ref))
+  )
+}
+
 function pickProductName(it: any): string {
   const nestedProduct = it?.product && typeof it.product === 'object' ? it.product : {}
   return s(
@@ -151,6 +166,41 @@ function pickLineDescription(it: any): string {
       it?.display_name ??
       '',
   )
+}
+
+function isSummaryOnlyInvoiceItems(dto: AnyDocumentDTO): boolean {
+  if (dto.docType !== 'invoice') return false
+  if (!Array.isArray(dto.items) || dto.items.length === 0) return true
+  const first = dto.items[0] as any
+  if (!first) return true
+  if (dto.items.every((it: any) => isInvoiceLikeText(it?.productName, dto) || isInvoiceLikeText(it?.description, dto))) return true
+  if ((dto.items.length === 1 || dto.items.every((it: any) => !s(it?.productName))) && first) {
+    return isInvoiceLikeText(first.description, dto) || isInvoiceLikeText(first.productName, dto)
+  }
+  return false
+}
+
+function hasItemLines(dto: AnyDocumentDTO): dto is Extract<AnyDocumentDTO, { items: any[] }> {
+  return Array.isArray((dto as any)?.items)
+}
+
+function legacyInvoiceDetailToItems(raw: any) {
+  const lines = Array.isArray(raw?.lines) ? raw.lines : []
+  return lines.map((line: any, idx: number) => {
+    const productName = pickProductName(line)
+    const description = pickLineDescription(line)
+    const composedDescription = composeLineDescription(productName, description)
+    return {
+      no: idx + 1,
+      productName: productName || undefined,
+      description: composedDescription || description || productName || '',
+      qty: n(line?.quantity ?? line?.qty),
+      unit: s(line?.uom ?? line?.unit) || undefined,
+      unitPrice: n(line?.price_unit ?? line?.unit_price),
+      discount: n(line?.discount),
+      amount: n(line?.subtotal ?? line?.amount ?? line?.price_total),
+    }
+  })
 }
 
 function normalizeErpthDto(raw: any): AnyDocumentDTO {
@@ -316,7 +366,7 @@ export class HttpOdooProvider implements OdooProvider {
     this.opts = opts
   }
 
-  async getDocumentDTO(params: GetDocumentParams): Promise<AnyDocumentDTO> {
+  private async fetchDocumentDTO(params: GetDocumentParams): Promise<AnyDocumentDTO> {
     const timeoutMs = this.opts.timeoutMs ?? 12_000
     const baseUrl = (this.opts.baseUrl || '').replace(/\/$/, '')
 
@@ -353,5 +403,115 @@ export class HttpOdooProvider implements OdooProvider {
     } finally {
       cleanup()
     }
+  }
+
+  private async fetchLegacyInvoiceDetail(invoiceId: string): Promise<AnyDocumentDTO> {
+    const timeoutMs = this.opts.timeoutMs ?? 12_000
+    const baseUrl = (this.opts.baseUrl || '').replace(/\/$/, '')
+    let url = `${baseUrl}/web/adt/th/v1/account/invoices/${encodeURIComponent(invoiceId)}`
+    const apiKey = String(import.meta.env.VITE_API_KEY || '').trim()
+    const odooDb = String(import.meta.env.VITE_ODOO_DB || '').trim()
+    const token = this.opts.token?.trim() || getAccessToken() || ''
+    const instanceId = getInstanceId() || ''
+    if (odooDb) {
+      const sep = url.includes('?') ? '&' : '?'
+      url = `${url}${sep}db=${encodeURIComponent(odooDb)}`
+    }
+    const { signal, cleanup } = withTimeout(undefined, timeoutMs)
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(apiKey ? { 'X-ADT-API-Key': apiKey } : {}),
+          ...(instanceId ? { 'X-Instance-ID': instanceId } : {}),
+        },
+        body: makeRpc(),
+        signal,
+      })
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        throw new Error(`Odoo DTO fetch failed (${res.status}): ${text || res.statusText}`)
+      }
+      const json = await res.json()
+      let payload: any = json
+      if (payload && typeof payload === 'object' && payload.jsonrpc === '2.0' && 'result' in payload) {
+        payload = payload.result
+      }
+      if (payload && typeof payload === 'object' && 'success' in payload) {
+        if (payload.success === false) {
+          const msg =
+            payload?.error?.message ||
+            payload?.error?.code ||
+            payload?.error ||
+            'Legacy invoice fetch failed'
+          throw new Error(String(msg))
+        }
+        payload = payload.data
+      }
+      const raw = payload as any
+      const items = legacyInvoiceDetailToItems(raw)
+      if (!items.length) {
+        throw new Error('Legacy invoice detail did not contain usable item lines')
+      }
+      return normalizeErpthDto({
+        doc_type: 'invoice',
+        company: { name: s(raw?.company) || '', addressLines: [] },
+        partner: { name: s(raw?.partner) || '' },
+        document: {
+          number: s(raw?.name) || s(raw?.ref) || '',
+          date: s(raw?.invoice_date) || '',
+          due_date: s(raw?.invoice_date_due) || '',
+          reference: s(raw?.ref) || s(raw?.name) || '',
+        },
+        items,
+        totals: {
+          currency: s(raw?.currency) || 'THB',
+          subtotal: n(raw?.amount_untaxed),
+          discount_total: 0,
+          after_discount: n(raw?.amount_untaxed),
+          vat: n(raw?.amount_tax),
+          total: n(raw?.amount_total),
+          amount_text: '',
+        },
+      }) as AnyDocumentDTO
+    } finally {
+      cleanup()
+    }
+  }
+
+  async getDocumentDTO(params: GetDocumentParams): Promise<AnyDocumentDTO> {
+    const dto = await this.fetchDocumentDTO(params)
+    if (params.docType === 'invoice' && isSummaryOnlyInvoiceItems(dto)) {
+      const invoiceId = params.recordId.trim()
+      if (invoiceId) {
+        try {
+          const legacyInvoiceDto = await this.fetchLegacyInvoiceDetail(invoiceId)
+          if (hasItemLines(legacyInvoiceDto) && legacyInvoiceDto.items.length > 0) {
+            return legacyInvoiceDto
+          }
+        } catch {
+          // Keep original invoice DTO if the fallback invoice fetch fails.
+        }
+      }
+    }
+    if ((params.docType === 'receipt_full' || params.docType === 'receipt_short') && params.recordId.startsWith('invoice:')) {
+      const invoiceId = params.recordId.slice('invoice:'.length).trim()
+      if (invoiceId) {
+        try {
+          const invoiceDto = await this.fetchLegacyInvoiceDetail(invoiceId)
+          if (hasItemLines(invoiceDto) && invoiceDto.items.length > 0) {
+            return {
+              ...dto,
+              items: invoiceDto.items,
+            } as AnyDocumentDTO
+          }
+        } catch {
+          // Keep original receipt DTO if the fallback invoice fetch fails.
+        }
+      }
+    }
+    return dto
   }
 }

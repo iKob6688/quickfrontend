@@ -25,14 +25,18 @@ export function PrintActions({
   const canPdf = useMemo(() => !!dto, [dto])
   const autoTriggeredRef = useRef(false)
 
-  async function openPdf() {
+  async function openPdf(options?: { sameTab?: boolean }) {
     setPdfError(null)
     if (!dto) return
 
     try {
+      const url = `/reports-studio/print/${template.id}?recordId=${encodeURIComponent(recordId)}&autoprint=0`
+      if (options?.sameTab) {
+        window.location.href = url
+        return
+      }
       // Most reliable "PDF" experience across devices without a server:
       // open the print page in a new tab, let the browser's native Print UI handle Save as PDF.
-      const url = `/reports-studio/print/${template.id}?recordId=${encodeURIComponent(recordId)}&autoprint=0`
       window.open(url, '_blank', 'noopener,noreferrer')
     } catch (e) {
       setPdfError(toApiError(e).message)
@@ -45,7 +49,7 @@ export function PrintActions({
     if (autoTriggeredRef.current) return
     autoTriggeredRef.current = true
     // Fire-and-forget; errors are handled via modal state.
-    void openPdf()
+    void openPdf({ sameTab: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoPdf, dto])
 
@@ -60,7 +64,7 @@ export function PrintActions({
       >
         Quick Print
       </Button>
-      <Button variant="outline" disabled={!canPdf} onClick={openPdf}>
+      <Button variant="outline" disabled={!canPdf} onClick={() => void openPdf()}>
         Open PDF
       </Button>
       <Button variant="outline" onClick={() => navigate(`/reports-studio/editor/${template.id}`)}>
@@ -93,5 +97,3 @@ export function PrintActions({
     </div>
   )
 }
-
-

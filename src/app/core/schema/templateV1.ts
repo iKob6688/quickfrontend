@@ -79,6 +79,8 @@ const docMetaBlockSchema = baseBlockSchema.extend({
         'number',
         'date',
         'dueDate',
+        'quotationNo',
+        'invoiceRefTop',
         'reference',
         'salesperson',
         'creditTerm',

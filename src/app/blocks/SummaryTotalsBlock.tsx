@@ -7,6 +7,7 @@ export function SummaryTotalsBlockView({ block, ctx }: { block: SummaryTotalsBlo
   const currency = t.currency || 'THB'
   const showDiscount = block.props.showDiscount !== false
   const showVat = block.props.showVat !== false && typeof t.vat === 'number'
+  const showWht = typeof t.whtAmount === 'number' && t.whtAmount > 0
 
   // Receipt short: compact one-column total
   if (ctx.dto.docType === 'receipt_short') {
@@ -25,6 +26,7 @@ export function SummaryTotalsBlockView({ block, ctx }: { block: SummaryTotalsBlo
     ...(showDiscount ? [{ label: 'Discount', value: t.discount }] : []),
     { label: 'After discount', value: t.afterDiscount },
     ...(showVat ? [{ label: 'VAT', value: t.vat! }] : []),
+    ...(showWht ? [{ label: 'WHT', value: t.whtAmount! }] : []),
     { label: 'Total', value: t.total },
   ]
 
@@ -69,6 +71,15 @@ export function SummaryTotalsBlockView({ block, ctx }: { block: SummaryTotalsBlo
                 <td className="px-2 py-2 text-end fw-semibold">{formatTHB(t.vat!, currency)}</td>
               </tr>
             ) : null}
+            {showWht ? (
+              <tr className="border-b border-slate-900">
+                <td className="px-2 py-2">
+                  <div className="fw-semibold">หัก ณ ที่จ่าย{t.whtRate ? ` (${t.whtRate}%)` : ''}</div>
+                  <div className="text-[10px] text-slate-600">{t.whtCode || 'WHT'}</div>
+                </td>
+                <td className="px-2 py-2 text-end fw-semibold">{formatTHB(t.whtAmount!, currency)}</td>
+              </tr>
+            ) : null}
             <tr style={{ backgroundColor: totalBg, color: totalText }}>
               <td className="px-2 py-2">
                 <div className="fw-semibold">จำนวนเงินรวมทั้งสิ้น</div>
@@ -100,4 +111,3 @@ export function SummaryTotalsBlockView({ block, ctx }: { block: SummaryTotalsBlo
     </div>
   )
 }
-

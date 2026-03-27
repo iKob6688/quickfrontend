@@ -8,6 +8,17 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { listSalesNotes, type SalesNoteListItem, type NoteType } from '@/api/services/sales-notes.service'
 import { Alert, Spinner } from 'react-bootstrap'
 
+function resolveActionableError(error: unknown): string {
+  const message = error instanceof Error ? error.message : 'เกิดข้อผิดพลาด'
+  if (/404|ไม่พบ route|ไม่พบ endpoint|not found/i.test(message)) {
+    return 'ยังไม่พบ route ใบเพิ่ม/ลดหนี้จาก backend ตรวจสอบว่า upgrade module `adt_th_api` แล้ว และ proxy ชี้มาที่ API ล่าสุด จากนั้นกดรีเฟรชอีกครั้ง'
+  }
+  if (/403|unauthorized|forbidden|scope/i.test(message)) {
+    return 'สิทธิ์ยังไม่พอสำหรับหน้าใบเพิ่ม/ลดหนี้ กรุณาให้ผู้ดูแลเปิด scope/permission ที่เกี่ยวข้อง แล้วลองใหม่'
+  }
+  return message
+}
+
 export function SalesNotesListPage() {
   const navigate = useNavigate()
   const [type, setType] = useState<NoteType | 'all'>('all')
@@ -126,7 +137,16 @@ export function SalesNotesListPage() {
         </div>
       ) : query.error ? (
         <Alert variant="danger" className="small">
-          {query.error instanceof Error ? query.error.message : 'เกิดข้อผิดพลาด'}
+          <div className="fw-semibold mb-1">เข้าเมนูใบเพิ่ม/ลดหนี้ไม่ได้</div>
+          <div>{resolveActionableError(query.error)}</div>
+          <div className="mt-2 d-flex gap-2">
+            <Button size="sm" variant="secondary" onClick={() => navigate('/sales/invoices')}>
+              กลับไปหน้าใบแจ้งหนี้
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => query.refetch()}>
+              ลองโหลดใหม่
+            </Button>
+          </div>
         </Alert>
       ) : (
         <DataTable title="รายการใบเพิ่ม/ลดหนี้" columns={columns} rows={rows} />
@@ -134,4 +154,3 @@ export function SalesNotesListPage() {
     </div>
   )
 }
-

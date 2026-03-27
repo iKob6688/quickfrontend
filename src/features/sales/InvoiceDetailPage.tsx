@@ -1,6 +1,6 @@
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getInvoice, postInvoice, registerPayment, updatePayment, openInvoicePdf, amendInvoice, type RegisterPaymentPayload, type PaymentRecord, type UpdatePaymentPayload } from '@/api/services/invoices.service'
+import { getInvoice, postInvoice, registerPayment, updatePayment, openInvoicePdf, amendInvoice, getInvoicePaymentMeta, type RegisterPaymentPayload, type PaymentRecord, type UpdatePaymentPayload } from '@/api/services/invoices.service'
 import { createSalesCreditNote, createSalesDebitNote } from '@/api/services/sales-notes.service'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
@@ -74,6 +74,13 @@ export function InvoiceDetailPage() {
     queryKey: ['invoice', invoiceId],
     queryFn: () => getInvoice(invoiceId!),
     enabled: !!invoiceId,
+  })
+
+  const paymentMetaQuery = useQuery({
+    queryKey: ['invoicePaymentMeta', invoiceId],
+    queryFn: () => getInvoicePaymentMeta(invoiceId || undefined),
+    enabled: !!invoiceId && (invoice?.status === 'posted' || invoice?.status === 'paid'),
+    staleTime: 60_000,
   })
 
   const invoicePayments = invoice?.payments || []
@@ -164,8 +171,8 @@ export function InvoiceDetailPage() {
       return
     }
     toast.info('เปิด PDF (Reports Studio)', `Template: ${templateId}`)
-    // Open preview and auto-trigger PDF generation there (mobile friendly: opens new tab).
-    const url = `/reports-studio/preview/${templateId}?recordId=${encodeURIComponent(receiptRecordId)}&auto=pdf`
+    // Open the print page directly to avoid the preview -> print double-tab hop.
+    const url = `/reports-studio/print/${templateId}?recordId=${encodeURIComponent(receiptRecordId)}`
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 
@@ -395,6 +402,7 @@ export function InvoiceDetailPage() {
     ...p,
     bankAccount: p.bankAccount ?? (p.default_account_id ? String(p.default_account_id) : null),
   }))
+  const hasAnyWht = payments.some((p) => (p.whtAmount ?? 0) > 0)
   const hasPaymentReceipt = Boolean(invoice.hasPaymentReceipt ?? payments.length > 0)
   const hasFinalReceipt = Boolean(invoice.hasFinalReceipt ?? invoice.hasReceipt ?? (amountDue <= 0 && amountPaid > 0))
   const canOpenReceipt = hasPaymentReceipt || hasFinalReceipt
@@ -437,7 +445,7 @@ export function InvoiceDetailPage() {
       },
       onPdf: () => {
         setPrintMenuOpen(false)
-        const url = `/reports-studio/preview/${rsTplInvoice}?recordId=${encodeURIComponent(String(invoice.id))}&auto=pdf`
+        const url = `/reports-studio/print/${rsTplInvoice}?recordId=${encodeURIComponent(String(invoice.id))}`
         window.open(url, '_blank', 'noopener,noreferrer')
       },
       onEdit: () => {
@@ -506,7 +514,7 @@ export function InvoiceDetailPage() {
             <Button size="sm" variant="secondary" onClick={() => navigate('/sales/invoices')}>
               กลับ
             </Button>
-            <Button size="sm" variant="secondary" onClick={() => navigate('/sales/notes')}>
+            <Button size="sm" variant="secondary" onClick={() => navigate('/notes?domain=sales')}>
               ใบเพิ่ม/ลดหนี้
             </Button>
             <Button
@@ -824,6 +832,7 @@ export function InvoiceDetailPage() {
                             {payments.some((p) => p.journal) && <th>ช่องทางชำระ</th>}
                             <th>วิธีชำระ</th>
                             <th className="text-end">ยอดที่รับ</th>
+                            {hasAnyWht && <th className="text-end">หัก ณ ที่จ่าย</th>}
                             {payments.some((p) => p.reference) && <th>อ้างอิง</th>}
                             <th className="text-end">จัดการ</th>
                           </tr>
@@ -873,6 +882,15 @@ export function InvoiceDetailPage() {
                                 })}{' '}
                                 {currency}
                               </td>
+                              {hasAnyWht && (
+                                <td className="text-end font-monospace text-danger">
+                                  {((payment.whtAmount ?? 0) || 0).toLocaleString('th-TH', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}{' '}
+                                  {currency}
+                                </td>
+                              )}
                               {payments.some((p) => p.reference) && (
                                 <td className="small text-muted font-monospace">{payment.reference || '—'}</td>
                               )}
@@ -897,6 +915,17 @@ export function InvoiceDetailPage() {
                                 })}{' '}
                                 {currency}
                               </td>
+                              {hasAnyWht ? (
+                                <td className="text-end fw-bold font-monospace text-danger">
+                                  {payments
+                                    .reduce((sum, payment) => sum + Number(payment.whtAmount || 0), 0)
+                                    .toLocaleString('th-TH', {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}{' '}
+                                  {currency}
+                                </td>
+                              ) : null}
                               {payments.some((p) => p.reference) && <td></td>}
                               <td></td>
                             </tr>
@@ -984,6 +1013,10 @@ export function InvoiceDetailPage() {
         currency={invoice.currency}
         defaultAmount={Math.max(0, amountDue)}
         maxAmount={Math.max(0, amountDue)}
+        enableWht
+        whtOptions={paymentMetaQuery.data?.whtOptions ?? [{ code: 'none', label: 'ไม่หัก ณ ที่จ่าย', rate: 0 }]}
+        defaultWhtCode={paymentMetaQuery.data?.defaultWht ?? 'none'}
+        currencyPrecision={paymentMetaQuery.data?.currencyPrecision ?? 2}
         onSubmit={async (payload) => {
           await paymentMutation.mutateAsync(payload as RegisterPaymentPayload)
         }}

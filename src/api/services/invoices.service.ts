@@ -26,10 +26,15 @@ export interface PaymentRecord {
   id: number
   amount: number
   appliedAmount?: number
+  grossAmount?: number
+  netAmount?: number
   date: string
   method?: string
   journal?: string
   reference?: string
+  whtCode?: string
+  whtRate?: number
+  whtAmount?: number
   default_account_id?: number | null // Backend field name
   bankAccount?: string | null // Mapped from default_account_id or account name
   bankAccountNumber?: string
@@ -88,12 +93,30 @@ export interface RegisterPaymentPayload {
   date: string
   method: string
   reference?: string
+  whtCode?: string
+  whtRate?: number
+  whtAmount?: number
+  grossAmount?: number
+  netAmount?: number
 }
 
 export interface UpdatePaymentPayload {
   date: string
   method: string
   reference?: string
+}
+
+export interface WhtOption {
+  code: string
+  label: string
+  rate: number
+  description?: string
+}
+
+export interface InvoicePaymentMeta {
+  whtOptions: WhtOption[]
+  defaultWht?: string | null
+  currencyPrecision: number
 }
 
 // NOTE: backend reality (adt_th_api): invoices are exposed under /api/th/v1/sales/invoices/*
@@ -201,10 +224,15 @@ function normalizeInvoice(raw: unknown): Invoice {
         id: parseNumber(p.id),
         amount: parseNumber(p.amount),
         appliedAmount: parseNumber(p.appliedAmount ?? p.applied_amount) || undefined,
+        grossAmount: parseNumber(p.grossAmount ?? p.gross_amount) || undefined,
+        netAmount: parseNumber(p.netAmount ?? p.net_amount) || undefined,
         date: String(p.date ?? ''),
         method: p.method ? String(p.method) : undefined,
         journal: p.journal ? String(p.journal) : undefined,
         reference: p.reference ? String(p.reference) : undefined,
+        whtCode: p.whtCode ? String(p.whtCode) : p.wht_code ? String(p.wht_code) : undefined,
+        whtRate: parseNumber(p.whtRate ?? p.wht_rate) || undefined,
+        whtAmount: parseNumber(p.whtAmount ?? p.wht_amount) || undefined,
         default_account_id: parseNumber(p.default_account_id) || null,
         bankAccount: p.bankAccount ? String(p.bankAccount) : null,
         bankAccountNumber: p.bankAccountNumber ? String(p.bankAccountNumber) : undefined,
@@ -311,10 +339,72 @@ export async function postInvoice(id: number) {
 }
 
 export async function registerPayment(id: number, payload: RegisterPaymentPayload) {
-  const body = makeRpc({ id, ...payload })
+  const amount = payload.grossAmount ?? payload.amount
+  const body = makeRpc({
+    id,
+    ...payload,
+    amount,
+    grossAmount: payload.grossAmount ?? amount,
+    netAmount: payload.netAmount ?? amount,
+    whtCode: payload.whtCode,
+    whtRate: payload.whtRate,
+    whtAmount: payload.whtAmount,
+    // snake_case compatibility for Odoo controllers
+    gross_amount: payload.grossAmount ?? amount,
+    net_amount: payload.netAmount ?? amount,
+    wht_code: payload.whtCode,
+    wht_rate: payload.whtRate,
+    wht_amount: payload.whtAmount,
+  })
   const response = await apiClient.post(`${basePath}/${id}/register-payment`, body)
   const data = unwrapResponse<unknown>(response)
   return normalizeInvoice(data)
+}
+
+export async function getInvoicePaymentMeta(id?: number): Promise<InvoicePaymentMeta> {
+  const fallback: InvoicePaymentMeta = {
+    whtOptions: [
+      { code: 'none', label: 'ไม่หัก ณ ที่จ่าย', rate: 0 },
+      { code: 'WHT_1', label: 'หัก ณ ที่จ่าย 1%', rate: 1 },
+      { code: 'WHT_3', label: 'หัก ณ ที่จ่าย 3%', rate: 3 },
+      { code: 'WHT_5', label: 'หัก ณ ที่จ่าย 5%', rate: 5 },
+    ],
+    defaultWht: 'none',
+    currencyPrecision: 2,
+  }
+
+  try {
+    const response = await apiClient.post(`${basePath}/payment-meta`, makeRpc({ ...(id ? { id } : {}) }))
+    const raw = unwrapResponse<unknown>(response) as RawRecord
+    const rawOptions = Array.isArray(raw.whtOptions)
+      ? raw.whtOptions
+      : Array.isArray(raw.wht_options)
+        ? raw.wht_options
+        : []
+    const whtOptions: WhtOption[] = rawOptions
+      .map((optionRaw) => {
+        const option = (optionRaw || {}) as RawRecord
+        const code = String(option.code ?? option.whtCode ?? option.wht_code ?? '').trim()
+        const label = String(option.label ?? option.name ?? code).trim()
+        const rate = parseNumber(option.rate ?? option.whtRate ?? option.wht_rate)
+        if (!code) return null
+        return {
+          code,
+          label: label || code,
+          rate,
+          description: option.description ? String(option.description) : undefined,
+        } as WhtOption
+      })
+      .filter((row): row is WhtOption => Boolean(row))
+
+    return {
+      whtOptions: whtOptions.length > 0 ? whtOptions : fallback.whtOptions,
+      defaultWht: String(raw.defaultWht ?? raw.default_wht ?? fallback.defaultWht),
+      currencyPrecision: Math.max(0, Math.min(4, Math.trunc(parseNumber(raw.currencyPrecision ?? raw.currency_precision) || fallback.currencyPrecision))),
+    }
+  } catch {
+    return fallback
+  }
 }
 
 export async function updatePayment(id: number, paymentId: number, payload: UpdatePaymentPayload) {
