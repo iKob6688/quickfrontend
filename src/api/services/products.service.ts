@@ -17,6 +17,8 @@ export interface ProductSummary {
   price?: number | null
   active?: boolean
   taxes?: Array<{ id: number; name: string; amount?: number; amountType?: string }>
+  saleTaxIds?: number[]
+  purchaseTaxIds?: number[]
 }
 
 export interface ProductDetail extends ProductSummary {
@@ -150,6 +152,8 @@ function mapProductSummary(raw: BackendProductSummary): ProductSummary {
     price: toNumberOrNull(raw.price),
     active: raw.active,
     taxes,
+    saleTaxIds: toIdList(raw.saleTaxIds ?? raw.taxes_id),
+    purchaseTaxIds: toIdList(raw.purchaseTaxIds ?? raw.supplier_taxes_id),
   }
 }
 

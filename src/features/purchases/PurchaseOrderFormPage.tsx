@@ -12,12 +12,12 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Alert, Modal, Spinner, Card as BootstrapCard } from 'react-bootstrap'
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { extractFieldErrors, type FieldErrors } from '@/lib/formErrors'
 import { clearDraft, loadDraft, loadRecentNotes, pushRecentNote, saveDraft } from '@/lib/formDrafts'
 import { toast } from '@/lib/toastStore'
 import { createPartner, listPartners, getPartner, type PartnerUpsertPayload } from '@/api/services/partners.service'
-import { listTaxes, type TaxListItem } from '@/api/services/taxes.service'
+import { getDefaultVatTaxId, listVatTaxes, type TaxAdminListItem } from '@/api/services/taxes.service'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { Combobox, type ComboboxOption } from '@/components/ui/Combobox'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -46,14 +46,14 @@ function roundAmount(value: number) {
 
 function computeLineTotals(
   line: PurchaseOrderLine,
-  taxById: Map<number, TaxListItem>,
+  taxById: Map<number, TaxAdminListItem>,
 ): PurchaseOrderLine {
   const quantity = Number.isFinite(line.quantity) ? Number(line.quantity) : 0
   const unitPrice = Number.isFinite(line.unitPrice) ? Number(line.unitPrice) : 0
   const subtotal = roundAmount(quantity * unitPrice)
   const applicableTaxes = (line.taxIds || [])
     .map((id) => taxById.get(id))
-    .filter((tax): tax is TaxListItem => !!tax)
+    .filter((tax): tax is TaxAdminListItem => !!tax)
   const totalTax = roundAmount(
     applicableTaxes.reduce((sum, tax) => {
       if (tax.type === 'percent') return sum + subtotal * (Number(tax.amount || 0) / 100)
@@ -192,15 +192,41 @@ export function PurchaseOrderFormPage() {
 
   const purchaseTaxesQuery = useQuery({
     queryKey: ['taxes', 'purchase-order', 'purchase'],
-    queryFn: () => listTaxes({ type: 'purchase', active: true, includeVat: false, limit: 200 }),
+    queryFn: () => listVatTaxes({ typeTaxUse: 'purchase', activeOnly: true, limit: 200 }),
     staleTime: 60_000,
   })
 
-  const purchaseTaxes = purchaseTaxesQuery.data ?? []
+  const purchaseTaxes = purchaseTaxesQuery.data?.items ?? []
   const purchaseTaxById = useMemo(
-    () => new Map<number, TaxListItem>(purchaseTaxes.map((tax: TaxListItem) => [tax.id, tax])),
+    () => new Map<number, TaxAdminListItem>(purchaseTaxes.map((tax: TaxAdminListItem) => [tax.id, tax])),
     [purchaseTaxes],
   )
+  const defaultPurchaseTaxId = useMemo(() => getDefaultVatTaxId(purchaseTaxes), [purchaseTaxes])
+  const purchaseVatDefaultsAppliedRef = useRef(false)
+
+  useEffect(() => {
+    if (isEdit || purchaseVatDefaultsAppliedRef.current) return
+    if (purchaseTaxesQuery.isLoading) return
+    if (!defaultPurchaseTaxId) return
+
+    setFormData((prev) => {
+      let changed = false
+      const nextLines = (prev.lines || []).map((line) => {
+        if (Array.isArray(line.taxIds) && line.taxIds.length > 0) return line
+        changed = true
+        return computeLineTotals(
+          {
+            ...line,
+            taxIds: [defaultPurchaseTaxId],
+          },
+          purchaseTaxById,
+        )
+      })
+      if (!changed) return prev
+      purchaseVatDefaultsAppliedRef.current = true
+      return { ...prev, lines: nextLines }
+    })
+  }, [defaultPurchaseTaxId, isEdit, purchaseTaxesQuery.isLoading, purchaseTaxById])
 
   // Hydrate form when editing order is loaded
   useEffect(() => {
@@ -487,7 +513,7 @@ export function PurchaseOrderFormPage() {
           description: '',
           quantity: 1,
           unitPrice: 0,
-          taxIds: [],
+          taxIds: defaultPurchaseTaxId ? [defaultPurchaseTaxId] : [],
           subtotal: 0,
           totalTax: 0,
           total: 0,
@@ -535,11 +561,17 @@ export function PurchaseOrderFormPage() {
               productId: product.id,
               description: (r.description || '').trim() ? r.description : product.name,
               unitPrice: typeof product.listPrice === 'number' ? product.listPrice : r.unitPrice,
+              taxIds:
+                Array.isArray(product.purchaseTaxIds) && product.purchaseTaxIds.length > 0
+                  ? product.purchaseTaxIds
+                  : defaultPurchaseTaxId
+                    ? [defaultPurchaseTaxId]
+                    : r.taxIds,
             })
           }
-        />
-      ),
-    },
+          />
+        ),
+      },
     {
       key: 'description',
       header: 'รายละเอียด',
@@ -605,7 +637,7 @@ export function PurchaseOrderFormPage() {
           }
           title="เลือกภาษีจาก backend"
         >
-          {purchaseTaxes.map((tax: TaxListItem) => (
+          {purchaseTaxes.map((tax: TaxAdminListItem) => (
             <option key={tax.id} value={tax.id}>
               {tax.name} ({Number(tax.amount || 0).toLocaleString('th-TH', { maximumFractionDigits: 2 })}%)
             </option>

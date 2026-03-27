@@ -79,6 +79,34 @@ export interface ListTaxesParams {
 // NOTE: backend reality (adt_th_api): taxes are exposed under /api/th/v1/taxes/*
 const basePath = '/th/v1/taxes'
 
+function mapTaxItem(t: any): TaxListItem {
+  return {
+    id: Number(t.id),
+    name: String(t.name ?? ''),
+    amount: Number(t.amount ?? 0),
+    type: (t.amountType ?? t.amount_type ?? 'percent') as TaxListItem['type'],
+    typeTaxUse: (t.typeTaxUse ?? t.type_tax_use ?? 'sale') as TaxListItem['typeTaxUse'],
+    active: !!t.active,
+    vatCode: t.vatCode ?? t.vat_code ?? undefined,
+    priceInclude: t.priceInclude ?? t.price_include ?? undefined,
+  }
+}
+
+function mapTaxAdminItem(t: any): TaxAdminListItem {
+  const mapped = mapTaxItem(t)
+  return {
+    ...mapped,
+    amountType: (t.amountType ?? t.amount_type ?? 'percent') as TaxAdminListItem['amountType'],
+    invoiceAccountId: t.invoiceAccountId ?? t.invoice_account_id ?? null,
+    refundAccountId: t.refundAccountId ?? t.refund_account_id ?? null,
+  }
+}
+
+export function getDefaultVatTaxId<T extends Pick<TaxListItem, 'id' | 'amount'>>(items: T[]) {
+  const vat7 = items.find((tax) => Math.abs(Number(tax.amount || 0) - 7) < 0.00001)
+  return vat7?.id ?? items[0]?.id ?? null
+}
+
 export async function listTaxes(params?: ListTaxesParams) {
   const body = makeRpc({
     ...(params?.type && { type_tax_use: params.type }),
@@ -88,19 +116,19 @@ export async function listTaxes(params?: ListTaxesParams) {
     ...(params?.limit && { limit: params.limit }),
     ...(params?.offset && { offset: params.offset }),
   })
-  const response = await apiClient.post(`${basePath}/list`, body)
-  const raw = unwrapResponse<any>(response)
-  const items = Array.isArray(raw) ? raw : Array.isArray(raw?.items) ? raw.items : []
-  return items.map((t: any) => ({
-    id: Number(t.id),
-    name: String(t.name ?? ''),
-    amount: Number(t.amount ?? 0),
-    type: (t.amountType ?? t.amount_type ?? 'percent') as TaxListItem['type'],
-    typeTaxUse: (t.typeTaxUse ?? t.type_tax_use ?? 'sale') as TaxListItem['typeTaxUse'],
-    active: !!t.active,
-    vatCode: t.vatCode ?? t.vat_code ?? undefined,
-    priceInclude: t.priceInclude ?? t.price_include ?? undefined,
-  }))
+  const tryPaths = ['/web/adt/th/v1/taxes/list', `${basePath}/list`]
+  let lastErr: unknown = null
+  for (const path of tryPaths) {
+    try {
+      const response = await apiClient.post(path, body)
+      const raw = unwrapResponse<any>(response)
+      const items = Array.isArray(raw) ? raw : Array.isArray(raw?.items) ? raw.items : []
+      return items.map(mapTaxItem)
+    } catch (e) {
+      lastErr = e
+    }
+  }
+  throw (lastErr instanceof Error ? lastErr : new Error('Error loading taxes'))
 }
 
 export async function calculateTax(params: {
@@ -167,19 +195,7 @@ export async function listTaxAdminItems(params?: {
       const raw = unwrapResponse<any>(response)
       const items = Array.isArray(raw?.items) ? raw.items : []
       return {
-        items: items.map((t: any) => ({
-          id: Number(t.id),
-          name: String(t.name ?? ''),
-          amount: Number(t.amount ?? 0),
-          type: (t.amountType ?? t.amount_type ?? 'percent') as TaxListItem['type'],
-          amountType: (t.amountType ?? t.amount_type ?? 'percent') as TaxAdminListItem['amountType'],
-          typeTaxUse: (t.typeTaxUse ?? t.type_tax_use ?? 'sale') as TaxListItem['typeTaxUse'],
-          active: !!t.active,
-          priceInclude: !!(t.priceInclude ?? t.price_include),
-          invoiceAccountId: t.invoiceAccountId ?? t.invoice_account_id ?? null,
-          refundAccountId: t.refundAccountId ?? t.refund_account_id ?? null,
-          vatCode: t.vatCode ?? t.vat_code ?? undefined,
-        })) as TaxAdminListItem[],
+        items: items.map(mapTaxAdminItem) as TaxAdminListItem[],
         total: Number(raw?.total ?? items.length ?? 0),
       }
     } catch (e) {
@@ -187,6 +203,45 @@ export async function listTaxAdminItems(params?: {
     }
   }
   throw (lastErr instanceof Error ? lastErr : new Error('Error listing taxes (admin)'))
+}
+
+export async function listVatTaxes(params: {
+  typeTaxUse: 'sale' | 'purchase'
+  activeOnly?: boolean
+  q?: string
+  limit?: number
+}): Promise<{ items: TaxAdminListItem[]; total: number }> {
+  try {
+    const browserResult = await listTaxes({
+      type: params.typeTaxUse,
+      active: params.activeOnly ?? true,
+      search: params.q,
+      limit: params.limit,
+    })
+    if (browserResult.length > 0) {
+      return {
+        items: browserResult.map((tax: TaxListItem) => ({
+          ...tax,
+          amountType: tax.type,
+          priceInclude: tax.priceInclude ?? false,
+          invoiceAccountId: null,
+          refundAccountId: null,
+        })),
+        total: browserResult.length,
+      }
+    }
+  } catch {
+    // fall through to the admin tax list route
+  }
+
+  const adminResult = await listTaxAdminItems({
+    typeTaxUse: params.typeTaxUse,
+    activeOnly: params.activeOnly ?? true,
+    q: params.q,
+    vatOnly: false,
+    limit: params.limit,
+  })
+  return adminResult
 }
 
 export async function createTaxAdminItem(payload: {
@@ -252,4 +307,8 @@ export async function updateTaxAdminItem(
     }
   }
   throw (lastErr instanceof Error ? lastErr : new Error('Error updating tax'))
+}
+
+export async function archiveTaxAdminItem(id: number) {
+  return updateTaxAdminItem(id, { active: false })
 }

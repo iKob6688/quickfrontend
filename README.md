@@ -65,6 +65,16 @@ If you see `ECONNREFUSED` when starting the dev server, it means the backend Odo
 - `VITE_API_KEY`: API key from Odoo (ADT API → API Clients)
 - `VITE_ODOO_DB`: Database name (optional, can be set at runtime)
 
+## VAT and Taxes Management
+
+ERPTH now uses the backend tax list as the source of truth for VAT and tax selection/editing.
+
+- Open `Accounting > VAT and Taxes` to manage sales and purchase taxes from the backend-backed admin screen.
+- The product form, sales order form, and purchase order form load VAT items from the backend.
+- If a `7%` VAT exists for the selected tax type, ERPTH selects it by default.
+- If no `7%` tax exists, the UI falls back to the first available VAT record and shows a hint.
+- “Archive” in the VAT admin screen is a soft remove (`active = false`), so tax references stay intact.
+
 ## Document Review Workspace (Phases 3-4)
 
 ERPTH now includes a React-first accountant review workspace for LINE and future document-intake channels.

@@ -14,7 +14,7 @@ import { extractFieldErrors, type FieldErrors } from '@/lib/formErrors'
 import { clearDraft, loadDraft, loadRecentNotes, pushRecentNote, saveDraft } from '@/lib/formDrafts'
 import { toast } from '@/lib/toastStore'
 import { createPartner, listPartners, getPartner, type PartnerUpsertPayload } from '@/api/services/partners.service'
-import { listTaxAdminItems, type TaxAdminListItem } from '@/api/services/taxes.service'
+import { getDefaultVatTaxId, listVatTaxes, type TaxAdminListItem } from '@/api/services/taxes.service'
 import {
   createSalesOrder,
   getSalesOrder,
@@ -40,6 +40,30 @@ import { useAppDateTimeFormatter } from '@/lib/dateFormat'
 
 const SALES_ORDER_DRAFT_KEY = 'qf:draft:sales-order-form:create:v1'
 const SALES_ORDER_RECENT_NOTES_KEY = 'qf:recent-notes:sales-order:v1'
+
+function toNumberLike(value: unknown, fallback = 0): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const parsed = Number.parseFloat(value.replace(/,/g, '').trim())
+    return Number.isFinite(parsed) ? parsed : fallback
+  }
+  return fallback
+}
+
+function normalizeSalesLine(line: SalesOrderLine): SalesOrderLine {
+  return {
+    ...line,
+    quantity: toNumberLike(line.quantity),
+    unitPrice: toNumberLike(line.unitPrice),
+    discount: toNumberLike(line.discount),
+    subtotal: toNumberLike(line.subtotal),
+    totalTax: toNumberLike(line.totalTax),
+    total: toNumberLike(line.total),
+    taxIds: Array.isArray(line.taxIds)
+      ? line.taxIds.map((id) => Number(id)).filter((id) => Number.isFinite(id) && id > 0)
+      : [],
+  }
+}
 
 export function SalesOrderFormPage() {
   const { id } = useParams<{ id: string }>()
@@ -83,7 +107,7 @@ export function SalesOrderFormPage() {
         validityDate: existingOrder.validityDate ? existingOrder.validityDate.split('T')[0] : undefined,
         currency: existingOrder.currency || 'THB',
         orderType: existingOrder.orderType || 'quotation',
-        lines: existingOrder.lines || [],
+        lines: (existingOrder.lines || []).map((line) => normalizeSalesLine(line)),
         notes: existingOrder.notes || '',
       })
     }, 0)
@@ -159,15 +183,14 @@ export function SalesOrderFormPage() {
 
   const salesTaxesQuery = useQuery({
     queryKey: ['tax-admin', 'sales-order-form', 'sale'],
-    queryFn: () => listTaxAdminItems({ typeTaxUse: 'sale', activeOnly: true, vatOnly: true, limit: 500 }),
+    queryFn: () => listVatTaxes({ typeTaxUse: 'sale', activeOnly: true, limit: 500 }),
     staleTime: 60_000,
   })
 
   const saleTaxOptions = useMemo(() => salesTaxesQuery.data?.items ?? [], [salesTaxesQuery.data])
   const saleTaxMap = useMemo(() => new Map<number, TaxAdminListItem>(saleTaxOptions.map((tax) => [tax.id, tax])), [saleTaxOptions])
   const defaultSaleTaxId = useMemo(() => {
-    const vat7 = saleTaxOptions.find((tax) => Math.abs(Number(tax.amount || 0) - 7) < 0.00001)
-    return vat7?.id ?? saleTaxOptions[0]?.id ?? null
+    return getDefaultVatTaxId(saleTaxOptions)
   }, [saleTaxOptions])
 
   useEffect(() => {
@@ -334,6 +357,7 @@ export function SalesOrderFormPage() {
     }))
   }
 
+  const totalTaxAmount = formData.lines.reduce((sum, line) => sum + (line.totalTax || 0), 0)
   const totalAmount = formData.lines.reduce((sum, line) => sum + (line.total || 0), 0)
   const isQuickPartnerThai = (quickPartner.countryId ?? thailandId) === thailandId
 
@@ -706,34 +730,8 @@ export function SalesOrderFormPage() {
                         </div>
                       </div>
 
-                      <div className="qf-so-line__meta">
-                        <div className="qf-so-line__field qf-so-line__field--qty">
-                          <Label htmlFor={`so-qty-${idx}`}>จำนวน</Label>
-                          <Input
-                            id={`so-qty-${idx}`}
-                            type="number"
-                            className="text-end"
-                            value={line.quantity}
-                            onChange={(e) => updateLine(idx, { quantity: parseFloat(e.target.value) || 0 })}
-                            min="0"
-                            step="0.01"
-                          />
-                        </div>
-
-                        <div className="qf-so-line__field qf-so-line__field--price">
-                          <Label htmlFor={`so-price-${idx}`}>ราคาต่อหน่วย</Label>
-                          <Input
-                            id={`so-price-${idx}`}
-                            type="number"
-                            className="text-end"
-                            value={line.unitPrice}
-                            onChange={(e) => updateLine(idx, { unitPrice: parseFloat(e.target.value) || 0 })}
-                            min="0"
-                            step="0.01"
-                          />
-                        </div>
-
-                        <div className="qf-so-line__field qf-so-line__field--discount">
+                      <div className="qf-so-line__tax-row">
+                        <div className="qf-so-line__field qf-so-line__field--tax">
                           <Label htmlFor={`so-tax-${idx}`}>VAT/ภาษี</Label>
                           <select
                             id={`so-tax-${idx}`}
@@ -751,6 +749,42 @@ export function SalesOrderFormPage() {
                               </option>
                             ))}
                           </select>
+                          {salesTaxesQuery.isLoading ? (
+                            <div className="small text-muted mt-1">กำลังโหลดรายการ VAT...</div>
+                          ) : null}
+                          {!salesTaxesQuery.isLoading && saleTaxOptions.length === 0 ? (
+                            <div className="small text-danger mt-1">ไม่พบรายการ VAT จากระบบ กรุณาตรวจสอบการตั้งค่า taxes</div>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div className="qf-so-line__meta">
+                        <div className="qf-so-line__field qf-so-line__field--qty">
+                          <Label htmlFor={`so-qty-${idx}`}>จำนวน</Label>
+                          <Input
+                            id={`so-qty-${idx}`}
+                            type="number"
+                            className="text-end"
+                            value={toNumberLike(line.quantity)}
+                            onChange={(e) => updateLine(idx, { quantity: toNumberLike(e.target.value) })}
+                            onBlur={(e) => updateLine(idx, { quantity: toNumberLike(e.target.value) })}
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+
+                        <div className="qf-so-line__field qf-so-line__field--price">
+                          <Label htmlFor={`so-price-${idx}`}>ราคาต่อหน่วย</Label>
+                          <Input
+                            id={`so-price-${idx}`}
+                            type="number"
+                            className="text-end"
+                            value={toNumberLike(line.unitPrice)}
+                            onChange={(e) => updateLine(idx, { unitPrice: toNumberLike(e.target.value) })}
+                            onBlur={(e) => updateLine(idx, { unitPrice: toNumberLike(e.target.value) })}
+                            min="0"
+                            step="0.01"
+                          />
                         </div>
 
                         <div className="qf-so-line__field qf-so-line__field--discount">
@@ -759,12 +793,20 @@ export function SalesOrderFormPage() {
                             id={`so-discount-${idx}`}
                             type="number"
                             className="text-end"
-                            value={line.discount || 0}
-                            onChange={(e) => updateLine(idx, { discount: parseFloat(e.target.value) || 0 })}
+                            value={toNumberLike(line.discount)}
+                            onChange={(e) => updateLine(idx, { discount: toNumberLike(e.target.value) })}
+                            onBlur={(e) => updateLine(idx, { discount: toNumberLike(e.target.value) })}
                             min="0"
                             max="100"
                             step="0.01"
                           />
+                        </div>
+
+                        <div className="qf-so-line__field qf-so-line__field--line-total">
+                          <Label htmlFor={`so-vat-amount-${idx}`}>จำนวน VAT</Label>
+                          <div id={`so-vat-amount-${idx}`} className="qf-so-line__total-box">
+                            {line.totalTax.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
                         </div>
 
                         <div className="qf-so-line__field qf-so-line__field--line-total">
@@ -793,6 +835,12 @@ export function SalesOrderFormPage() {
               <span className="text-muted">ยอดรวม</span>
               <span className="h5 fw-bold mb-0 font-monospace">
                 {totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <span className="text-muted">VAT รวม</span>
+              <span className="fw-semibold font-monospace">
+                {totalTaxAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
 

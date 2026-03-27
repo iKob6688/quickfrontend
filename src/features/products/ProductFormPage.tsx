@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Form } from 'react-bootstrap'
@@ -15,7 +15,7 @@ import {
   updateProduct,
   type ProductUpsertPayload,
 } from '@/api/services/products.service'
-import { listTaxAdminItems } from '@/api/services/taxes.service'
+import { getDefaultVatTaxId, listVatTaxes } from '@/api/services/taxes.service'
 
 const DEFAULT_FORM: ProductUpsertPayload = {
   name: '',
@@ -83,17 +83,45 @@ export function ProductFormPage() {
   })
   const canManageAdminFields = !!productAdminMetaQuery.data?.permissions?.canManageAdminFields
   const salesTaxesQuery = useQuery({
-    queryKey: ['tax-admin', 'product-form', 'sale'],
-    queryFn: () => listTaxAdminItems({ typeTaxUse: 'sale', activeOnly: true, vatOnly: true, limit: 500 }),
-    enabled: canManageAdminFields,
+    queryKey: ['taxes', 'product-form', 'sale'],
+    queryFn: () => listVatTaxes({ typeTaxUse: 'sale', activeOnly: true, limit: 500 }),
     staleTime: 60_000,
   })
   const purchaseTaxesQuery = useQuery({
-    queryKey: ['tax-admin', 'product-form', 'purchase'],
-    queryFn: () => listTaxAdminItems({ typeTaxUse: 'purchase', activeOnly: true, vatOnly: true, limit: 500 }),
-    enabled: canManageAdminFields,
+    queryKey: ['taxes', 'product-form', 'purchase'],
+    queryFn: () => listVatTaxes({ typeTaxUse: 'purchase', activeOnly: true, limit: 500 }),
     staleTime: 60_000,
   })
+  const saleVatDefaultAppliedRef = useRef(false)
+  const purchaseVatDefaultAppliedRef = useRef(false)
+  const saleVatTouchedRef = useRef(false)
+  const purchaseVatTouchedRef = useRef(false)
+  const saleTaxOptions = salesTaxesQuery.data?.items ?? []
+  const purchaseTaxOptions = purchaseTaxesQuery.data?.items ?? []
+  const defaultSaleTaxId = useMemo(() => getDefaultVatTaxId(saleTaxOptions), [saleTaxOptions])
+  const defaultPurchaseTaxId = useMemo(() => getDefaultVatTaxId(purchaseTaxOptions), [purchaseTaxOptions])
+
+  useEffect(() => {
+    if (isEdit || saleVatDefaultAppliedRef.current || saleVatTouchedRef.current) return
+    if (salesTaxesQuery.isLoading) return
+    if (!defaultSaleTaxId) return
+    setDraft((prev) => {
+      if (Array.isArray(prev.saleTaxIds) && prev.saleTaxIds.length > 0) return prev
+      saleVatDefaultAppliedRef.current = true
+      return { ...prev, saleTaxIds: [defaultSaleTaxId] }
+    })
+  }, [defaultSaleTaxId, isEdit, salesTaxesQuery.isLoading])
+
+  useEffect(() => {
+    if (isEdit || purchaseVatDefaultAppliedRef.current || purchaseVatTouchedRef.current) return
+    if (purchaseTaxesQuery.isLoading) return
+    if (!defaultPurchaseTaxId) return
+    setDraft((prev) => {
+      if (Array.isArray(prev.purchaseTaxIds) && prev.purchaseTaxIds.length > 0) return prev
+      purchaseVatDefaultAppliedRef.current = true
+      return { ...prev, purchaseTaxIds: [defaultPurchaseTaxId] }
+    })
+  }, [defaultPurchaseTaxId, isEdit, purchaseTaxesQuery.isLoading])
 
   const saveMutation = useMutation({
     mutationFn: async (payload: ProductUpsertPayload) => {
@@ -235,6 +263,60 @@ export function ProductFormPage() {
                     onChange={(e) => setDraft((p) => ({ ...p, description: e.target.value }))}
                   />
                 </div>
+                <div className="col-md-6">
+                  <Label htmlFor="saleTaxId">ภาษีขาย (VAT)</Label>
+                  <select
+                    id="saleTaxId"
+                    className="form-select"
+                    value={formData.saleTaxIds?.[0] ?? ''}
+                    onChange={(e) => {
+                      saleVatTouchedRef.current = true
+                      const id = e.target.value ? Number(e.target.value) : null
+                      setDraft((p) => ({ ...p, saleTaxIds: id ? [id] : [] }))
+                    }}
+                  >
+                    <option value="">— ไม่กำหนด —</option>
+                    {saleTaxOptions.map((t) => (
+                      <option key={`sale-tax-${t.id}`} value={t.id}>
+                        {t.name} ({t.amount}%)
+                      </option>
+                    ))}
+                  </select>
+                  <div className="small text-muted mt-1">
+                    {defaultSaleTaxId
+                      ? `ค่าเริ่มต้น: ${saleTaxOptions.find((t) => t.id === defaultSaleTaxId)?.name ?? 'VAT 7%'}`
+                      : saleTaxOptions.length > 0
+                        ? 'ไม่พบ VAT 7% ในรายการนี้ ระบบจะให้เลือกจากรายการที่มีอยู่'
+                        : 'ไม่พบรายการ VAT ฝั่งขายในระบบ'}
+                  </div>
+                </div>
+                <div className="col-md-6">
+                  <Label htmlFor="purchaseTaxId">ภาษีซื้อ (VAT)</Label>
+                  <select
+                    id="purchaseTaxId"
+                    className="form-select"
+                    value={formData.purchaseTaxIds?.[0] ?? ''}
+                    onChange={(e) => {
+                      purchaseVatTouchedRef.current = true
+                      const id = e.target.value ? Number(e.target.value) : null
+                      setDraft((p) => ({ ...p, purchaseTaxIds: id ? [id] : [] }))
+                    }}
+                  >
+                    <option value="">— ไม่กำหนด —</option>
+                    {purchaseTaxOptions.map((t) => (
+                      <option key={`purchase-tax-${t.id}`} value={t.id}>
+                        {t.name} ({t.amount}%)
+                      </option>
+                    ))}
+                  </select>
+                  <div className="small text-muted mt-1">
+                    {defaultPurchaseTaxId
+                      ? `ค่าเริ่มต้น: ${purchaseTaxOptions.find((t) => t.id === defaultPurchaseTaxId)?.name ?? 'VAT 7%'}`
+                      : purchaseTaxOptions.length > 0
+                        ? 'ไม่พบ VAT 7% ในรายการนี้ ระบบจะให้เลือกจากรายการที่มีอยู่'
+                        : 'ไม่พบรายการ VAT ฝั่งซื้อในระบบ'}
+                  </div>
+                </div>
                 {canManageAdminFields ? (
                   <>
                     <div className="col-md-4">
@@ -261,44 +343,6 @@ export function ProductFormPage() {
                         <option value="">— เลือก Category —</option>
                         {(productAdminMetaQuery.data?.categories || []).map((c) => (
                           <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="col-md-6">
-                      <Label htmlFor="saleTaxId">ภาษีขาย (VAT)</Label>
-                      <select
-                        id="saleTaxId"
-                        className="form-select"
-                        value={formData.saleTaxIds?.[0] ?? ''}
-                        onChange={(e) => {
-                          const id = e.target.value ? Number(e.target.value) : null
-                          setDraft((p) => ({ ...p, saleTaxIds: id ? [id] : [] }))
-                        }}
-                      >
-                        <option value="">— ไม่กำหนด —</option>
-                        {(salesTaxesQuery.data?.items || []).map((t) => (
-                          <option key={`sale-tax-${t.id}`} value={t.id}>
-                            {t.name} ({t.amount}%)
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="col-md-6">
-                      <Label htmlFor="purchaseTaxId">ภาษีซื้อ (VAT)</Label>
-                      <select
-                        id="purchaseTaxId"
-                        className="form-select"
-                        value={formData.purchaseTaxIds?.[0] ?? ''}
-                        onChange={(e) => {
-                          const id = e.target.value ? Number(e.target.value) : null
-                          setDraft((p) => ({ ...p, purchaseTaxIds: id ? [id] : [] }))
-                        }}
-                      >
-                        <option value="">— ไม่กำหนด —</option>
-                        {(purchaseTaxesQuery.data?.items || []).map((t) => (
-                          <option key={`purchase-tax-${t.id}`} value={t.id}>
-                            {t.name} ({t.amount}%)
-                          </option>
                         ))}
                       </select>
                     </div>
