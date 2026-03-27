@@ -1,6 +1,8 @@
 import type { Branding } from '@/app/core/types/branding'
 import type { AnyDocumentDTO } from '@/app/core/types/dto'
 import type { TemplateTheme } from '@/app/core/types/template'
+import { useSettingsStore } from '@/app/core/storage/settingsStore'
+import { formatAppDate } from '@/lib/dateFormat'
 
 export type BlockViewContext = {
   branding: Branding
@@ -21,4 +23,15 @@ export function formatTHB(n: number, currency: string = 'THB') {
   }
 }
 
+export function formatReportDate(value?: string | Date | null, fallback = '—') {
+  const settings = useSettingsStore.getState().settings
+  return formatAppDate(
+    value,
+    {
+      dateDisplayFormat: 'DD-MM-YYYY',
+      dateCalendar: settings.dateCalendar,
+    },
+    fallback,
+  )
+}
 

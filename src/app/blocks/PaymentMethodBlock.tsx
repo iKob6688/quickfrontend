@@ -1,5 +1,6 @@
 import type { PaymentMethodBlock } from '@/app/core/types/template'
 import type { BlockViewContext } from './shared'
+import { formatReportDate } from './shared'
 
 function CheckboxLine({ checked, label }: { checked: boolean; label: string }) {
   return (
@@ -51,12 +52,11 @@ export function PaymentMethodBlockView({ block, ctx }: { block: PaymentMethodBlo
         {block.props.showDate ? (
           <div className="flex justify-between gap-2">
             <div className="text-slate-600">Date</div>
-            <div className="font-medium text-slate-900">{payment?.date || ctx.dto.document.date || '-'}</div>
+            <div className="font-medium text-slate-900">{formatReportDate(payment?.date || ctx.dto.document.date || null)}</div>
           </div>
         ) : null}
       </div>
     </div>
   )
 }
-
 

@@ -34,6 +34,7 @@ function sampleItems(count: number): ItemLineDTO[] {
     const amount = thb(qty * unitPrice - discount)
     return {
       no: i + 1,
+      productName: `Service ${i + 1}`,
       description: `Service / Product line item ${i + 1} — รายการ ${i + 1}`,
       qty,
       unit: 'EA',
@@ -193,6 +194,8 @@ export class MockOdooProvider implements OdooProvider {
           document: {
             number: 'RC-2025-0100',
             date: '2025-12-20',
+            quotationNo: 'QT-2025-0008',
+            invoiceRefTop: 'INV-2025-0550',
             reference: 'INV-2025-0550',
           },
           items,
@@ -212,7 +215,7 @@ export class MockOdooProvider implements OdooProvider {
           docType,
           company: sampleCompany(),
           partner: { name: 'Walk-in Customer', tel: '08x-xxx-xxxx' },
-          document: { number: 'RC-2025-0101', date: '2025-12-20' },
+          document: { number: 'RC-2025-0101', date: '2025-12-20', invoiceRefTop: 'INV-2025-0551' },
           items,
           totals: { ...totals, vat: undefined },
           payment: { method: 'cash', date: '2025-12-20' },

@@ -1,10 +1,13 @@
 import type { DocMetaBlock } from '@/app/core/types/template'
 import type { BlockViewContext } from './shared'
+import { formatReportDate } from './shared'
 
 const labelMap: Record<string, string> = {
   number: 'Document No.',
   date: 'Date',
   dueDate: 'Due Date',
+  quotationNo: 'Quotation No.',
+  invoiceRefTop: 'Invoice Ref.',
   reference: 'Reference',
   salesperson: 'Salesperson',
   creditTerm: 'Credit Term',
@@ -17,8 +20,10 @@ export function DocMetaBlockView({ block, ctx }: { block: DocMetaBlock; ctx: Blo
 
   // Quotation sample: right-side meta box with grid, plus a Salesman area.
   if (ctx.dto.docType === 'quotation' || ctx.dto.docType === 'invoice') {
-    const issueDate = d.date || '-'
-    const dueDate = d.dueDate || '-'
+    const issueDate = formatReportDate(d.date)
+    const dueDate = formatReportDate(d.dueDate)
+    const quotationNo = d.quotationNo || '-'
+    const invoiceRefTop = d.invoiceRefTop || d.reference || '-'
     const creditTerm = d.creditTerm || '-'
     const contactName = d.contact || '-'
     const projectName = d.project || '-'
@@ -41,6 +46,20 @@ export function DocMetaBlockView({ block, ctx }: { block: DocMetaBlock; ctx: Blo
                 <div className="text-[10px] text-slate-600">{ctx.dto.docType === 'invoice' ? 'Due Date' : 'Validity Date'}</div>
               </div>
               <div className="font-medium">{dueDate}</div>
+            </div>
+            <div className="d-flex justify-content-between mt-2">
+              <div>
+                <div className="font-semibold">เลขที่ใบเสนอราคา</div>
+                <div className="text-[10px] text-slate-600">Quotation No.</div>
+              </div>
+              <div className="font-medium">{quotationNo}</div>
+            </div>
+            <div className="d-flex justify-content-between mt-2">
+              <div>
+                <div className="font-semibold">เลขอ้างอิงใบแจ้งหนี้</div>
+                <div className="text-[10px] text-slate-600">Invoice Ref.</div>
+              </div>
+              <div className="font-medium">{invoiceRefTop}</div>
             </div>
             <div className="d-flex justify-content-between mt-2">
               <div>
@@ -84,20 +103,24 @@ export function DocMetaBlockView({ block, ctx }: { block: DocMetaBlock; ctx: Blo
       f === 'number'
         ? d.number
         : f === 'date'
-          ? d.date
+          ? formatReportDate(d.date)
           : f === 'dueDate'
-            ? d.dueDate
-          : f === 'reference'
-            ? d.reference
-            : f === 'salesperson'
-              ? d.salesperson
-              : f === 'creditTerm'
-                ? d.creditTerm
-                : f === 'contact'
-                  ? d.contact
-                  : f === 'project'
-                    ? d.project
-                    : undefined
+            ? formatReportDate(d.dueDate)
+            : f === 'quotationNo'
+              ? d.quotationNo
+              : f === 'invoiceRefTop'
+                ? d.invoiceRefTop
+                : f === 'reference'
+                  ? d.reference
+                  : f === 'salesperson'
+                    ? d.salesperson
+                    : f === 'creditTerm'
+                      ? d.creditTerm
+                      : f === 'contact'
+                        ? d.contact
+                        : f === 'project'
+                          ? d.project
+                          : undefined
     return { key: f, label: labelMap[f] || f, value }
   })
 

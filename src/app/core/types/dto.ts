@@ -34,6 +34,8 @@ export type DocumentMetaDTO = {
   number: string
   date: string // ISO date
   dueDate?: string
+  quotationNo?: string
+  invoiceRefTop?: string
   reference?: string
   salesperson?: string
   creditTerm?: string
@@ -54,6 +56,7 @@ export type DocumentMetaDTO = {
 
 export type ItemLineDTO = {
   no: number
+  productName?: string
   description: string
   qty: number
   unit?: string
@@ -67,6 +70,9 @@ export type TotalsDTO = {
   discount: Money
   afterDiscount: Money
   vat?: Money
+  whtAmount?: Money
+  whtRate?: Money
+  whtCode?: string
   total: Money
   amountText: string
   currency?: 'THB' | string

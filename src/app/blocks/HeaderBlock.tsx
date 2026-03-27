@@ -1,5 +1,6 @@
 import type { HeaderBlock } from '@/app/core/types/template'
 import type { BlockViewContext } from './shared'
+import { formatReportDate } from './shared'
 
 export function HeaderBlockView({ block, ctx }: { block: HeaderBlock; ctx: BlockViewContext }) {
   const { branding, dto, theme } = ctx
@@ -114,11 +115,10 @@ export function HeaderBlockView({ block, ctx }: { block: HeaderBlock; ctx: Block
           >
             <div className="font-semibold text-slate-900">Receipt No.</div>
             <div className="mt-0.5 font-mono text-slate-900">{dto.document.number}</div>
-            <div className="mt-1 text-slate-600">Date: {dto.document.date}</div>
+            <div className="mt-1 text-slate-600">Date: {formatReportDate(dto.document.date)}</div>
           </div>
         </div>
       ) : null}
     </div>
   )
 }
-
