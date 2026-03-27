@@ -112,6 +112,47 @@ function normalizeAddressLines(value: unknown): string[] {
     .filter((x) => x.length > 0)
 }
 
+function composeLineDescription(productName: string, description: string): string {
+  const p = productName.trim()
+  const d = description.trim()
+  if (!p && !d) return ''
+  if (!p) return d
+  if (!d) return p
+  if (d.toLowerCase().startsWith(p.toLowerCase())) return d
+  return `${p} - ${d}`
+}
+
+function pickProductName(it: any): string {
+  const nestedProduct = it?.product && typeof it.product === 'object' ? it.product : {}
+  return s(
+    it?.productName ??
+      it?.product_name ??
+      it?.productDisplayName ??
+      it?.product_display_name ??
+      it?.displayName ??
+      it?.display_name ??
+      nestedProduct?.name ??
+      nestedProduct?.display_name ??
+      nestedProduct?.displayName ??
+      it?.productCode ??
+      it?.product_code ??
+      it?.product ??
+      '',
+  )
+}
+
+function pickLineDescription(it: any): string {
+  return s(
+    it?.description ??
+      it?.line_description ??
+      it?.lineName ??
+      it?.line_name ??
+      it?.name ??
+      it?.display_name ??
+      '',
+  )
+}
+
 function normalizeErpthDto(raw: any): AnyDocumentDTO {
   const docType = (raw?.docType ?? raw?.doc_type) as DocType
   const companyRaw = raw?.company ?? {}
@@ -148,7 +189,9 @@ function normalizeErpthDto(raw: any): AnyDocumentDTO {
       number: s(documentRaw.number ?? documentRaw.receipt_no),
       date: s(documentRaw.date ?? documentRaw.issue_date),
       dueDate: s(documentRaw.dueDate ?? documentRaw.due_date) || undefined,
-      reference: s(documentRaw.reference) || undefined,
+      quotationNo: s(documentRaw.quotationNo ?? documentRaw.quotation_no) || undefined,
+      invoiceRefTop: s(documentRaw.invoiceRefTop ?? documentRaw.invoice_ref_top) || undefined,
+      reference: s(documentRaw.invoiceRefTop ?? documentRaw.invoice_ref_top ?? documentRaw.reference) || undefined,
       salesperson: s(documentRaw.salesperson) || undefined,
       creditTerm: s(documentRaw.creditTerm ?? documentRaw.credit_term) || undefined,
       contact: s(documentRaw.contact ?? documentRaw.contact_name) || undefined,
@@ -175,21 +218,30 @@ function normalizeErpthDto(raw: any): AnyDocumentDTO {
           : undefined,
     },
     items: Array.isArray(raw?.items)
-      ? raw.items.map((it: any, idx: number) => ({
-          no: n(it?.no) || idx + 1,
-          description: s(it?.description),
-          qty: n(it?.qty),
-          unit: s(it?.unit ?? it?.uom) || undefined,
-          unitPrice: n(it?.unitPrice ?? it?.unit_price),
-          discount: n(it?.discount),
-          amount: n(it?.amount),
-        }))
+      ? raw.items.map((it: any, idx: number) => {
+          const productName = pickProductName(it)
+          const description = pickLineDescription(it)
+          const composedDescription = composeLineDescription(productName, description)
+          return {
+            no: n(it?.no) || idx + 1,
+            productName: productName || undefined,
+            description: composedDescription || description || productName || '',
+            qty: n(it?.qty),
+            unit: s(it?.unit ?? it?.uom) || undefined,
+            unitPrice: n(it?.unitPrice ?? it?.unit_price),
+            discount: n(it?.discount),
+            amount: n(it?.amount),
+          }
+        })
       : [],
     totals: {
       subtotal: n(totalsRaw.subtotal),
       discount: n(totalsRaw.discount ?? totalsRaw.discount_total),
       afterDiscount: n(totalsRaw.afterDiscount ?? totalsRaw.after_discount),
       vat: totalsRaw.vat == null ? undefined : n(totalsRaw.vat),
+      whtAmount: n(totalsRaw.whtAmount ?? totalsRaw.wht_amount ?? raw?.wht?.amount) || undefined,
+      whtRate: n(totalsRaw.whtRate ?? totalsRaw.wht_rate ?? raw?.wht?.rate) || undefined,
+      whtCode: s(totalsRaw.whtCode ?? totalsRaw.wht_code ?? raw?.wht?.code) || undefined,
       total: n(totalsRaw.total),
       amountText: s(totalsRaw.amountText ?? totalsRaw.amount_text),
       currency: s(totalsRaw.currency) || 'THB',
