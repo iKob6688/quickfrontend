@@ -46,6 +46,8 @@ import { GeneralLedgerAccountDrilldownPage } from '@/features/accounting/General
 import { MoveLineDetailPage } from '@/features/accounting/MoveLineDetailPage'
 import { AccountingAdminPage } from '@/features/accounting/AccountingAdminPage'
 import { VatSettingsAdminPage } from '@/features/accounting/VatSettingsAdminPage'
+import { EtaxDashboardPage } from '@/features/etax/EtaxDashboardPage'
+import { EtaxSettingsPage } from '@/features/etax/EtaxSettingsPage'
 import { BackendConnectionPage } from '@/features/backend-connection/BackendConnectionPage'
 import { ExcelImportPage } from '@/features/excel-import/ExcelImportPage'
 import { AgentDashboardPage } from '@/features/agent/AgentDashboardPage'
@@ -139,6 +141,8 @@ function AppRoutes() {
           <Route path="/accounting/reports/vat" element={<VatReportPage />} />
           <Route path="/accounting/reports/wht" element={<WhtReportPage />} />
           <Route path="/accounting/tax-settings" element={<VatSettingsAdminPage />} />
+          <Route path="/accounting/etax" element={<EtaxDashboardPage />} />
+          <Route path="/accounting/etax-settings" element={<EtaxSettingsPage />} />
           <Route path="/accounting/reports/general-ledger/account/:accountId" element={<GeneralLedgerAccountDrilldownPage />} />
           <Route path="/accounting/reports/move-lines/:moveLineId" element={<MoveLineDetailPage />} />
           <Route path="/accounting/admin" element={<AccountingAdminPage />} />

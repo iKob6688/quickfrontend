@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.adt.openclaw.healthcheck</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/ikob/Library/Application Support/OpenClaw/adt_openclaw_healthcheck</string>
+        <string>check</string>
+    </array>
+    <key>StartInterval</key>
+    <integer>300</integer>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/tmp/openclaw-healthcheck.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/openclaw-healthcheck.err.log</string>
+</dict>
+</plist>

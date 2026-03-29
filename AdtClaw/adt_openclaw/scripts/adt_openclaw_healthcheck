@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+die() {
+  echo "ERROR: $*" >&2
+  exit 1
+}
+
+base_url="${OPENCLAW_BASE_URL:-http://127.0.0.1:11434/v1}"
+model="${OPENCLAW_MODEL:-openclaw-local}"
+api_key="${OPENCLAW_API_KEY:-}"
+timeout_sec="${OPENCLAW_HEALTHCHECK_TIMEOUT_SEC:-5}"
+wait_sec="${OPENCLAW_HEALTHCHECK_WAIT_SEC:-60}"
+mode="${1:-check}"
+
+check_once() {
+  local headers=("-H" "Content-Type: application/json")
+  if [[ -n "$api_key" ]]; then
+    headers+=("-H" "Authorization: Bearer ${api_key}")
+  fi
+
+  curl -fsS -m "$timeout_sec" "$base_url/models" >/dev/null
+  curl -fsS -m "$timeout_sec" "${headers[@]}" \
+    -d "{\"model\":\"$model\",\"messages\":[{\"role\":\"system\",\"content\":\"healthcheck\"},{\"role\":\"user\",\"content\":\"ping\"}],\"temperature\":0}" \
+    "$base_url/chat/completions" >/dev/null
+}
+
+if [[ "$mode" == "wait" ]]; then
+  end=$((SECONDS + wait_sec))
+  until check_once; do
+    if (( SECONDS >= end )); then
+      die "OpenClaw provider did not become ready within ${wait_sec}s"
+    fi
+    sleep 2
+  done
+  echo "OpenClaw provider ready"
+  exit 0
+fi
+
+check_once
+echo "OpenClaw provider healthy"

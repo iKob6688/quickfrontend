@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+die() {
+  echo "ERROR: $*" >&2
+  exit 1
+}
+
+bind_addr="${OPENCLAW_BIND_ADDR:-127.0.0.1:11434}"
+
+if [[ -n "${OPENCLAW_PROVIDER_CMD:-}" ]]; then
+  # shellcheck disable=SC2206
+  cmd=(${OPENCLAW_PROVIDER_CMD})
+else
+  if command -v ollama >/dev/null 2>&1; then
+    cmd=(ollama serve)
+  elif command -v openclaw >/dev/null 2>&1; then
+    cmd=(openclaw serve)
+  else
+    die "No provider command found. Set OPENCLAW_PROVIDER_CMD or install ollama/openclaw."
+  fi
+fi
+
+if [[ "${cmd[0]}" == "ollama" ]]; then
+  export OLLAMA_HOST="$bind_addr"
+fi
+export OPENCLAW_BIND_ADDR="$bind_addr"
+
+echo "Starting OpenClaw provider: ${cmd[*]}" >&2
+exec "${cmd[@]}"

@@ -351,6 +351,18 @@ adt_th_api.ai_feature_reports=1
 - Do not call OpenClaw from frontend; use `/api/th/v1/ai/*` only.
 - DB/company scope is enforced in backend session execution; cross-db execution is denied.
 
+### Production service layout
+
+OpenClaw should run as a production service stack:
+
+- Odoo service: hosts `adt_th_api` and `adt_openclaw`
+- Local provider service: binds to `127.0.0.1:11434` and serves the OpenAI-compatible API
+- Healthcheck timer: verifies the provider stays reachable
+
+Service templates and launchers live in:
+
+- [`AdtClaw/adt_openclaw/deploy/systemd/README.md`](/Users/ikob/Documents/iKobDoc/ERPTH/AdtClaw/adt_openclaw/deploy/systemd/README.md)
+
 ## AI Assistant (Safe LLM / DB-only)
 
 The React assistant UI integrates with `adt_th_api` AI endpoints and now supports a **backend-only LLM adapter** with deterministic fallback.

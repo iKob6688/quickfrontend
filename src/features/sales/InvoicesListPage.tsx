@@ -5,12 +5,14 @@ import { Input } from '@/components/ui/Input'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/Badge'
 import { useMemo, useState } from 'react'
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
 import { listInvoices } from '@/api/services/invoices.service'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Spinner } from 'react-bootstrap'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { useAppDateFormatter } from '@/lib/dateFormat'
+import { submitInvoiceEtax } from '@/api/services/etax.service'
+import { toast } from '@/lib/toastStore'
 
 interface InvoicesListPageProps {
   mode?: 'invoices' | 'receipts'
@@ -18,6 +20,7 @@ interface InvoicesListPageProps {
 
 export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const formatDate = useAppDateFormatter()
   const [searchParams, setSearchParams] = useSearchParams()
   type StatusTab = 'all' | 'draft' | 'posted' | 'paid' | 'cancelled' | 'due'
@@ -28,6 +31,7 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
   const qDebounced = useDebouncedValue(q, 300)
   const limit = 30
   const isReceiptMode = mode === 'receipts'
+  const [submittingEtaxId, setSubmittingEtaxId] = useState<number | null>(null)
 
   const query = useInfiniteQuery({
     queryKey: ['invoices', mode, tab, qDebounced, limit],
@@ -111,6 +115,27 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
       hasFinalReceipt: inv.hasFinalReceipt,
     }))
   }, [invoices, isReceiptMode, tab, formatDate])
+
+  const handleSubmitEtax = async (invoiceId: number, invoiceNo?: string) => {
+    setSubmittingEtaxId(invoiceId)
+    try {
+      const res = await submitInvoiceEtax(invoiceId)
+      await queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+      await queryClient.invalidateQueries({ queryKey: ['invoice-etax', invoiceId] })
+      await queryClient.invalidateQueries({ queryKey: ['etax'] })
+      toast.success(
+        'Submit e-Tax สำเร็จ',
+        `${invoiceNo || `#${invoiceId}`} → ${res.document?.name || 'ETax document'}`,
+      )
+    } catch (err) {
+      toast.error(
+        'Submit e-Tax ไม่สำเร็จ',
+        err instanceof Error ? err.message : undefined,
+      )
+    } finally {
+      setSubmittingEtaxId((current) => (current === invoiceId ? null : current))
+    }
+  }
 
   const columns: Column<(typeof rows)[number]>[] = [
     {
@@ -245,15 +270,38 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
         }
         if (hasPaymentReceipt || hasFinalReceipt) {
           return (
-            <Button size="sm" variant="ghost" onClick={() => navigate(`/sales/invoices/${r.id}?action=receipt`)}>
-              {hasFinalReceipt ? 'ดูใบเสร็จรับเงิน' : 'ดูใบเสร็จรับเงิน'}
-            </Button>
+            <div className="d-flex justify-content-end gap-2 flex-wrap">
+              <Button size="sm" variant="ghost" onClick={() => navigate(`/sales/invoices/${r.id}?action=receipt`)}>
+                ดูใบเสร็จรับเงิน
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => void handleSubmitEtax(r.id, r.number)}
+                isLoading={submittingEtaxId === r.id}
+                disabled={submittingEtaxId === r.id}
+              >
+                Submit e-Tax
+              </Button>
+            </div>
           )
         }
         return (
-          <Button size="sm" onClick={() => navigate(`/sales/invoices/${r.id}?action=payment`)}>
-            {isReceiptMode ? (isPaid ? 'เปิดเอกสาร' : 'รับชำระเงิน') : 'ชำระเงิน'}
-          </Button>
+          <div className="d-flex justify-content-end gap-2 flex-wrap">
+            <Button size="sm" onClick={() => navigate(`/sales/invoices/${r.id}?action=payment`)}>
+              {isReceiptMode ? (isPaid ? 'เปิดเอกสาร' : 'รับชำระเงิน') : 'ชำระเงิน'}
+            </Button>
+            {(r.status === 'posted' || r.status === 'paid') && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => void handleSubmitEtax(r.id, r.number)}
+                isLoading={submittingEtaxId === r.id}
+                disabled={submittingEtaxId === r.id}
+              >
+                Submit e-Tax
+              </Button>
+            )}
+          </div>
         )
       },
     },

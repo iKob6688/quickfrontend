@@ -12,6 +12,7 @@ import { listPurchaseOrders } from '@/api/services/purchases.service'
 import { listPurchaseRequests } from '@/api/services/purchase-requests.service'
 import { listProducts } from '@/api/services/products.service'
 import { getProfitLoss } from '@/api/services/accounting-reports.service'
+import { getEtaxSummary } from '@/api/services/etax.service'
 import { getAssistantTasks } from '@/api/services/ai-assistant.service'
 import { approvalAction, listApprovalTasks } from '@/api/services/approval.service'
 import { hasScope } from '@/lib/scopes'
@@ -83,6 +84,7 @@ type DashboardCardKey =
   | 'quotations'
   | 'salesOrders'
   | 'accounting'
+  | 'etax'
   | 'purchaseOrders'
   | 'purchaseRequests'
   | 'approvals'
@@ -99,6 +101,7 @@ const DASHBOARD_CARD_DEFAULTS: Record<DashboardCardKey, boolean> = {
   quotations: true,
   salesOrders: true,
   accounting: true,
+  etax: true,
   purchaseOrders: true,
   purchaseRequests: true,
   approvals: true,
@@ -187,6 +190,13 @@ export function DashboardPage() {
     enabled: canSeeKpis,
     queryFn: () => listProducts({ limit: 1000, active: true }),
     staleTime: 60_000,
+  })
+
+  const etaxQuery = useQuery({
+    queryKey: ['etax', 'summary', 'dashboard'],
+    queryFn: getEtaxSummary,
+    staleTime: 60_000,
+    retry: 1,
   })
 
   const profitLossQuery = useQuery({
@@ -427,6 +437,7 @@ export function DashboardPage() {
                   ['quotations', 'Quotations'],
                   ['salesOrders', 'Sale Orders'],
                   ['accounting', 'รายงานบัญชี'],
+                  ['etax', 'e-Tax'],
                   ['purchaseOrders', 'Purchase Orders'],
                   ['purchaseRequests', 'Purchase Requests'],
                   ['approvals', 'Approval Inbox'],
@@ -681,6 +692,44 @@ export function DashboardPage() {
             <p className="small text-muted mb-0">
               งบการเงิน · เล่มบัญชี · ภาษี (คลิกเพื่อดูรายงาน)
             </p>
+          </Card>
+        </div>}
+        {cardVisibility.etax && <div className="col-md-6 col-xl-3">
+          <Card
+            onClick={() => navigate('/accounting/etax')}
+            role="button"
+            tabIndex={0}
+            className="qf-dashboard-card qf-dashboard-card-etax h-100"
+          >
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <p className="small fw-medium text-muted mb-0">e-Tax</p>
+              <i className="bi bi-receipt-cutoff" style={{ fontSize: '1.5rem', color: '#0f766e' }}></i>
+            </div>
+            <p className="h6 fw-semibold mb-2">
+              {etaxQuery.isLoading
+                ? 'กำลังโหลด...'
+                : etaxQuery.isError
+                  ? '—'
+                  : `${etaxQuery.data?.config?.usage?.queueDepth ?? 0} queued`}
+            </p>
+            <p className="small text-muted mb-2">
+              Success {etaxQuery.data?.config?.usage ? `${etaxQuery.data.config.usage.successRate.toFixed(1)}%` : '—'} · Logs {etaxQuery.data?.config?.usage?.apiLogCount ?? '—'}
+            </p>
+            <div className="d-flex align-items-center justify-content-between">
+              <span className="small text-muted">
+                {etaxQuery.data?.config?.name || 'Backend-managed workflow'}
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  navigate('/accounting/etax-settings')
+                }}
+              >
+                Settings
+              </Button>
+            </div>
           </Card>
         </div>}
         {cardVisibility.purchaseOrders && <div className="col-md-6 col-xl-3">

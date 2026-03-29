@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Spinner } from 'react-bootstrap'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
+import { writeAssistantPageContext } from '@/lib/assistantPageContext'
 import { listProducts } from '@/api/services/products.service'
 
 function productImageSrc(row: { id: number; image128?: string | null; imageUrl?: string | null }) {
@@ -18,9 +19,17 @@ function productImageSrc(row: { id: number; image128?: string | null; imageUrl?:
 
 export function ProductsListPage() {
   const navigate = useNavigate()
-  const [q, setQ] = useState('')
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
+  const [q, setQ] = useState(() => searchParams.get('q') || '')
   const qDebounced = useDebouncedValue(q, 300)
   const limit = 30
+  const [selected, setSelected] = useState<Record<number, true>>({})
+
+  useEffect(() => {
+    const nextQ = searchParams.get('q') || ''
+    if (nextQ !== q) setQ(nextQ)
+  }, [searchParams, q])
 
   const query = useInfiniteQuery({
     queryKey: ['products', qDebounced, limit],
@@ -59,7 +68,76 @@ export function ProductsListPage() {
     [products],
   )
 
+  const selectedRecords = useMemo(
+    () =>
+      rows
+        .filter((row) => Boolean(selected[row.id]))
+        .slice(0, 25)
+        .map((row) => ({
+          id: row.id,
+          name: row.name,
+          model: 'product.product',
+          route: `/products/${row.id}/edit`,
+          ref: row.defaultCode || row.uom || '',
+          code: row.defaultCode || undefined,
+          barcode: undefined,
+        })),
+    [rows, selected],
+  )
+
+  useEffect(() => {
+    writeAssistantPageContext({
+      route: location.pathname,
+      search: location.search,
+      page_kind: 'products',
+      q: q.trim(),
+      selected_records: selectedRecords,
+      selected_count: selectedRecords.length,
+      selection_scope: selectedRecords.length > 0 ? 'manual' : 'none',
+    })
+  }, [location.pathname, location.search, q, selectedRecords])
+
   const columns: Column<(typeof rows)[number]>[] = [
+    {
+      key: 'select',
+      header: (
+        <input
+          className="form-check-input"
+          type="checkbox"
+          aria-label="เลือกสินค้าทั้งหมดในหน้านี้"
+          checked={rows.length > 0 && rows.every((r) => Boolean(selected[r.id]))}
+          onChange={(e) => {
+            const checked = e.target.checked
+            setSelected((prev) => {
+              const next = { ...prev }
+              if (!checked) {
+                for (const r of rows) delete next[r.id]
+              } else {
+                for (const r of rows) next[r.id] = true
+              }
+              return next
+            })
+          }}
+        />
+      ) as unknown as string,
+      cell: (r) => (
+        <input
+          className="form-check-input"
+          type="checkbox"
+          aria-label={`เลือกสินค้า ${r.name}`}
+          checked={Boolean(selected[r.id])}
+          onChange={(e) => {
+            const checked = e.target.checked
+            setSelected((prev) => {
+              const next = { ...prev }
+              if (!checked) delete next[r.id]
+              else next[r.id] = true
+              return next
+            })
+          }}
+        />
+      ),
+    } as unknown as Column<(typeof rows)[number]>,
     {
       key: 'name',
       header: 'สินค้า/บริการ',

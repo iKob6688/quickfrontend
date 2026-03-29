@@ -21,6 +21,12 @@ export interface AssistantCapabilities {
   show_bot: boolean
   mode: AssistantMode
   features: Record<string, boolean>
+  assistant_agent?: {
+    enabled: boolean
+    login?: string
+    display_name?: string
+    source?: string
+  }
   permissions?: Record<string, { read: boolean; create: boolean; write: boolean }>
   tools: AssistantToolCapability[]
   reports: AssistantReportRoute[]

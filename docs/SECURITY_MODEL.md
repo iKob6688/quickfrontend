@@ -16,6 +16,9 @@
   - global enable (`ai.enabled`)
   - key readiness (server-side settings only)
   - per-user feature flags/groups
+- The OpenClaw executor is a separate feature gate:
+  - `assistant_agent.enabled = true|false`
+  - recommended feature key: `openclaw.ai_agent`
 - React renders avatar only when `show_bot=true`.
 
 ## Tool allowlist enforcement

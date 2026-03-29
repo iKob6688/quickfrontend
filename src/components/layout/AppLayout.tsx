@@ -45,6 +45,7 @@ export function AppLayout() {
     { path: '/dashboard', label: 'แดชบอร์ด', icon: 'bi-speedometer2' },
     { path: '/accounting/reports', label: 'รายงานบัญชี', scope: 'accounting_reports', icon: 'bi-graph-up-arrow' },
     { path: '/accounting/tax-settings', label: 'VAT and Taxes', scope: 'accounting_reports', icon: 'bi-percent' },
+    { path: '/accounting/etax', label: 'e-Tax', scope: 'etax', icon: 'bi-receipt-cutoff' },
     { path: '/customers', label: 'รายชื่อติดต่อ', scope: 'contacts', icon: 'bi-people' },
     { path: '/products', label: 'สินค้า', scope: 'products', icon: 'bi-box-seam' },
     { path: '/sales/orders', label: 'ใบเสนอราคา/SO', scope: 'invoice', icon: 'bi-file-earmark-text' },

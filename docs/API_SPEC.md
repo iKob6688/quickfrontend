@@ -18,11 +18,17 @@ Response `data` schema:
   "show_bot": true,
   "mode": "approve_required",
   "features": {
+    "openclaw.ai_agent": true,
     "ai.read_assistant": true,
     "ai.create_contact": true,
     "ai.create_product": true,
     "ai.create_quotation": true,
     "ai.open_report": true
+  },
+  "assistant_agent": {
+    "enabled": true,
+    "login": "iadmin",
+    "display_name": "OpenClaw"
   },
   "tools": [
     {"name": "create_contact", "allowed": true, "requires_approval": false},
@@ -46,6 +52,7 @@ Response `data` schema:
 
 Rules:
 - `show_bot = enabled && keys_ready && user_has_feature(ai.bot_ui)`.
+- `assistant_agent.enabled` controls whether the OpenClaw/iadmin executor is active.
 - No secrets in response.
 
 ## 2) POST /ai/chat

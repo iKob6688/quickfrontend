@@ -7,6 +7,14 @@
   - `POST /api/th/v1/ai/chat`
   - `POST /api/th/v1/ai/execute`
 
+## Dedicated AI agent identity
+- Toggle: `Enable AI Agent`
+- Recommended login: `iadmin`
+- Configure it from **Settings → OpenClaw → AI Agent Identity**
+- Enter the password once in Odoo settings; it is not stored in this repo
+- Grant business-module groups only; keep system/admin groups separate
+- Backend capability should return `assistant_agent.enabled` and `features["openclaw.ai_agent"]` so React can reflect the same toggle.
+
 ## Odoo settings
 Go to Settings and configure:
 - `Enable AI Assistant` = true
@@ -23,6 +31,7 @@ Go to Settings and configure:
   - Create product
   - Create quotation
   - Open report
+  - OpenClaw executor
 
 ## Security and auth
 - React still sends:
@@ -31,6 +40,7 @@ Go to Settings and configure:
   - `X-Instance-ID`
 - Odoo enforces ACL/record rules by user env.
 - Assistant uses allowlisted tools only.
+- System configuration models stay blocked even when the AI agent has broad business access.
 
 ## React integration
 - Service file:
@@ -60,3 +70,4 @@ Go to Settings and configure:
   - Verify bearer token and API key headers.
 - `Tool disabled or not allowed`:
   - Enable corresponding feature flag in Odoo settings.
+  - Make sure `Enable AI Agent` is on.

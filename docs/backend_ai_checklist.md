@@ -356,10 +356,11 @@ can_create_invoice = fields.Boolean(
    ```
 
 4. **Create Agent User in Odoo:**
-   - ไปที่ **ADT API → Agent Users**
-   - สร้าง agent user ใหม่
-   - เปิด permission `Can Create Invoice`
-   - Copy `Agent Token` ไปใช้ใน frontend
+   - ไปที่ **Settings → OpenClaw → AI Agent Identity**
+   - ตั้งค่า login ที่ต้องการ (แนะนำ `iadmin`)
+   - ใส่รหัสผ่านของบัญชีนี้ครั้งแรกในฟอร์มตั้งค่า
+   - ให้สิทธิ์กลุ่ม business modules ที่ต้องใช้ แต่ไม่ต้องเพิ่มกลุ่ม system/admin
+   - ใช้ login เดียวกันนี้ใน React UI เพื่อให้ backend เป็น source of truth
 
 ---
 
@@ -374,4 +375,3 @@ can_create_invoice = fields.Boolean(
 
 **Last Updated:** 2026-01-15  
 **Status:** ⚠️ Invoice creation endpoint ยังไม่ implement
-

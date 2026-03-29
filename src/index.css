@@ -368,6 +368,21 @@ body {
   box-shadow: 0 4px 12px rgba(6, 182, 212, 0.2) !important;
 }
 
+.qf-dashboard-card-etax {
+  border-top-color: #0f766e !important;
+  background:
+    linear-gradient(180deg, rgba(15, 118, 110, 0.06) 0%, rgba(255, 255, 255, 0.96) 55%),
+    linear-gradient(135deg, rgba(14, 165, 233, 0.06) 0%, rgba(16, 185, 129, 0.03) 100%);
+}
+
+.qf-dashboard-card-etax:hover {
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.2) !important;
+}
+
+.qf-etax-page .qf-report-card {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
 /* Accounting Overview KPIs */
 .qf-kpi-card {
   border: 1px solid rgba(15, 23, 42, 0.08);

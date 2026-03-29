@@ -7,6 +7,27 @@
         <field name="arch" type="xml">
             <xpath expr="//form" position="inside">
                 <app string="OpenClaw" name="adt_openclaw_app">
+                    <block title="AI Agent Identity">
+                        <setting string="Enable AI Agent">
+                            <field name="openclaw_ai_agent_enabled"/>
+                        </setting>
+                        <setting string="AI Agent Login">
+                            <field name="openclaw_ai_agent_login"/>
+                        </setting>
+                        <setting string="AI Agent Display Name">
+                            <field name="openclaw_ai_agent_name"/>
+                        </setting>
+                        <setting string="AI Agent Password">
+                            <field name="openclaw_ai_agent_password" password="True"/>
+                        </setting>
+                        <setting string="AI Agent Company Scope">
+                            <field name="openclaw_ai_agent_company_scope"/>
+                        </setting>
+                        <div class="text-muted">
+                            Recommended login: <code>iadmin</code>. Disable this setting to turn off assistant execution without deleting the account.
+                            Grant only business-module groups here; keep system configuration and admin groups separate.
+                        </div>
+                    </block>
                     <block title="Messenger">
                         <setting string="LINE Channel Secret">
                             <field name="openclaw_line_channel_secret" password="True"/>
@@ -47,13 +68,15 @@
                         </setting>
                     </block>
                     <block title="Odoo Scope">
-                        <setting string="Allowed Models for record.*">
+                        <setting string="Business Model Allowlist (optional)">
                             <field name="openclaw_allowed_models"/>
                         </setting>
+                        <div class="text-muted">
+                            Leave this blank to allow all non-system business models. System configuration models are always blocked.
+                        </div>
                     </block>
                 </app>
             </xpath>
         </field>
     </record>
 </odoo>
-

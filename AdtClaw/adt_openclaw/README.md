@@ -4,6 +4,7 @@ Secure messenger bridge for LINE and Web chat with:
 - Odoo scope commands (ORM with ACL/record rules)
 - OS scope admin commands (allowlist-only via helper)
 - One-time auto-login links for report download
+- Dedicated AI agent identity setup in Odoo settings
 
 ## Install
 
@@ -16,6 +17,9 @@ Secure messenger bridge for LINE and Web chat with:
 ## Configuration
 
 Open `Settings -> OpenClaw` and set:
+- Enable AI Agent
+- AI Agent Login / Display Name / Password
+- AI Agent Company Scope
 - LINE channel secret / access token
 - Public Base URL
 - Admin login allowlist
@@ -24,6 +28,28 @@ Open `Settings -> OpenClaw` and set:
   - service names
   - repo keys (`key=/path`)
   - log keys (`key=/path`)
+
+## Production service layout
+
+`adt_openclaw` is an Odoo addon, not a standalone daemon. In production, run:
+
+- the Odoo service that loads `adt_openclaw` and `adt_th_api`
+- a local OpenClaw-compatible provider service on `127.0.0.1:11434`
+
+The addon includes service templates and launcher scripts under:
+
+- `deploy/systemd/`
+- `scripts/`
+
+See `deploy/systemd/README.md` for install steps and the environment file layout.
+
+Recommended AI agent login:
+
+- `iadmin`
+
+The password is not stored in module code. Enter it once in Odoo settings when creating the account.
+Grant the account the business-module groups it needs, but keep system configuration and admin groups separate.
+Use the `Enable AI Agent` switch to turn assistant execution on/off without deleting `iadmin`.
 
 ## Endpoints
 
@@ -69,6 +95,8 @@ No shell passthrough is allowed.
 }
 ```
 
+For the dedicated assistant identity, use the `iadmin` Odoo login and the password you configured in OpenClaw settings.
+
 ### Web inbound
 
 ```json
@@ -99,4 +127,3 @@ No shell passthrough is allowed.
 - Confirm audit rows
 - Confirm admin TTL/expiry denial
 - Confirm token single-use and expiry behavior
-

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -10,7 +10,8 @@ import { useInfiniteQuery, useMutation, useQueryClient, useQuery } from '@tansta
 import { listPartners, setPartnersActive, setPartnersActiveByQuery } from '@/api/services/partners.service'
 import { checkPartnersApiAvailable } from '@/api/services/partners-check.service'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
-import { useNavigate } from 'react-router-dom'
+import { writeAssistantPageContext } from '@/lib/assistantPageContext'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from '@/lib/toastStore'
 
 type StatusTab = 'active' | 'archived' | 'all'
@@ -18,15 +19,29 @@ type CompanyFilter = 'all' | 'company' | 'person'
 
 export function CustomersListPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
   const queryClient = useQueryClient()
-  const [tab, setTab] = useState<StatusTab>('active')
-  const [q, setQ] = useState('')
+  const [tab, setTab] = useState<StatusTab>(() => {
+    const initial = (searchParams.get('tab') || '').toLowerCase()
+    return initial === 'archived' || initial === 'all' ? initial : 'active'
+  })
+  const [q, setQ] = useState(() => searchParams.get('q') || '')
   const debouncedQ = useDebouncedValue(q, 300)
   const limit = 50
   const [companyFilter, setCompanyFilter] = useState<CompanyFilter>('all')
   const [selected, setSelected] = useState<Record<number, true>>({})
   const [allMatchingSelected, setAllMatchingSelected] = useState(false)
   const [excluded, setExcluded] = useState<Record<number, true>>({})
+
+  useEffect(() => {
+    const nextQ = searchParams.get('q') || ''
+    const nextTab = (searchParams.get('tab') || '').toLowerCase()
+    if (nextQ !== q) setQ(nextQ)
+    if (nextTab === 'active' || nextTab === 'archived' || nextTab === 'all') {
+      setTab((prev) => (prev === nextTab ? prev : (nextTab as StatusTab)))
+    }
+  }, [searchParams, q])
 
   // Check if API is available
   const apiCheckQuery = useQuery({
@@ -117,6 +132,45 @@ export function CustomersListPage() {
   const allSelectedCount = allMatchingSelected
     ? Math.max(0, total - excludedIds.length)
     : selectedIds.length
+
+  useEffect(() => {
+    const selectedRecords = rows
+      .filter((row) => (allMatchingSelected ? !excluded[row.id] : Boolean(selected[row.id])))
+      .slice(0, 25)
+      .map((row) => ({
+        id: row.id,
+        name: row.name,
+        model: 'res.partner',
+        route: `/customers/${row.id}`,
+        ref: row.vat || row.email || row.phone || '',
+        vat: row.vat,
+        companyType: row.companyType,
+      }))
+
+    writeAssistantPageContext({
+      route: location.pathname,
+      search: location.search,
+      page_kind: 'customers',
+      q: q.trim(),
+      tab,
+      filter: companyFilter,
+      selected_records: selectedRecords,
+      selected_count: allSelectedCount,
+      all_matching_selected: allMatchingSelected,
+      selection_scope: allMatchingSelected ? 'current_query' : selectedRecords.length > 0 ? 'manual' : 'none',
+    })
+  }, [
+    allMatchingSelected,
+    allSelectedCount,
+    companyFilter,
+    excluded,
+    location.pathname,
+    location.search,
+    q,
+    rows,
+    selected,
+    tab,
+  ])
 
   const resetSelection = () => {
     setSelected({})
@@ -508,4 +562,3 @@ export function CustomersListPage() {
     </div>
   )
 }
-

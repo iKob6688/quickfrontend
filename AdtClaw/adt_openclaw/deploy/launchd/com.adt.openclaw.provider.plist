@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.adt.openclaw.provider</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/env</string>
+        <string>python3</string>
+        <string>/Users/ikob/Library/Application Support/OpenClaw/mock_openclaw_provider.py</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>OPENCLAW_BIND_HOST</key>
+        <string>127.0.0.1</string>
+        <key>OPENCLAW_BIND_PORT</key>
+        <string>11434</string>
+        <key>OPENCLAW_MODEL</key>
+        <string>openclaw-local</string>
+        <key>OPENCLAW_DISPLAY_NAME</key>
+        <string>OpenClaw Local Test Provider</string>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/tmp/openclaw-provider.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/openclaw-provider.err.log</string>
+</dict>
+</plist>

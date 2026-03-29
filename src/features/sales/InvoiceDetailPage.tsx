@@ -2,6 +2,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getInvoice, postInvoice, registerPayment, updatePayment, openInvoicePdf, amendInvoice, getInvoicePaymentMeta, type RegisterPaymentPayload, type PaymentRecord, type UpdatePaymentPayload } from '@/api/services/invoices.service'
 import { createSalesCreditNote, createSalesDebitNote } from '@/api/services/sales-notes.service'
+import { getInvoiceEtax, submitInvoiceEtax, pollEtaxDocument, sendEtaxDocumentEmail, resendEtaxDocumentEmail } from '@/api/services/etax.service'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -81,6 +82,13 @@ export function InvoiceDetailPage() {
     queryFn: () => getInvoicePaymentMeta(invoiceId || undefined),
     enabled: !!invoiceId && (invoice?.status === 'posted' || invoice?.status === 'paid'),
     staleTime: 60_000,
+  })
+
+  const etaxQuery = useQuery({
+    queryKey: ['invoice-etax', invoiceId],
+    queryFn: () => getInvoiceEtax(invoiceId!),
+    enabled: !!invoiceId,
+    staleTime: 10_000,
   })
 
   const invoicePayments = invoice?.payments || []
@@ -209,6 +217,50 @@ export function InvoiceDetailPage() {
       toast.error('แก้ไขข้อมูลการชำระเงินไม่สำเร็จ', err instanceof Error ? err.message : undefined)
     },
   })
+
+  const etaxSubmitMutation = useMutation({
+    mutationFn: async () => {
+      if (!invoiceId) throw new Error('Missing invoice id')
+      return await submitInvoiceEtax(invoiceId)
+    },
+    onSuccess: async (res) => {
+      await queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+      await queryClient.invalidateQueries({ queryKey: ['invoice-etax', invoiceId] })
+      await queryClient.invalidateQueries({ queryKey: ['etax'] })
+      toast.success(
+        'Submit e-Tax สำเร็จ',
+        res.document?.name ? `ETax document: ${res.document.name}` : undefined,
+      )
+    },
+    onError: (err) => {
+      toast.error('Submit e-Tax ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+    },
+  })
+
+  const etaxDocument = etaxQuery.data?.document
+  const etaxEmailState = etaxDocument?.emailState || 'not_applicable'
+  const etaxStatusTone =
+    etaxDocument?.state === 'done'
+      ? 'green'
+      : etaxDocument?.state === 'error'
+        ? 'red'
+        : etaxDocument?.state === 'processing'
+          ? 'amber'
+          : etaxDocument?.state === 'submitted' || etaxDocument?.state === 'queued'
+            ? 'blue'
+            : 'gray'
+  const etaxStatusLabel =
+    etaxDocument?.state === 'done'
+      ? 'Done'
+      : etaxDocument?.state === 'error'
+        ? 'Error'
+        : etaxDocument?.state === 'processing'
+          ? 'Processing'
+          : etaxDocument?.state === 'submitted'
+            ? 'Submitted'
+            : etaxDocument?.state === 'queued'
+              ? 'Queued'
+              : 'Draft'
 
   const amendMutation = useMutation({
     mutationFn: async (reason: string) => {
@@ -676,6 +728,105 @@ export function InvoiceDetailPage() {
                 ▾
               </BootstrapButton>
             </ButtonGroup>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="p-4 mb-4">
+        <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+          <div>
+            <div className="qf-section-title mb-2">e-Tax</div>
+            <div className="d-flex align-items-center gap-2 flex-wrap mb-2">
+              <Badge tone={etaxStatusTone}>{etaxStatusLabel}</Badge>
+              <span className="text-muted small">
+                {etaxQuery.data?.eligible ? 'เอกสารนี้ส่ง e-Tax ได้' : 'เอกสารนี้ยังไม่พร้อมสำหรับ e-Tax'}
+              </span>
+            </div>
+            <div className="small text-muted">
+              {etaxDocument
+                ? `ETax ${etaxDocument.name} · INET ${etaxDocument.inetStatus || '—'} · Email ${etaxEmailState}`
+                : 'ยังไม่มี ETax document สำหรับเอกสารนี้'}
+            </div>
+            {etaxDocument?.addressValidationMessage ? (
+              <div className="small text-warning mt-1">
+                {etaxDocument.addressValidationMessage}
+              </div>
+            ) : null}
+            {etaxDocument?.emailLastError ? (
+              <div className="small text-danger mt-1">
+                {etaxDocument.emailLastError}
+              </div>
+            ) : null}
+          </div>
+          <div className="d-flex align-items-center gap-2 flex-wrap justify-content-lg-end">
+            <Button
+              size="sm"
+              className="text-nowrap"
+              onClick={async () => {
+                await etaxSubmitMutation.mutateAsync()
+              }}
+              isLoading={etaxSubmitMutation.isPending}
+              disabled={invoice.status !== 'posted' || etaxSubmitMutation.isPending || etaxQuery.data?.canSubmit === false}
+            >
+              Submit e-Tax
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="text-nowrap"
+              onClick={() => navigate('/accounting/etax')}
+            >
+              เปิด e-Tax Workspace
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-nowrap"
+              onClick={async () => {
+                if (!etaxDocument) {
+                  toast.error('ยังไม่มี ETax document', 'Submit e-Tax ก่อน')
+                  return
+                }
+                try {
+                  await pollEtaxDocument(etaxDocument.id)
+                  await queryClient.invalidateQueries({ queryKey: ['invoice-etax', invoiceId] })
+                  await queryClient.invalidateQueries({ queryKey: ['etax'] })
+                  toast.success('Poll e-Tax สำเร็จ')
+                } catch (err) {
+                  toast.error('Poll e-Tax ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+                }
+              }}
+              disabled={!etaxDocument}
+            >
+              Poll Status
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-nowrap"
+              onClick={async () => {
+                if (!etaxDocument) {
+                  toast.error('ยังไม่มี ETax document', 'Submit e-Tax ก่อน')
+                  return
+                }
+                try {
+                  const res = etaxDocument.emailState === 'sent'
+                    ? await resendEtaxDocumentEmail(etaxDocument.id)
+                    : await sendEtaxDocumentEmail(etaxDocument.id)
+                  await queryClient.invalidateQueries({ queryKey: ['invoice-etax', invoiceId] })
+                  await queryClient.invalidateQueries({ queryKey: ['etax'] })
+                  toast.success(
+                    res.emailState === 'sent' ? 'ส่ง e-Tax email สำเร็จ' : 'ส่ง e-Tax email แล้ว',
+                    res.emailRecipient || undefined,
+                  )
+                } catch (err) {
+                  toast.error('ส่ง e-Tax email ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+                }
+              }}
+              disabled={!etaxDocument || !etaxDocument.hasPdfAttachment || etaxDocument.state !== 'done' || etaxSubmitMutation.isPending}
+            >
+              {etaxDocument?.emailState === 'sent' ? 'Resend Email' : 'Send Email'}
+            </Button>
           </div>
         </div>
       </Card>

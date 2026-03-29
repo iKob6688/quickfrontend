@@ -1,0 +1,9 @@
+[Unit]
+Description=OpenClaw Provider Healthcheck
+After=adt-openclaw-provider.service
+Requires=adt-openclaw-provider.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/openclaw/openclaw.env
+ExecStart=/usr/local/bin/adt_openclaw_healthcheck wait
