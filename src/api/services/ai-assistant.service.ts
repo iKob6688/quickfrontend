@@ -39,11 +39,26 @@ export interface AssistantCapabilities {
 }
 
 export interface AssistantRuntimeInfo {
-  provider: 'local' | 'openai_compat' | 'openclaw' | string
+  provider: 'local' | 'openai_compat' | 'openclaw' | 'assistant_orchestrator' | string
   enabled: boolean
   model: string
   base_url: string
   ready: boolean
+  ready_reason?: string
+  planner_provider?: string
+  planner_enabled?: boolean
+  planner_ready?: boolean
+  planner_model?: string
+  planner_base_url?: string
+  planner_temperature?: number
+  planner_max_tokens?: number
+  planner_prompt_version?: string
+  planner_confirmation_policy?: string
+  executor_provider?: string
+  executor_enabled?: boolean
+  executor_login?: string
+  executor_display_name?: string
+  executor_user_ready?: boolean
 }
 
 export interface AssistantPlanStep {
@@ -121,6 +136,15 @@ export interface AssistantChatResponse {
   tool_proposals?: AssistantToolProposal[]
   usage?: AssistantTokenUsage | Record<string, unknown>
   permission_explanations?: string[]
+  classification?: {
+    primary_intent?: string
+    context_mode?: 'chat' | 'lookup' | 'analytics' | 'document' | 'workflow' | 'mixed' | string
+    secondary_intents?: string[]
+    confidence?: number
+    needs_clarification?: boolean
+    user_reply?: string
+    reason?: string
+  }
   confirmation_request?: {
     doc_type: 'quotation' | 'invoice' | string
     contact_name: string

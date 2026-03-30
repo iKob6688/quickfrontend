@@ -1,3 +1,4 @@
+import json
 import logging
 import shlex
 from datetime import timedelta
@@ -27,10 +28,19 @@ class OpenClawCommandRouter(models.AbstractModel):
         return normalized
 
     def _ctx_for_session(self, session):
-        company_ids = session.allowed_company_ids.ids or ([session.company_id.id] if session.company_id else [])
+        company_ids = []
+        if hasattr(session, "allowed_company_ids") and session.allowed_company_ids:
+            company_ids = session.allowed_company_ids.ids
+        if not company_ids and getattr(session, "company_id", False):
+            company_ids = [session.company_id.id]
         return {"allowed_company_ids": company_ids}
 
+    def _is_openclaw_session(self, session):
+        return bool(getattr(session, "_name", "") == "openclaw.session")
+
     def _require_bound(self, session):
+        if not self._is_openclaw_session(session):
+            return
         if session.state != "bound" or not session.odoo_uid:
             raise AccessError(_("Session is not bound to a local Odoo user."))
 
@@ -67,6 +77,53 @@ class OpenClawCommandRouter(models.AbstractModel):
         if cmd == "record.confirm":
             return self._record_confirm(session, args)
         return {"text": f"Unknown command: {cmd}. Try `help`."}
+
+    def execute_structured_command(self, session, command, context=None):
+        context = context or {}
+        if not isinstance(command, dict):
+            raise AccessError(_("Structured command must be an object."))
+        if not is_ai_agent_enabled(self.env):
+            raise AccessError(_("AI agent is disabled in OpenClaw settings. Enable it to allow assistant execution."))
+        self._require_bound(session)
+
+        tool_name = str(command.get("tool") or "").strip()
+        if not tool_name:
+            raise AccessError(_("Structured command tool is required."))
+        args = command.get("args") if isinstance(command.get("args"), dict) else {}
+        request_id = str(command.get("request_id") or command.get("trace_id") or "").strip() or False
+        source = str(command.get("source") or "assistant").strip()
+        assistant_session_uid = str(context.get("assistant_session_uid") or "").strip() or False
+
+        self.env["openclaw.audit"].sudo().log_event(
+            "assistant_command",
+            session=session if self._is_openclaw_session(session) else None,
+            request_data={
+                "command": command,
+                "context": context,
+                "source": source,
+                "assistant_session_uid": assistant_session_uid,
+            },
+        )
+        payload = session._dispatch_tool(tool_name, args)
+        self.env["openclaw.audit"].sudo().log_event(
+            "odoo_action",
+            session=session if self._is_openclaw_session(session) else None,
+            request_data={
+                "command": command,
+                "context": context,
+                "source": source,
+                "request_id": request_id,
+                "assistant_session_uid": assistant_session_uid,
+            },
+            response_data=payload,
+            model=payload.get("records", [{}])[0].get("model") if payload.get("records") else None,
+            method=tool_name,
+            res_ids=[ref.get("id") for ref in (payload.get("records") or []) if isinstance(ref, dict) and ref.get("id")],
+        )
+        result = dict(payload or {})
+        result.setdefault("command", command)
+        result.setdefault("request_id", request_id)
+        return result
 
     def _help(self):
         return {

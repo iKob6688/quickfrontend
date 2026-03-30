@@ -1,10 +1,15 @@
 # adt_openclaw (Odoo 18 CE)
 
-Secure messenger bridge for LINE and Web chat with:
-- Odoo scope commands (ORM with ACL/record rules)
-- OS scope admin commands (allowlist-only via helper)
-- One-time auto-login links for report download
-- Dedicated AI agent identity setup in Odoo settings
+OpenClaw is the backend execution gateway for assistant-driven business actions.
+
+It provides:
+
+- structured execution of validated Odoo business commands
+- LINE and Web message bridging
+- Odoo scope commands with ACL / record-rule enforcement
+- OS scope admin commands behind an explicit allowlist-only helper
+- one-time auto-login links for report download
+- dedicated technical agent identity support (`iadmin`)
 
 ## Install
 
@@ -27,7 +32,7 @@ Open `Settings -> OpenClaw` and set:
 - allowlists:
   - service names
   - repo keys (`key=/path`)
-  - log keys (`key=/path`)
+- log keys (`key=/path`)
 
 ## Production service layout
 
@@ -43,6 +48,20 @@ The addon includes service templates and launcher scripts under:
 
 See `deploy/systemd/README.md` for install steps and the environment file layout.
 
+For Linux production servers, the recommended fast path is:
+
+```bash
+sudo ./scripts/install_server_openclaw.sh
+```
+
+That installer sets up:
+
+- the `openclaw` system user/group
+- `/etc/openclaw/openclaw.env`
+- the provider launcher and healthcheck binaries
+- the systemd provider service
+- the periodic healthcheck timer
+
 Recommended AI agent login:
 
 - `iadmin`
@@ -50,6 +69,12 @@ Recommended AI agent login:
 The password is not stored in module code. Enter it once in Odoo settings when creating the account.
 Grant the account the business-module groups it needs, but keep system configuration and admin groups separate.
 Use the `Enable AI Agent` switch to turn assistant execution on/off without deleting `iadmin`.
+
+## Role boundary
+
+- OpenAI handles chat/planning in the React assistant.
+- OpenClaw executes validated structured commands only.
+- Odoo owns the truth, validation, and audit trail.
 
 ## Endpoints
 
@@ -121,7 +146,7 @@ For the dedicated assistant identity, use the `iadmin` Odoo login and the passwo
 
 - Install module
 - Bind session via `/session/bind`
-- Run `record.create` and `report.generate`
+- Run `record.create`, `record.search`, and `report.generate`
 - Open `/go/<token>` and confirm direct download without login page
 - Verify admin session and run `os.status`, `os.logs`
 - Confirm audit rows

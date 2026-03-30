@@ -128,6 +128,7 @@ class OpenClawAudit(models.Model):
     event_type = fields.Selection(
         [
             ("inbound_message", "Inbound Message"),
+            ("assistant_command", "Assistant Command"),
             ("odoo_action", "Odoo Action"),
             ("os_action", "OS Action"),
             ("report_render", "Report Render"),
@@ -266,4 +267,3 @@ class OpenClawShareToken(models.Model):
         now = fields.Datetime.now()
         exp = self.search([("state", "=", "active"), ("expires_at", "<=", now)])
         exp.write({"state": "expired"})
-

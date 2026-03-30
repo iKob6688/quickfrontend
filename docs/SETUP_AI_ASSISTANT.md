@@ -1,73 +1,125 @@
 # SETUP_AI_ASSISTANT
 
-## Backend module (Odoo)
-- Main module: `/Users/ikob/Documents/iKobDoc/Active22/V18/odoo/adtv18/adt_th_api`
-- New endpoints:
-  - `POST /api/th/v1/ai/capabilities`
-  - `POST /api/th/v1/ai/chat`
-  - `POST /api/th/v1/ai/execute`
+## Architecture
 
-## Dedicated AI agent identity
-- Toggle: `Enable AI Agent`
-- Recommended login: `iadmin`
-- Configure it from **Settings → OpenClaw → AI Agent Identity**
-- Enter the password once in Odoo settings; it is not stored in this repo
-- Grant business-module groups only; keep system/admin groups separate
-- Backend capability should return `assistant_agent.enabled` and `features["openclaw.ai_agent"]` so React can reflect the same toggle.
+- **OpenAI** handles the conversational assistant and structured planning.
+- **OpenClaw** handles structured execution only.
+- **Odoo** remains the source of truth and policy authority.
+- **React** is the only chat surface.
 
-## Odoo settings
-Go to Settings and configure:
-- `Enable AI Assistant` = true
-- `AI Assistant Mode`:
-  - `approve_required` (recommended)
-  - `auto_safe`
-  - `plan_only`
-- `AI Provider`:
-  - `local` for deterministic MVP (no external key required)
-  - `service` if using external AI service URL/secret
-- Feature flags:
-  - Read assistant
-  - Create contact
-  - Create product
-  - Create quotation
-  - Open report
-  - OpenClaw executor
+## Main backend module
+
+- `/Users/ikob/Documents/iKobDoc/Active22/V18/odoo/adtv18/adt_th_api`
+
+## Assistant endpoints
+
+- `POST /api/th/v1/ai/capabilities`
+- `POST /api/th/v1/ai/runtime`
+- `POST /api/th/v1/ai/chat`
+- `POST /api/th/v1/ai/execute`
+- `POST /api/th/v1/ai/confirm`
+- `POST /api/th/v1/ai/tasks`
+
+## Dedicated execution identity
+
+- Recommended technical login: `iadmin`
+- Display name: `OpenClaw`
+- Keep the account limited to business-module groups needed for assistant execution
+- Keep system configuration / admin groups separate
+
+OpenClaw execution identity is controlled from Odoo settings and the `adt_openclaw` addon.
+
+## OpenAI configuration in Odoo
+
+Configure these from Odoo backend settings:
+
+- `Enable AI Assistant`
+- `Enable OpenAI Planner`
+- `OpenAI Model`
+- `OpenAI Base URL`
+- `OpenAI API Key`
+- `OpenAI Temperature`
+- `OpenAI Max Tokens`
+- `Prompt Version`
+- `Allowed Intents`
+- `Confirmation Policy`
+- `Audit Logging`
+
+Recommended values for the current `q01` smoke-tested setup:
+
+- OpenAI model: `gpt-4o`
+- Confirmation policy: `strict`
+- Temperature: low, e.g. `0.0` to `0.2`
+
+## OpenClaw configuration in Odoo
+
+Configure these from Odoo backend settings:
+
+- `Enable AI Agent`
+- `AI Agent Login` = `iadmin`
+- `AI Agent Display Name` = `OpenClaw`
+- Allowed business models / scopes
+- Company scope
+
+OpenClaw should be reachable on localhost/private network only. It is used as a backend executor, not as a public chat service.
 
 ## Security and auth
-- React still sends:
-  - `Authorization: Bearer <token>`
-  - `X-ADT-API-Key`
-  - `X-Instance-ID`
-- Odoo enforces ACL/record rules by user env.
-- Assistant uses allowlisted tools only.
-- System configuration models stay blocked even when the AI agent has broad business access.
+
+- React sends bearer/session headers and safe UI context only.
+- React does not store backend secrets.
+- OpenAI does not access the database directly.
+- OpenClaw does not receive free-form conversational control for assistant flows.
+- Odoo enforces ACLs, record rules, company scope, and confirmation policy.
 
 ## React integration
-- Service file:
-  - `/Users/ikob/Documents/iKobDoc/ERPTH/src/api/services/ai-assistant.service.ts`
-- Avatar widget:
-  - `/Users/ikob/Documents/iKobDoc/ERPTH/src/features/assistant/AvatarAssistant.tsx`
-  - `/Users/ikob/Documents/iKobDoc/ERPTH/src/features/assistant/avatar-assistant.css`
-- Mounted in:
-  - `/Users/ikob/Documents/iKobDoc/ERPTH/src/components/layout/AppLayout.tsx`
 
-## Demo script (MVP)
-1. Open ERPTH and login.
-2. Click avatar assistant.
-3. Send:
-   - `Create contact ABC Co with email a@b.com`
-   - `Create product Solar Panel 30W price 990`
-   - `Create quotation for ABC Co with 2 x Solar Panel 30W`
-4. Click `Approve` when asked (for quotation in `approve_required` mode).
-5. Ask:
-   - `Open profit report`
+- Service: `/Users/ikob/Documents/iKobDoc/ERPTH/src/api/services/ai-assistant.service.ts`
+- Assistant UI: `/Users/ikob/Documents/iKobDoc/ERPTH/src/features/assistant/AvatarAssistant.tsx`
+- Context capture: `/Users/ikob/Documents/iKobDoc/ERPTH/src/lib/assistantPageContext.ts`
+
+The assistant should receive:
+
+- current route
+- page kind
+- search query
+- active model
+- active record
+- selected rows
+- lightweight record summary
+
+## Local smoke test status
+
+The `q01` database has been smoke-tested end-to-end with:
+
+- OpenAI planner enabled
+- OpenClaw executor enabled
+- quotation creation through a complex command
+- audit logging working
+
+Example command used in smoke testing:
+
+- `หาลูกค้า ACTIVE แล้วสร้างใบเสนอราคาให้เขาโดยใช้สินค้า ค่าปิดงบ จำนวน 1 ชิ้น`
+
+## Production deployment notes
+
+- Upgrade `adt_th_api` after backend code changes.
+- Restart the running Odoo process after controller/model changes.
+- Keep OpenClaw provider/service bound to localhost or an internal network.
+- Use the systemd installer in `AdtClaw/adt_openclaw/scripts/install_server_openclaw.sh` for Linux deployment.
 
 ## Troubleshooting
-- Avatar not shown:
-  - Check `/api/th/v1/ai/capabilities` response `show_bot`.
-  - Check Odoo setting `Enable AI Assistant`.
-- `Unauthorized`:
-  - Verify bearer token and API key headers.
-- `Tool disabled or not allowed`:
-  - Enable corresponding feature flag in Odoo settings.
-  - Make sure `Enable AI Agent` is on.
+
+- Assistant says planner is not ready:
+  - Check OpenAI enabled flag
+  - Check API key
+  - Check model name
+  - Check base URL
+- Assistant says executor is disabled:
+  - Enable `AI Agent`
+  - Confirm `iadmin` exists and is configured
+- Assistant shows stale UI state:
+  - Hard refresh the browser
+  - Reopen the assistant panel
+- Execution works but summary is stale:
+  - Restart the Odoo process after updates
+

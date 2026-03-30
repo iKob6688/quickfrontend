@@ -40,6 +40,7 @@ type AssistantResultCard = {
   explain?: string
   rows: Array<{ label: string; value: string; route?: string }>
   sources: AssistantSourceLink[]
+  actions?: Array<{ label: string; query: string; tone?: 'primary' | 'secondary' | 'light' }>
 }
 
 type UsageSummary = {
@@ -501,6 +502,24 @@ export function AvatarAssistant() {
     setResultCards((prev) => [...nextCards, ...prev].slice(0, 5))
   }
 
+  const appendClarificationCard = (message: string, options: Array<{ label: string; query: string }>) => {
+    appendResultCards([
+      {
+        id: `clarify-${Date.now()}`,
+        title: 'เลือกโฟกัสก่อน',
+        summary: message,
+        explain: 'Assistant เห็นว่าคำสั่งนี้ผสมหลาย intent ในประโยคเดียว เลือก focus ก่อนเพื่อให้ context ชัด',
+        rows: [],
+        sources: [],
+        actions: options.map((option, idx) => ({
+          label: option.label,
+          query: option.query,
+          tone: idx === 0 ? 'primary' : 'light',
+        })),
+      },
+    ])
+  }
+
   const updateTraceMeta = (res: Partial<AssistantChatResponse & AssistantExecuteResponse>) => {
     const sources = Array.isArray((res as any)?.sources)
       ? ((res as any).sources as any[])
@@ -595,8 +614,8 @@ export function AvatarAssistant() {
     return dedupeSources(sourceLinks)
   }
 
-  const onSend = async () => {
-    const text = input.trim()
+  const onSend = async (overrideText?: string) => {
+    const text = String(overrideText ?? input).trim()
     if (!text || loading) return
     if (!assistantAgentEnabled) {
       setHistory((prev) => [
@@ -648,6 +667,23 @@ export function AvatarAssistant() {
         ...prev,
         { role: 'assistant', text: res.business_reply || res.reply || 'รับทราบ กำลังเตรียมขั้นตอนให้' },
       ])
+      const isMixedClarification =
+        Boolean((res as any)?.needs_clarification) &&
+        !res.confirmation_request &&
+        String((res as any)?.classification?.context_mode || '').toLowerCase() === 'mixed'
+      if (isMixedClarification) {
+        const clarificationOptions = [
+          { label: 'สรุปยอดซื้อรายลูกค้า', query: 'สรุปยอดซื้อรายลูกค้า' },
+          { label: 'ค้นลูกค้า', query: 'ค้นลูกค้า' },
+          { label: 'ค้นสินค้า', query: 'ค้นสินค้า' },
+          { label: 'สร้างใบเสนอราคา', query: 'สร้างใบเสนอราคา' },
+        ]
+        appendClarificationCard(
+          String(res.business_reply || res.reply || 'กรุณาเลือกว่าจะให้ช่วยด้านไหนก่อน'),
+          clarificationOptions,
+        )
+        return
+      }
       if ((res.plan || []).length > 0) {
         const planCount = (res.plan || []).length
         const restricted = (res.plan || []).filter((p) => p.requires_approval).length
@@ -1168,6 +1204,27 @@ export function AvatarAssistant() {
                           ))}
                         </div>
                       )}
+                      {card.actions && card.actions.length > 0 && (
+                        <div className="avatar-result-actions mt-2 d-flex flex-wrap gap-2">
+                          {card.actions.map((action, idx) => (
+                            <button
+                              type="button"
+                              key={`${card.id}-action-${idx}`}
+                              className={`btn btn-sm ${
+                                action.tone === 'primary'
+                                  ? 'btn-primary'
+                                  : action.tone === 'secondary'
+                                    ? 'btn-secondary'
+                                    : 'btn-outline-secondary'
+                              }`}
+                              disabled={loading}
+                              onClick={() => void onSend(action.query)}
+                            >
+                              {action.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       {card.sources.length > 0 && (
                         <div className="avatar-result-sources mt-1">
                           {card.sources.map((src, idx) => (
@@ -1216,6 +1273,15 @@ export function AvatarAssistant() {
                 <div className="small text-muted">
                   Backend agent: {assistantIdentityLabel}
                 </div>
+                {caps?.runtime?.planner_provider || caps?.runtime?.executor_provider ? (
+                  <div className="small text-muted">
+                    Planner: {caps.runtime?.planner_provider || 'unknown'}
+                    {caps.runtime?.planner_model ? ` • model ${caps.runtime.planner_model}` : ''}
+                    {' · '}
+                    Executor: {caps.runtime?.executor_provider || 'unknown'}
+                    {caps.runtime?.executor_login ? ` / ${caps.runtime.executor_login}` : ''}
+                  </div>
+                ) : null}
                 {traceMeta.safety && (
                   <div className="small text-muted mt-1">
                     Safety: DB-only {traceMeta.safety.db_only_enforced ? 'on' : 'off'}

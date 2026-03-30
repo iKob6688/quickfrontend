@@ -129,7 +129,7 @@ ERPTH now includes a React-first accountant review workspace for LINE and future
 - Copilot is assistive only
 - It explains extraction, validation, partner matching, duplicate warnings, and suggested accounting path
 - It does not post or mutate records directly
-- If the backend AI assistant is unavailable, the UI falls back to honest rule-based guidance for the current document
+- If the backend AI assistant is unavailable, the UI shows an unavailable state and keeps review actions manual
 
 ### Current limitations
 
@@ -322,61 +322,27 @@ curl -i http://127.0.0.1:18069/web/login | head
 - **401 Unauthorized** with JSON `Missing X-ADT-API-Key header`:
   - **Meaning**: you didn’t send `X-ADT-API-Key` (curl) or frontend env `VITE_API_KEY` is empty/wrong.
 
-## AI Assistant (OpenClaw provider) — Production
+## AI Assistant Architecture
 
-This frontend must call AI through `adt_th_api` only:
+The assistant is now split into three roles:
 
-- Frontend: `POST /api/th/v1/ai/*`
-- Odoo (`adt_th_api`): policy gate + ACL/record-rule + company/db scope
-- LLM provider: `openclaw` via internal URL (no direct frontend access)
+- **OpenAI**: conversational planning, intent understanding, structured command generation, and natural-language replies
+- **OpenClaw**: backend execution gateway only
+- **Odoo**: source of truth, ACL / record-rule enforcement, workflow validation, and audit trail
 
-### Required Odoo config (`ir.config_parameter`)
+The React UI is the only chat surface. It sends safe page context to the backend orchestrator and never talks to OpenClaw directly.
 
-```text
-adt_th_api.ai_llm_enabled=1
-adt_th_api.ai_provider=openclaw
-adt_th_api.ai_openclaw_base_url=http://127.0.0.1:11434/v1
-adt_th_api.ai_openclaw_model=<model>
-adt_th_api.ai_timeout_sec=30
-adt_th_api.ai_mode=auto_safe
-adt_th_api.ai_feature_sales=1
-adt_th_api.ai_feature_purchase=1
-adt_th_api.ai_feature_reports=1
-```
+### Request flow
 
-### Security requirements
+- React → `/api/th/v1/ai/*`
+- `adt_th_api` orchestrator → OpenAI planner
+- validated structured command → OpenClaw executor
+- OpenClaw → Odoo ORM / service layer
+- result → React UI
 
-- Do not expose OpenClaw to public internet.
-- Keep OpenClaw bound to localhost/private network.
-- Do not call OpenClaw from frontend; use `/api/th/v1/ai/*` only.
-- DB/company scope is enforced in backend session execution; cross-db execution is denied.
+### API endpoints
 
-### Production service layout
-
-OpenClaw should run as a production service stack:
-
-- Odoo service: hosts `adt_th_api` and `adt_openclaw`
-- Local provider service: binds to `127.0.0.1:11434` and serves the OpenAI-compatible API
-- Healthcheck timer: verifies the provider stays reachable
-
-Service templates and launchers live in:
-
-- [`AdtClaw/adt_openclaw/deploy/systemd/README.md`](/Users/ikob/Documents/iKobDoc/ERPTH/AdtClaw/adt_openclaw/deploy/systemd/README.md)
-
-## AI Assistant (Safe LLM / DB-only)
-
-The React assistant UI integrates with `adt_th_api` AI endpoints and now supports a **backend-only LLM adapter** with deterministic fallback.
-
-### Security model (important)
-
-- LLM runs **only on backend** (`adt_th_api`)
-- LLM **does not** access DB directly
-- LLM can only propose backend tools (tool registry)
-- Tool execution uses normal Odoo ORM access (ACL + record rules + company scope)
-- All business facts must come from the current Odoo DB/company context
-- Sensitive write actions (confirm/post/payment/status changes) should remain approval-gated
-
-### AI endpoints (unchanged paths)
+The main assistant endpoints remain:
 
 - `/api/th/v1/ai/capabilities`
 - `/api/th/v1/ai/runtime`
@@ -385,53 +351,59 @@ The React assistant UI integrates with `adt_th_api` AI endpoints and now support
 - `/api/th/v1/ai/confirm`
 - `/api/th/v1/ai/tasks`
 
-`/web/adt/th/v1/ai/*` aliases remain supported for web-session style integrations.
+The `/web/adt/th/v1/ai/*` aliases remain supported for web-session integrations.
 
-### Backend config (Odoo `ir.config_parameter`)
+### Odoo backend config
 
-Set these in Odoo (System Parameters) for LLM mode:
+Manage assistant behavior from Odoo settings / System Parameters:
 
 - `adt_th_api.ai_enabled=1`
-- `adt_th_api.ai_mode=approve_required` (or `auto_safe`, `plan_only`)
-- `adt_th_api.ai_provider=openai_compat` (or `local`)
-- `adt_th_api.ai_provider=openclaw` (for offline/local OpenAI-compatible runtime)
-- `adt_th_api.ai_llm_enabled=1`
-- `adt_th_api.ai_model=<model-name>`
-- `adt_th_api.ai_base_url=<openai-compatible-base-url>`
-- `adt_th_api.ai_api_key=<secret>`
-- `adt_th_api.ai_timeout_sec=30`
+- `adt_th_api.ai_openai_enabled=1`
+- `adt_th_api.ai_openai_model=gpt-4o` or another model your OpenAI project can access
+- `adt_th_api.ai_openai_base_url=https://api.openai.com/v1`
+- `adt_th_api.ai_openai_api_key=<secret>`
+- `adt_th_api.ai_openai_temperature=0.2`
+- `adt_th_api.ai_openai_max_tokens=2048`
+- `adt_th_api.ai_prompt_version=v1`
+- `adt_th_api.ai_allowed_intents=<csv-or-json-list>`
+- `adt_th_api.ai_confirmation_policy=strict`
+- `adt_th_api.ai_audit_enabled=1`
+- `adt_th_api.ai_agent_enabled=1`
+- `adt_th_api.ai_agent_login=iadmin`
+- `adt_th_api.ai_agent_display_name=OpenClaw`
 
-For OpenClaw-specific overrides:
+OpenClaw execution settings remain in `adt_openclaw`:
 
-- `adt_th_api.ai_openclaw_base_url=<openclaw-base-url>`
-- `adt_th_api.ai_openclaw_model=<openclaw-model>`
-- `adt_th_api.ai_openclaw_api_key=<optional-api-key>`
+- `adt_openclaw.ai_agent_enabled=1`
+- `adt_openclaw.ai_agent_login=iadmin`
+- `adt_openclaw.ai_agent_display_name=OpenClaw`
+- `adt_openclaw.allowed_models=<csv>`
 
-If `ai_provider=local` or LLM is unavailable, the assistant falls back to deterministic planning (`mode=deterministic_fallback`).
+### Security model
 
-### Frontend behavior
+- React never stores or receives backend secrets.
+- OpenAI never gets direct ORM / DB access.
+- OpenClaw only executes validated structured commands.
+- Odoo enforces ACLs, record rules, company scope, and workflow rules.
+- High-risk actions stay approval-gated.
 
-The assistant UI shows runtime metadata returned by backend:
+### Runtime notes
 
-- `mode` (`llm` / `deterministic_fallback`)
-- `trace_id`
-- `warnings`
-- `safety` (DB-only flag, company id, approval count)
-- `sources` (safe source summaries / record links)
-- token `usage` (provider usage or local estimate)
-- safe trace panel / drawer for tool proposals (allowed/denied, approval flags, deny reason)
-- retry controls (`Retry query`, `Retry answer`)
-- assistant context reset on company/instance change (to prevent cross-company chat context bleed)
-- approval queue grouping summary (`Draft create`, `Status change`, `Payment`, `Posting`, etc.)
+- The assistant panel shows the backend runtime state returned by `/api/th/v1/ai/runtime`.
+- If OpenAI is configured but the model is unavailable, update the Odoo setting to a model the project can access.
+- `q01` has been smoke-tested with `gpt-4o` and OpenClaw execution.
 
-### Backend AI behavior (current phase)
+### Production service layout
 
-- Backend-only LLM adapter (`OpenAI-compatible`) with deterministic fallback
-- Central provider resolver (`local` / `openai_compat` / `openclaw`) in backend adapter
-- Tool registry + policy metadata (category / auto-safe / approval-required)
-- Sales / Purchase / Reports tool coverage extended (read + selected write wrappers)
-- Structured `execute` results include `data`, `computed_from`, `error_code` (for source summaries and safe trace)
-- AI errors include `trace_id` for support/debug without exposing sensitive stack traces
+OpenClaw should run as a production service stack:
+
+- Odoo service: hosts `adt_th_api` and `adt_openclaw`
+- OpenClaw-compatible provider service: binds to `127.0.0.1:11434` and serves the API used by OpenClaw/local validation
+- Healthcheck timer: verifies the provider stays reachable
+
+Service templates and launchers live in:
+
+- [`AdtClaw/adt_openclaw/deploy/systemd/README.md`](/Users/ikob/Documents/iKobDoc/ERPTH/AdtClaw/adt_openclaw/deploy/systemd/README.md)
 
 ### AI eval harness (read workflow + safety contract)
 
