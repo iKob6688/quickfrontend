@@ -11,6 +11,18 @@ import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { writeAssistantPageContext } from '@/lib/assistantPageContext'
 import { listProducts } from '@/api/services/products.service'
 
+interface ProductRow {
+  id: number
+  name: string
+  defaultCode: string
+  image128: string | null
+  imageUrl: string | null
+  uom: string
+  qtyAvailable: number | null | undefined
+  listPrice: number
+  active: boolean
+}
+
 function productImageSrc(row: { id: number; image128?: string | null; imageUrl?: string | null }) {
   if (row.image128) return `data:image/png;base64,${row.image128}`
   if (row.imageUrl) return row.imageUrl
@@ -52,7 +64,7 @@ export function ProductsListPage() {
 
   const products = useMemo(() => query.data?.pages.flatMap((p) => p.items) ?? [], [query.data?.pages])
 
-  const rows = useMemo(
+  const rows = useMemo<ProductRow[]>(
     () =>
       products.map((p) => ({
         id: p.id,
@@ -97,7 +109,7 @@ export function ProductsListPage() {
     })
   }, [location.pathname, location.search, q, selectedRecords])
 
-  const columns: Column<(typeof rows)[number]>[] = [
+  const columns: Column<ProductRow>[] = [
     {
       key: 'select',
       header: (
@@ -137,7 +149,7 @@ export function ProductsListPage() {
           }}
         />
       ),
-    } as unknown as Column<(typeof rows)[number]>,
+    },
     {
       key: 'name',
       header: 'สินค้า/บริการ',
