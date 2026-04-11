@@ -40,6 +40,20 @@ export interface PaymentRecord {
   bankAccountNumber?: string
 }
 
+export interface PaymentWorkflow {
+  allowed: boolean
+  reasonCode?: string | null
+  reasonMessage?: string | null
+  queueState?: string | null
+  nextActions?: string[]
+  relatedPaymentId?: number | null
+  relatedPaymentName?: string | null
+  approvalRequestId?: number | null
+  approvalRequestState?: string | null
+  approvalTeamId?: number | null
+  approvalTeamName?: string | null
+}
+
 export interface Invoice extends InvoicePayload {
   id: number
   status: 'draft' | 'posted' | 'paid' | 'cancelled'
@@ -54,6 +68,7 @@ export interface Invoice extends InvoicePayload {
   hasFinalReceipt?: boolean
   lastPaymentDate?: string | null
   payments?: PaymentRecord[] // Payment history (if available from backend)
+  paymentWorkflow?: PaymentWorkflow
   createdAt: string
   updatedAt: string
   number?: string
@@ -217,6 +232,11 @@ function normalizeInvoice(raw: unknown): Invoice {
     }
   })
   const paymentsRaw = Array.isArray(item.payments) ? item.payments : []
+  const paymentWorkflowRaw = item.paymentWorkflow && typeof item.paymentWorkflow === 'object'
+    ? (item.paymentWorkflow as RawRecord)
+    : item.payment_workflow && typeof item.payment_workflow === 'object'
+      ? (item.payment_workflow as RawRecord)
+      : null
   const payments: PaymentRecord[] = paymentsRaw
     .map((pRaw) => {
       const p = (pRaw || {}) as RawRecord
@@ -284,6 +304,25 @@ function normalizeInvoice(raw: unknown): Invoice {
     hasFinalReceipt,
     lastPaymentDate: (item.lastPaymentDate ?? item.last_payment_date ?? null) as string | null,
     payments,
+    paymentWorkflow: paymentWorkflowRaw
+      ? {
+          allowed: Boolean(paymentWorkflowRaw.allowed),
+          reasonCode: paymentWorkflowRaw.reasonCode ? String(paymentWorkflowRaw.reasonCode) : paymentWorkflowRaw.reason_code ? String(paymentWorkflowRaw.reason_code) : null,
+          reasonMessage: paymentWorkflowRaw.reasonMessage ? String(paymentWorkflowRaw.reasonMessage) : paymentWorkflowRaw.reason_message ? String(paymentWorkflowRaw.reason_message) : null,
+          queueState: paymentWorkflowRaw.queueState ? String(paymentWorkflowRaw.queueState) : paymentWorkflowRaw.queue_state ? String(paymentWorkflowRaw.queue_state) : null,
+          nextActions: Array.isArray(paymentWorkflowRaw.nextActions)
+            ? paymentWorkflowRaw.nextActions.map((value) => String(value))
+            : Array.isArray(paymentWorkflowRaw.next_actions)
+              ? (paymentWorkflowRaw.next_actions as unknown[]).map((value) => String(value))
+              : [],
+          relatedPaymentId: parseNumber(paymentWorkflowRaw.relatedPaymentId ?? paymentWorkflowRaw.related_payment_id) || null,
+          relatedPaymentName: paymentWorkflowRaw.relatedPaymentName ? String(paymentWorkflowRaw.relatedPaymentName) : paymentWorkflowRaw.related_payment_name ? String(paymentWorkflowRaw.related_payment_name) : null,
+          approvalRequestId: parseNumber(paymentWorkflowRaw.approvalRequestId ?? paymentWorkflowRaw.approval_request_id) || null,
+          approvalRequestState: paymentWorkflowRaw.approvalRequestState ? String(paymentWorkflowRaw.approvalRequestState) : paymentWorkflowRaw.approval_request_state ? String(paymentWorkflowRaw.approval_request_state) : null,
+          approvalTeamId: parseNumber(paymentWorkflowRaw.approvalTeamId ?? paymentWorkflowRaw.approval_team_id) || null,
+          approvalTeamName: paymentWorkflowRaw.approvalTeamName ? String(paymentWorkflowRaw.approvalTeamName) : paymentWorkflowRaw.approval_team_name ? String(paymentWorkflowRaw.approval_team_name) : null,
+        }
+      : undefined,
     createdAt: String(item.createdAt ?? item.created_at ?? item.create_date ?? ''),
     updatedAt: String(item.updatedAt ?? item.updated_at ?? item.write_date ?? ''),
     number: item.number ? String(item.number) : undefined,

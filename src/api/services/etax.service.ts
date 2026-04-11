@@ -138,6 +138,7 @@ export interface EtaxDocumentRecord {
   canResendEmail?: boolean
   requestSummary?: string | null
   signedArtifactsAvailable?: boolean
+  availableNextActions?: string[]
 }
 
 export interface EtaxInvoiceRecord {
@@ -346,6 +347,7 @@ function normalizeDocument(raw: any): EtaxDocumentRecord {
     canResendEmail: parseBoolean(raw?.canResendEmail),
     requestSummary: parseText(raw?.requestSummary),
     signedArtifactsAvailable: parseBoolean(raw?.signedArtifactsAvailable),
+    availableNextActions: parseStringArray(raw?.availableNextActions),
   }
 }
 

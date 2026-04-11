@@ -37,11 +37,11 @@ export function CustomersListPage() {
   useEffect(() => {
     const nextQ = searchParams.get('q') || ''
     const nextTab = (searchParams.get('tab') || '').toLowerCase()
-    if (nextQ !== q) setQ(nextQ)
+    setQ((prev) => (prev === nextQ ? prev : nextQ))
     if (nextTab === 'active' || nextTab === 'archived' || nextTab === 'all') {
       setTab((prev) => (prev === nextTab ? prev : (nextTab as StatusTab)))
     }
-  }, [searchParams, q])
+  }, [searchParams])
 
   // Check if API is available
   const apiCheckQuery = useQuery({

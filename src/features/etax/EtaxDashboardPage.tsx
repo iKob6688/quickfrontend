@@ -366,16 +366,14 @@ export function EtaxDashboardPage() {
   ]
 
   const currentDoc = detailQuery.data
+  const currentAvailableActions = currentDoc?.availableNextActions || []
   const canSubmitCurrentDoc = Boolean(
     currentDoc &&
-      ['draft', 'queued', 'error'].includes(currentDoc.state) &&
-      !currentDoc.addressReviewNeeded &&
+      currentAvailableActions.includes('submit') &&
       summary?.credentialsConfigured,
   )
   const canPollCurrentDoc = Boolean(
-    currentDoc &&
-      currentDoc.transactionCode &&
-      ['submitted', 'processing', 'queued'].includes(currentDoc.state),
+    currentDoc && currentAvailableActions.includes('poll'),
   )
   const currentStatusMessage =
     currentDoc?.state === 'done'
@@ -565,73 +563,77 @@ export function EtaxDashboardPage() {
                 </div>
 
                 <div className="d-flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      if (!currentDoc) return
-                      if (!canSubmitCurrentDoc) {
-                        toast.info('Submit ใช้ไม่ได้กับสถานะนี้', `สถานะปัจจุบัน: ${stateLabel(currentDoc.state)}`)
-                        return
-                      }
-                      submitMutation.mutate(currentDoc.id)
-                    }}
-                    isLoading={submitMutation.isPending && submitMutation.variables === currentDoc.id}
-                    disabled={!canSubmitCurrentDoc}
-                  >
-                    Submit
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => {
-                      if (!currentDoc) return
-                      if (!canPollCurrentDoc) {
-                        toast.info('Poll ใช้ไม่ได้กับสถานะนี้', `สถานะปัจจุบัน: ${stateLabel(currentDoc.state)}`)
-                        return
-                      }
-                      pollMutation.mutate(currentDoc.id)
-                    }}
-                    isLoading={pollMutation.isPending && pollMutation.variables === currentDoc.id}
-                    disabled={!canPollCurrentDoc}
-                  >
-                    Poll
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => retryMutation.mutate(currentDoc.id)}
-                    isLoading={retryMutation.isPending && retryMutation.variables === currentDoc.id}
-                    disabled={currentDoc.state !== 'error'}
-                  >
-                    Retry
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => sendEmailMutation.mutate(currentDoc.id)}
-                    isLoading={sendEmailMutation.isPending && sendEmailMutation.variables === currentDoc.id}
-                    disabled={!currentDoc.canSendEmail}
-                  >
-                    Send Email
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => resendEmailMutation.mutate(currentDoc.id)}
-                    isLoading={resendEmailMutation.isPending && resendEmailMutation.variables === currentDoc.id}
-                    disabled={!currentDoc.canResendEmail}
-                  >
-                    Resend Email
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => cancelMutation.mutate(currentDoc.id)}
-                    isLoading={cancelMutation.isPending && cancelMutation.variables === currentDoc.id}
-                    disabled={currentDoc.state === 'done' || currentDoc.state === 'cancelled'}
-                  >
-                    Cancel
-                  </Button>
+                  {canSubmitCurrentDoc ? (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        if (!currentDoc) return
+                        submitMutation.mutate(currentDoc.id)
+                      }}
+                      isLoading={submitMutation.isPending && submitMutation.variables === currentDoc.id}
+                      disabled={!canSubmitCurrentDoc}
+                    >
+                      Submit
+                    </Button>
+                  ) : null}
+                  {canPollCurrentDoc ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        if (!currentDoc) return
+                        pollMutation.mutate(currentDoc.id)
+                      }}
+                      isLoading={pollMutation.isPending && pollMutation.variables === currentDoc.id}
+                      disabled={!canPollCurrentDoc}
+                    >
+                      Poll
+                    </Button>
+                  ) : null}
+                  {currentAvailableActions.includes('retry') ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => retryMutation.mutate(currentDoc.id)}
+                      isLoading={retryMutation.isPending && retryMutation.variables === currentDoc.id}
+                      disabled={!currentAvailableActions.includes('retry')}
+                    >
+                      Retry
+                    </Button>
+                  ) : null}
+                  {currentDoc.canSendEmail ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => sendEmailMutation.mutate(currentDoc.id)}
+                      isLoading={sendEmailMutation.isPending && sendEmailMutation.variables === currentDoc.id}
+                      disabled={!currentDoc.canSendEmail}
+                    >
+                      Send Email
+                    </Button>
+                  ) : null}
+                  {currentDoc.canResendEmail ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => resendEmailMutation.mutate(currentDoc.id)}
+                      isLoading={resendEmailMutation.isPending && resendEmailMutation.variables === currentDoc.id}
+                      disabled={!currentDoc.canResendEmail}
+                    >
+                      Resend Email
+                    </Button>
+                  ) : null}
+                  {currentAvailableActions.includes('cancel') ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => cancelMutation.mutate(currentDoc.id)}
+                      isLoading={cancelMutation.isPending && cancelMutation.variables === currentDoc.id}
+                      disabled={!currentAvailableActions.includes('cancel')}
+                    >
+                      Cancel
+                    </Button>
+                  ) : null}
                 </div>
 
                 <div className="rounded-3 border bg-light p-3">

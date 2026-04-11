@@ -194,11 +194,20 @@ export function InvoiceDetailPage() {
   const paymentMutation = useMutation({
     mutationFn: (payload: RegisterPaymentPayload) =>
       registerPayment(invoiceId!, payload),
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
       queryClient.invalidateQueries({ queryKey: ['invoices'] })
       queryClient.invalidateQueries({ queryKey: ['invoices', 'receipts'] })
       queryClient.invalidateQueries({ queryKey: ['taxReports'] })
+      if (result.paymentWorkflow?.queueState === 'pending_approval') {
+        toast.success(
+          'ส่งรายการรับชำระเข้า approval queue แล้ว',
+          result.paymentWorkflow.approvalTeamName
+            ? `ทีมอนุมัติ: ${result.paymentWorkflow.approvalTeamName}`
+            : 'รอการอนุมัติก่อนออกใบเสร็จ',
+        )
+        return
+      }
       toast.success('บันทึกรับชำระเงินสำเร็จ')
     },
     onError: (err) => {
@@ -261,19 +270,17 @@ export function InvoiceDetailPage() {
           : etaxDocument?.state === 'submitted'
             ? 'Submitted'
             : etaxDocument?.state === 'queued'
-              ? 'Queued'
+            ? 'Queued'
             : 'Draft'
+  const etaxAvailableActions = etaxDocument?.availableNextActions || []
   const canSubmitEtaxFromInvoice = Boolean(
     invoice &&
       invoice.status === 'posted' &&
       !etaxSubmitMutation.isPending &&
-      etaxQuery.data?.canSubmit !== false &&
-      (!etaxDocument || ['draft', 'queued', 'error'].includes(etaxDocument.state)),
+      (etaxDocument ? etaxAvailableActions.includes('submit') : etaxQuery.data?.canSubmit !== false),
   )
   const canPollEtaxFromInvoice = Boolean(
-    etaxDocument &&
-      etaxDocument.transactionCode &&
-      ['queued', 'submitted', 'processing'].includes(etaxDocument.state),
+    etaxDocument && etaxAvailableActions.includes('poll'),
   )
 
   useEffect(() => {
@@ -822,24 +829,19 @@ export function InvoiceDetailPage() {
             ) : null}
           </div>
           <div className="d-flex align-items-center gap-2 flex-wrap justify-content-lg-end">
-            <Button
-              size="sm"
-              className="text-nowrap"
-              onClick={async () => {
-                if (!canSubmitEtaxFromInvoice) {
-                  toast.info(
-                    'Submit e-Tax ใช้ไม่ได้กับสถานะนี้',
-                    etaxDocument ? `สถานะปัจจุบัน: ${etaxStatusLabel}` : 'เอกสารยังไม่พร้อม',
-                  )
-                  return
-                }
-                await etaxSubmitMutation.mutateAsync()
-              }}
-              isLoading={etaxSubmitMutation.isPending}
-              disabled={!canSubmitEtaxFromInvoice}
-            >
-              Submit e-Tax
-            </Button>
+            {canSubmitEtaxFromInvoice ? (
+              <Button
+                size="sm"
+                className="text-nowrap"
+                onClick={async () => {
+                  await etaxSubmitMutation.mutateAsync()
+                }}
+                isLoading={etaxSubmitMutation.isPending}
+                disabled={!canSubmitEtaxFromInvoice}
+              >
+                Submit e-Tax
+              </Button>
+            ) : null}
             <Button
               size="sm"
               variant="secondary"
@@ -848,32 +850,30 @@ export function InvoiceDetailPage() {
             >
               เปิด e-Tax Workspace
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-nowrap"
-              onClick={async () => {
-                if (!etaxDocument) {
-                  toast.error('ยังไม่มี ETax document', 'Submit e-Tax ก่อน')
-                  return
-                }
-                if (!canPollEtaxFromInvoice) {
-                  toast.info('Poll ใช้ไม่ได้กับสถานะนี้', `สถานะปัจจุบัน: ${etaxStatusLabel}`)
-                  return
-                }
-                try {
-                  await pollEtaxDocument(etaxDocument.id)
-                  await queryClient.invalidateQueries({ queryKey: ['invoice-etax', invoiceId] })
-                  await queryClient.invalidateQueries({ queryKey: ['etax'] })
-                  toast.success('Poll e-Tax สำเร็จ')
-                } catch (err) {
-                  toast.error('Poll e-Tax ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
-                }
-              }}
-              disabled={!canPollEtaxFromInvoice}
-            >
-              Poll Status
-            </Button>
+            {canPollEtaxFromInvoice ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-nowrap"
+                onClick={async () => {
+                  if (!etaxDocument) {
+                    toast.error('ยังไม่มี ETax document', 'Submit e-Tax ก่อน')
+                    return
+                  }
+                  try {
+                    await pollEtaxDocument(etaxDocument.id)
+                    await queryClient.invalidateQueries({ queryKey: ['invoice-etax', invoiceId] })
+                    await queryClient.invalidateQueries({ queryKey: ['etax'] })
+                    toast.success('Poll e-Tax สำเร็จ')
+                  } catch (err) {
+                    toast.error('Poll e-Tax ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+                  }
+                }}
+                disabled={!canPollEtaxFromInvoice}
+              >
+                Poll Status
+              </Button>
+            ) : null}
             <Button
               size="sm"
               variant="ghost"
@@ -903,6 +903,12 @@ export function InvoiceDetailPage() {
             </Button>
           </div>
         </div>
+        {invoice.paymentWorkflow?.queueState === 'pending_approval' ? (
+          <div className="small text-warning mt-2">
+            การรับชำระเงินล่าสุดถูกส่งเข้า approval queue แล้ว
+            {invoice.paymentWorkflow.approvalTeamName ? ` · ทีม ${invoice.paymentWorkflow.approvalTeamName}` : ''}
+          </div>
+        ) : null}
       </Card>
 
       <Card className="p-3 mb-4">
