@@ -460,6 +460,7 @@ export function AvatarAssistant() {
       route.startsWith('/products') ||
       route.startsWith('/sales/') ||
       route.startsWith('/purchases/') ||
+      route.startsWith('/accounting/etax') ||
       route.startsWith('/accounting/reports') ||
       route.startsWith('/reports-studio')
     ) {
@@ -475,6 +476,7 @@ export function AvatarAssistant() {
     if (model === 'product.product' || model === 'product.template') return `/products/${id}/edit`
     if (model === 'sale.order') return `/sales/orders/${id}`
     if (model === 'account.move') return `/sales/invoices/${id}`
+    if (model === 'adt.etax.document') return `/accounting/etax?documentId=${id}`
     if (model === 'purchase.order') return `/purchases/orders/${id}`
     if (model === 'purchase.request') return `/purchases/requests/${id}`
     return ''
@@ -519,6 +521,41 @@ export function AvatarAssistant() {
       },
     ])
   }
+
+  useEffect(() => {
+    if (!open || history.length > 0) return
+    const pageContext = readAssistantPageContext()
+    if (!pageContext) return
+    if (!['invoice_detail', 'etax_dashboard'].includes(pageContext.page_kind)) return
+    const prompts =
+      pageContext.page_kind === 'invoice_detail'
+        ? [
+            { label: 'เช็กสถานะ e-Tax ใบนี้', query: 'เช็กสถานะ e-Tax ใบนี้' },
+            { label: 'เตรียมส่ง e-Tax', query: 'เตรียมส่ง e-Tax' },
+            { label: 'ส่ง e-Tax', query: 'ส่ง e-Tax' },
+            { label: 'ส่งอีเมล e-Tax อีกครั้ง', query: 'ส่งอีเมล e-Tax อีกครั้ง' },
+          ]
+        : [
+            { label: 'มี e-Tax ไหนผิดพลาดบ้าง', query: 'มี e-Tax ไหนผิดพลาดบ้าง' },
+            { label: 'เช็กสถานะเอกสารที่เลือก', query: 'เช็กสถานะ e-Tax ของเอกสารที่เลือก' },
+            { label: 'Poll สถานะ e-Tax', query: 'poll e-Tax' },
+            { label: 'อธิบาย error ของเอกสารนี้', query: 'อธิบาย error ของเอกสารนี้' },
+          ]
+    appendResultCards([
+      {
+        id: `etax-quick-${Date.now()}`,
+        title: 'e-Tax Assistant',
+        summary: 'พร้อมช่วยดูสถานะ อธิบาย error และเตรียม action ผ่าน approval flow เดียวกับ backend',
+        rows: [],
+        sources: [],
+        actions: prompts.map((item, index) => ({
+          label: item.label,
+          query: item.query,
+          tone: index === 0 ? 'primary' : 'light',
+        })),
+      },
+    ])
+  }, [open, history.length])
 
   const updateTraceMeta = (res: Partial<AssistantChatResponse & AssistantExecuteResponse>) => {
     const sources = Array.isArray((res as any)?.sources)

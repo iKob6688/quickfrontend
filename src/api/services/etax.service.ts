@@ -102,6 +102,8 @@ export interface EtaxDocumentRecord {
   partnerName?: string | null
   documentType?: string | null
   serviceCode?: string | null
+  submissionMode?: string | null
+  csvPayloadStyle?: string | null
   state: EtaxDocumentState
   transactionCode?: string | null
   inetStatus?: EtaxInetStatus
@@ -115,6 +117,7 @@ export interface EtaxDocumentRecord {
   pollCount?: number
   lastSubmitDate?: string | null
   lastPollDate?: string | null
+  completedAt?: string | null
   amountTotal?: number | null
   currency?: string | null
   note?: string | null
@@ -133,6 +136,8 @@ export interface EtaxDocumentRecord {
   emailRetryCount?: number
   canSendEmail?: boolean
   canResendEmail?: boolean
+  requestSummary?: string | null
+  signedArtifactsAvailable?: boolean
 }
 
 export interface EtaxInvoiceRecord {
@@ -303,6 +308,8 @@ function normalizeDocument(raw: any): EtaxDocumentRecord {
     partnerName: parseText(raw?.partnerName),
     documentType: parseText(raw?.documentType),
     serviceCode: parseText(raw?.serviceCode),
+    submissionMode: parseText(raw?.submissionMode),
+    csvPayloadStyle: parseText(raw?.csvPayloadStyle),
     state: (raw?.state as EtaxDocumentState) || 'draft',
     transactionCode: parseText(raw?.transactionCode),
     inetStatus: raw?.inetStatus === 'OK' || raw?.inetStatus === 'ER' || raw?.inetStatus === 'PC'
@@ -318,6 +325,7 @@ function normalizeDocument(raw: any): EtaxDocumentRecord {
     pollCount: raw?.pollCount != null ? parseNumber(raw.pollCount) : undefined,
     lastSubmitDate: parseText(raw?.lastSubmitDate),
     lastPollDate: parseText(raw?.lastPollDate),
+    completedAt: parseText(raw?.completedAt),
     amountTotal: raw?.amountTotal != null ? parseNumber(raw.amountTotal) : null,
     currency: parseText(raw?.currency),
     note: parseText(raw?.note),
@@ -336,6 +344,8 @@ function normalizeDocument(raw: any): EtaxDocumentRecord {
     emailRetryCount: raw?.emailRetryCount != null ? parseNumber(raw.emailRetryCount) : undefined,
     canSendEmail: parseBoolean(raw?.canSendEmail),
     canResendEmail: parseBoolean(raw?.canResendEmail),
+    requestSummary: parseText(raw?.requestSummary),
+    signedArtifactsAvailable: parseBoolean(raw?.signedArtifactsAvailable),
   }
 }
 

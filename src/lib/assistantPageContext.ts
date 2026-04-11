@@ -8,6 +8,13 @@ export type AssistantPageSelectionRecord = {
   barcode?: string
   vat?: string
   companyType?: string
+  documentType?: string
+  state?: string
+  status?: string
+  submissionMode?: string
+  csvPayloadStyle?: string
+  transactionCode?: string
+  routeHint?: string
 }
 
 export type AssistantPageContext = {
@@ -17,6 +24,12 @@ export type AssistantPageContext = {
   q: string
   tab?: string
   filter?: string
+  company_key?: string
+  source_model?: string
+  source_id?: number
+  source_name?: string
+  document_type_candidate?: string
+  selected_etax_document_id?: number
   selected_records: AssistantPageSelectionRecord[]
   selected_count: number
   all_matching_selected?: boolean
@@ -54,4 +67,3 @@ export function writeAssistantPageContext(context: Omit<AssistantPageContext, 'u
     }),
   )
 }
-

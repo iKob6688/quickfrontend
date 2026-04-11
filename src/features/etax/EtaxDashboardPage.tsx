@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -22,6 +22,7 @@ import {
   type EtaxDocumentRecord,
   type EtaxDocumentState,
 } from '@/api/services/etax.service'
+import { writeAssistantPageContext, type AssistantPageSelectionRecord } from '@/lib/assistantPageContext'
 
 type FilterState = EtaxDocumentState | 'all'
 
@@ -124,10 +125,13 @@ function formatFieldLabel(field: string) {
 
 export function EtaxDashboardPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
   const queryClient = useQueryClient()
   const [stateFilter, setStateFilter] = useState<FilterState>('all')
   const [search, setSearch] = useState('')
   const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(null)
+  const requestedDocumentId = Number.parseInt(searchParams.get('documentId') || '', 10)
 
   const summaryQuery = useQuery({
     queryKey: ['etax', 'summary'],
@@ -146,6 +150,12 @@ export function EtaxDashboardPage() {
       }),
     staleTime: 15_000,
   })
+
+  useEffect(() => {
+    if (Number.isFinite(requestedDocumentId) && requestedDocumentId > 0 && selectedDocumentId !== requestedDocumentId) {
+      setSelectedDocumentId(requestedDocumentId)
+    }
+  }, [requestedDocumentId, selectedDocumentId])
 
   useEffect(() => {
     const first = listQuery.data?.items?.[0]
@@ -168,6 +178,65 @@ export function EtaxDashboardPage() {
     queryFn: () => getEtaxDocument(selectedDocumentId as number),
     staleTime: 10_000,
   })
+
+  useEffect(() => {
+    if (!selectedDocumentId) return
+    const next = new URLSearchParams(searchParams)
+    next.set('documentId', String(selectedDocumentId))
+    setSearchParams(next, { replace: true })
+  }, [selectedDocumentId, searchParams, setSearchParams])
+
+  useEffect(() => {
+    const doc = detailQuery.data
+    const selectedRecords: AssistantPageSelectionRecord[] = doc
+      ? [
+          {
+            id: doc.id,
+            name: doc.name || `ETAX#${doc.id}`,
+            model: 'adt.etax.document',
+            route: `/accounting/etax?documentId=${doc.id}`,
+            documentType: doc.documentType || undefined,
+            state: doc.state,
+            status: doc.inetStatus || doc.state,
+            submissionMode: doc.submissionMode || undefined,
+            csvPayloadStyle: doc.csvPayloadStyle || undefined,
+            transactionCode: doc.transactionCode || undefined,
+          },
+          ...(doc.moveId
+            ? [
+                {
+                  id: doc.moveId,
+                  name: doc.moveName || doc.invoiceNumber || `INV#${doc.moveId}`,
+                  model: 'account.move',
+                  route: `/sales/invoices/${doc.moveId}`,
+                  ref: doc.invoiceNumber || undefined,
+                  documentType: doc.documentType || undefined,
+                  state: doc.state,
+                  status: doc.inetStatus || doc.state,
+                },
+              ]
+            : []),
+        ]
+      : []
+    writeAssistantPageContext({
+      route: '/accounting/etax',
+      search: location.search,
+      page_kind: 'etax_dashboard',
+      q: search,
+      filter: stateFilter,
+      source_model: doc?.moveId ? 'account.move' : doc?.id ? 'adt.etax.document' : undefined,
+      source_id: doc?.moveId || doc?.id || undefined,
+      source_name: doc?.moveName || doc?.name || undefined,
+      document_type_candidate: doc?.documentType || undefined,
+      selected_etax_document_id: doc?.id || undefined,
+      selected_records: selectedRecords,
+      selected_count: selectedRecords.length,
+      selection_scope: 'etax_dashboard',
+    })
+    return () => {
+      writeAssistantPageContext(null)
+    }
+  }, [detailQuery.data, location.search, search, stateFilter])
 
   const refreshAll = async () => {
     await queryClient.invalidateQueries({ queryKey: ['etax'] })
@@ -297,6 +366,25 @@ export function EtaxDashboardPage() {
   ]
 
   const currentDoc = detailQuery.data
+  const canSubmitCurrentDoc = Boolean(
+    currentDoc &&
+      ['draft', 'queued', 'error'].includes(currentDoc.state) &&
+      !currentDoc.addressReviewNeeded &&
+      summary?.credentialsConfigured,
+  )
+  const canPollCurrentDoc = Boolean(
+    currentDoc &&
+      currentDoc.transactionCode &&
+      ['submitted', 'processing', 'queued'].includes(currentDoc.state),
+  )
+  const currentStatusMessage =
+    currentDoc?.state === 'done'
+      ? 'เอกสารเสร็จสมบูรณ์แล้ว สามารถเปิด signed artifacts หรือส่งอีเมลได้'
+      : currentDoc?.state === 'cancelled'
+        ? 'เอกสารถูกยกเลิกแล้ว'
+        : currentDoc?.errorMessage
+          ? currentDoc.errorMessage
+          : 'ไม่มีข้อความผิดพลาด'
 
   return (
     <div className="qf-etax-page">
@@ -479,22 +567,32 @@ export function EtaxDashboardPage() {
                 <div className="d-flex flex-wrap gap-2">
                   <Button
                     size="sm"
-                    onClick={() => submitMutation.mutate(currentDoc.id)}
+                    onClick={() => {
+                      if (!currentDoc) return
+                      if (!canSubmitCurrentDoc) {
+                        toast.info('Submit ใช้ไม่ได้กับสถานะนี้', `สถานะปัจจุบัน: ${stateLabel(currentDoc.state)}`)
+                        return
+                      }
+                      submitMutation.mutate(currentDoc.id)
+                    }}
                     isLoading={submitMutation.isPending && submitMutation.variables === currentDoc.id}
-                    disabled={
-                      ['done', 'cancelled', 'submitted', 'processing'].includes(currentDoc.state) ||
-                      Boolean(currentDoc.addressReviewNeeded) ||
-                      !summary?.credentialsConfigured
-                    }
+                    disabled={!canSubmitCurrentDoc}
                   >
                     Submit
                   </Button>
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={() => pollMutation.mutate(currentDoc.id)}
+                    onClick={() => {
+                      if (!currentDoc) return
+                      if (!canPollCurrentDoc) {
+                        toast.info('Poll ใช้ไม่ได้กับสถานะนี้', `สถานะปัจจุบัน: ${stateLabel(currentDoc.state)}`)
+                        return
+                      }
+                      pollMutation.mutate(currentDoc.id)
+                    }}
                     isLoading={pollMutation.isPending && pollMutation.variables === currentDoc.id}
-                    disabled={!currentDoc.transactionCode}
+                    disabled={!canPollCurrentDoc}
                   >
                     Poll
                   </Button>
@@ -539,7 +637,7 @@ export function EtaxDashboardPage() {
                 <div className="rounded-3 border bg-light p-3">
                   <div className="small fw-semibold mb-2">Current Status</div>
                   <div className="small text-muted">
-                    {currentDoc.errorMessage ? currentDoc.errorMessage : 'ไม่มีข้อความผิดพลาด'}
+                    {currentStatusMessage}
                   </div>
                   <div className={`small mt-2 ${currentDoc.addressReviewNeeded ? 'text-danger' : 'text-success'}`}>
                     {currentDoc.addressReviewNeeded

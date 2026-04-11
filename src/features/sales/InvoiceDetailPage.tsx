@@ -1,4 +1,4 @@
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getInvoice, postInvoice, registerPayment, updatePayment, openInvoicePdf, amendInvoice, getInvoicePaymentMeta, type RegisterPaymentPayload, type PaymentRecord, type UpdatePaymentPayload } from '@/api/services/invoices.service'
 import { createSalesCreditNote, createSalesDebitNote } from '@/api/services/sales-notes.service'
@@ -17,6 +17,7 @@ import { useEffect, useState } from 'react'
 import { toast } from '@/lib/toastStore'
 import { useSettingsStore as useStudioSettingsStore } from '@/app/core/storage/settingsStore'
 import { useAppDateFormatter } from '@/lib/dateFormat'
+import { writeAssistantPageContext, type AssistantPageSelectionRecord } from '@/lib/assistantPageContext'
 
 const FALLBACK_RS_TPL_TAX_FULL = 'receipt_full_default_v1'
 const FALLBACK_RS_TPL_TAX_SHORT = 'receipt_short_default_v1'
@@ -26,6 +27,7 @@ export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const queryClient = useQueryClient()
   const [paymentOpen, setPaymentOpen] = useState(false)
   const [editingPayment, setEditingPayment] = useState<PaymentRecord | null>(null)
@@ -260,7 +262,68 @@ export function InvoiceDetailPage() {
             ? 'Submitted'
             : etaxDocument?.state === 'queued'
               ? 'Queued'
-              : 'Draft'
+            : 'Draft'
+  const canSubmitEtaxFromInvoice = Boolean(
+    invoice &&
+      invoice.status === 'posted' &&
+      !etaxSubmitMutation.isPending &&
+      etaxQuery.data?.canSubmit !== false &&
+      (!etaxDocument || ['draft', 'queued', 'error'].includes(etaxDocument.state)),
+  )
+  const canPollEtaxFromInvoice = Boolean(
+    etaxDocument &&
+      etaxDocument.transactionCode &&
+      ['queued', 'submitted', 'processing'].includes(etaxDocument.state),
+  )
+
+  useEffect(() => {
+    if (!invoiceId || !invoice) {
+      return
+    }
+    const selectedRecords: AssistantPageSelectionRecord[] = [
+      {
+        id: invoice.id,
+        name: invoice.number || `INV#${invoice.id}`,
+        model: 'account.move',
+        route: `/sales/invoices/${invoice.id}`,
+        ref: invoice.number || undefined,
+        documentType: etaxDocument?.documentType || undefined,
+        state: String(invoice.status),
+        status: etaxDocument?.state || invoice.status,
+      },
+    ]
+    if (etaxDocument?.id) {
+      selectedRecords.push({
+        id: etaxDocument.id,
+        name: etaxDocument.name || `ETAX#${etaxDocument.id}`,
+        model: 'adt.etax.document',
+        route: `/accounting/etax?documentId=${etaxDocument.id}`,
+        documentType: etaxDocument.documentType || undefined,
+        state: etaxDocument.state,
+        status: etaxDocument.inetStatus || etaxDocument.state,
+        submissionMode: etaxDocument.submissionMode || undefined,
+        csvPayloadStyle: etaxDocument.csvPayloadStyle || undefined,
+        transactionCode: etaxDocument.transactionCode || undefined,
+      })
+    }
+    writeAssistantPageContext({
+      route: `/sales/invoices/${invoice.id}`,
+      search: location.search,
+      page_kind: 'invoice_detail',
+      q: '',
+      source_model: 'account.move',
+      source_id: invoice.id,
+      source_name: invoice.number || `INV#${invoice.id}`,
+      document_type_candidate: etaxDocument?.documentType || undefined,
+      selected_etax_document_id: etaxDocument?.id || undefined,
+      selected_records: selectedRecords,
+      selected_count: selectedRecords.length,
+      selection_scope: 'invoice_detail',
+    })
+    return () => {
+      writeAssistantPageContext(null)
+    }
+  }, [invoiceId, invoice, etaxDocument, location.search])
 
   const amendMutation = useMutation({
     mutationFn: async (reason: string) => {
@@ -763,10 +826,17 @@ export function InvoiceDetailPage() {
               size="sm"
               className="text-nowrap"
               onClick={async () => {
+                if (!canSubmitEtaxFromInvoice) {
+                  toast.info(
+                    'Submit e-Tax ใช้ไม่ได้กับสถานะนี้',
+                    etaxDocument ? `สถานะปัจจุบัน: ${etaxStatusLabel}` : 'เอกสารยังไม่พร้อม',
+                  )
+                  return
+                }
                 await etaxSubmitMutation.mutateAsync()
               }}
               isLoading={etaxSubmitMutation.isPending}
-              disabled={invoice.status !== 'posted' || etaxSubmitMutation.isPending || etaxQuery.data?.canSubmit === false}
+              disabled={!canSubmitEtaxFromInvoice}
             >
               Submit e-Tax
             </Button>
@@ -787,6 +857,10 @@ export function InvoiceDetailPage() {
                   toast.error('ยังไม่มี ETax document', 'Submit e-Tax ก่อน')
                   return
                 }
+                if (!canPollEtaxFromInvoice) {
+                  toast.info('Poll ใช้ไม่ได้กับสถานะนี้', `สถานะปัจจุบัน: ${etaxStatusLabel}`)
+                  return
+                }
                 try {
                   await pollEtaxDocument(etaxDocument.id)
                   await queryClient.invalidateQueries({ queryKey: ['invoice-etax', invoiceId] })
@@ -796,7 +870,7 @@ export function InvoiceDetailPage() {
                   toast.error('Poll e-Tax ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
                 }
               }}
-              disabled={!etaxDocument}
+              disabled={!canPollEtaxFromInvoice}
             >
               Poll Status
             </Button>
