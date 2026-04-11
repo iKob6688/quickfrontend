@@ -55,8 +55,11 @@ export function EtaxSettingsPage() {
   })
 
   useEffect(() => {
-    if (!configQuery.data) return
-    const cfg = configQuery.data
+    const cfg = configQuery.data?.config
+    if (!cfg) {
+      setDraft(null)
+      return
+    }
     setDraft({
       name: cfg.name,
       environment: cfg.environment,
@@ -94,8 +97,9 @@ export function EtaxSettingsPage() {
     onError: (err) => toast.error('บันทึก e-Tax settings ไม่สำเร็จ', err instanceof Error ? err.message : undefined),
   })
 
-  const usage = configQuery.data?.usage
-  const config = configQuery.data
+  const configState = configQuery.data
+  const config = configState?.config || null
+  const usage = config?.usage
 
   const isDirty = useMemo(() => {
     if (!draft || !config) return false
@@ -148,7 +152,11 @@ export function EtaxSettingsPage() {
           >
             {!draft || !config ? (
               <div className="py-4 text-center text-muted">
-                {configQuery.isLoading ? 'กำลังโหลด configuration...' : 'ไม่พบ configuration'}
+                {configQuery.isLoading
+                  ? 'กำลังโหลด configuration...'
+                  : configState?.configMissing
+                    ? 'ยังไม่มี active ETax configuration สำหรับบริษัทนี้'
+                    : 'ไม่พบ configuration'}
               </div>
             ) : (
               <div className="d-flex flex-column gap-3">
@@ -355,6 +363,18 @@ export function EtaxSettingsPage() {
 
         <div className="col-12 col-xl-5">
           <div className="d-flex flex-column gap-3">
+            {!config ? (
+              <Card className="qf-report-card qf-report-card--amber">
+                <div className="small text-muted mb-1">e-Tax Onboarding</div>
+                <div className="h5 fw-semibold mb-2">ยังไม่มี active ETax configuration</div>
+                <div className="small text-muted mb-3">
+                  ขั้นถัดไปคือไปผูกหรือสร้าง e-Tax configuration ที่ Odoo backend ก่อน แล้วค่อยกลับมาส่ง e-Tax จากหน้าเอกสาร
+                </div>
+                <div className="small text-muted">
+                  Recommended action: Open Odoo e-Tax configuration หรือให้ Admin ตั้งค่า company/provider credential ให้เรียบร้อย
+                </div>
+              </Card>
+            ) : null}
             <Card className="qf-report-card qf-report-card--blue">
               <div className="small text-muted mb-1">Seller Tax ID</div>
               <div className="h5 fw-semibold mb-0 font-monospace">{config?.sellerTaxId || '—'}</div>
@@ -363,6 +383,11 @@ export function EtaxSettingsPage() {
                 Credential Tax ID: <span className="font-monospace">{config?.authCodeTaxId || '—'}</span>
               </div>
               <div className="small text-muted mt-1">Reference only for the INET provider credential.</div>
+              <div className="small text-muted mt-2">
+                Mode: <span className="font-monospace">{config?.submissionMode || '—'}</span>
+                {' · '}
+                CSV style: <span className="font-monospace">{config?.csvPayloadStyle || '—'}</span>
+              </div>
               <div className="small mt-2">
                 Address status:{' '}
                 {config?.sellerAddressReviewNeeded ? <Badge tone="amber">Needs review</Badge> : <Badge tone="green">Ready</Badge>}
@@ -371,6 +396,10 @@ export function EtaxSettingsPage() {
                 {config?.sellerAddressMissingFields?.length
                   ? config.sellerAddressMissingFields.map(formatFieldLabel).join(', ')
                   : config?.sellerAddressText || 'Address validated from backend partner data'}
+              </div>
+              <div className="small mt-2">
+                Credentials:{' '}
+                {config?.configReady ? <Badge tone="green">Ready</Badge> : <Badge tone="amber">Needs review</Badge>}
               </div>
             </Card>
             <Card className="qf-report-card qf-report-card--green">

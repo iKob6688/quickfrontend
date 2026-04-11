@@ -302,7 +302,8 @@ export function EtaxDashboardPage() {
     onError: (err) => toast.error('ส่งอีเมล e-Tax อีกครั้งไม่สำเร็จ', err instanceof Error ? err.message : undefined),
   })
 
-  const summary = summaryQuery.data?.config
+  const summaryState = summaryQuery.data
+  const summary = summaryState?.config
   const usage = summary?.usage
 
   const rows = useMemo(
@@ -435,9 +436,13 @@ export function EtaxDashboardPage() {
                 <div className="col-md-6 col-xl-3">
                   <Card className="qf-report-card qf-report-card--amber h-100">
                     <div className="small text-muted mb-1">Seller Address</div>
-                    <div className="h4 fw-semibold mb-1">{summary?.sellerAddressReviewNeeded ? 'Needs review' : 'Ready'}</div>
+                    <div className="h4 fw-semibold mb-1">
+                      {summaryState?.configMissing ? 'Not configured' : summary?.sellerAddressReviewNeeded ? 'Needs review' : 'Ready'}
+                    </div>
                     <div className="small text-muted">
-                      {summary?.sellerAddressMissingFields?.length
+                      {summaryState?.configMissing
+                        ? 'ยังไม่มี active ETax configuration ให้เริ่มงานจากหน้า invoice ก่อนแล้วเปิด Settings เพื่อตรวจสอบการตั้งค่า'
+                        : summary?.sellerAddressMissingFields?.length
                         ? summary.sellerAddressMissingFields.map(formatFieldLabel).join(', ')
                         : 'Backend-validated, but not a submit blocker in provider mode'}
                     </div>
@@ -453,7 +458,11 @@ export function EtaxDashboardPage() {
                 <div className="d-flex align-items-start justify-content-between gap-3">
                   <div>
                     <div className="fw-semibold">Recent ETax Documents</div>
-                    <div className="small text-muted">เอกสารล่าสุดที่พร้อมดำเนินการต่อ</div>
+                    <div className="small text-muted">
+                      {summaryState?.configMissing
+                        ? 'ยังไม่มี config จึงยังเริ่มสร้าง e-Tax document ไม่ได้'
+                        : 'เอกสารล่าสุดที่พร้อมดำเนินการต่อ'}
+                    </div>
                   </div>
                   <div className="d-flex gap-2 flex-wrap">
                     <Button
@@ -501,9 +510,23 @@ export function EtaxDashboardPage() {
               rowKey={(r) => r.id}
               empty={
                 <div className="py-4 text-center">
-                  <div className="fw-semibold">ไม่พบเอกสาร e-Tax</div>
+                  <div className="fw-semibold">
+                    {summaryState?.configMissing ? 'ยังไม่มี e-Tax configuration' : 'ไม่พบเอกสาร e-Tax'}
+                  </div>
                   <div className="small text-muted">
-                    {search ? 'ลองล้างคำค้นหา' : 'รอเอกสารจาก Odoo backend'}
+                    {summaryState?.configMissing
+                      ? 'เริ่มจากหน้าใบแจ้งหนี้/ใบเสร็จ แล้วเปิด Settings เพื่อผูก active e-Tax configuration ก่อน'
+                      : search
+                        ? 'ลองล้างคำค้นหา'
+                        : 'เริ่มจากหน้าใบแจ้งหนี้/ใบเสร็จ แล้วกด Submit e-Tax จากเอกสารต้นทาง'}
+                  </div>
+                  <div className="d-flex justify-content-center gap-2 mt-3 flex-wrap">
+                    <Button size="sm" variant="secondary" onClick={() => navigate('/sales/invoices')}>
+                      ไปหน้าใบแจ้งหนี้
+                    </Button>
+                    <Button size="sm" onClick={() => navigate('/accounting/etax-settings')}>
+                      เปิด Settings
+                    </Button>
                   </div>
                 </div>
               }
@@ -524,7 +547,11 @@ export function EtaxDashboardPage() {
             }
           >
             {!currentDoc ? (
-              <div className="py-4 text-center text-muted">เลือกเอกสารจากตารางด้านซ้าย</div>
+              <div className="py-4 text-center text-muted">
+                {summaryState?.configMissing
+                  ? 'ยังไม่มี config ให้เริ่มจาก Settings ก่อน แล้วค่อยกลับไป Submit e-Tax จากหน้าเอกสารต้นทาง'
+                  : 'เลือกเอกสารจากตารางด้านซ้าย หรือเริ่มจากหน้าใบแจ้งหนี้แล้วกด Submit e-Tax'}
+              </div>
             ) : detailQuery.isLoading ? (
               <div className="py-4 text-center text-muted">กำลังโหลดรายละเอียด...</div>
             ) : (

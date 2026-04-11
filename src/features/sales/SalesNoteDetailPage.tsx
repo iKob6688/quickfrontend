@@ -10,6 +10,8 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { toast } from '@/lib/toastStore'
 import { useSettingsStore as useStudioSettingsStore } from '@/app/core/storage/settingsStore'
 import { cancelSalesNote, getSalesNote, postSalesNote, type SalesNoteDetail } from '@/api/services/sales-notes.service'
+import { EtaxWorkflowCard } from '@/features/etax/EtaxWorkflowCard'
+import { getInvoiceEtax, pollEtaxDocument, resendEtaxDocumentEmail, sendEtaxDocumentEmail, submitInvoiceEtax } from '@/api/services/etax.service'
 
 const FALLBACK_TPL_SALES_CREDIT = 'sales_credit_note_default_v1'
 const FALLBACK_TPL_SALES_DEBIT = 'sales_debit_note_default_v1'
@@ -25,6 +27,13 @@ export function SalesNoteDetailPage() {
     queryKey: ['salesNote', noteId],
     queryFn: () => getSalesNote(noteId!),
     enabled: !!noteId,
+  })
+
+  const etaxQuery = useQuery({
+    queryKey: ['sales-note-etax', noteId],
+    queryFn: () => getInvoiceEtax(noteId!),
+    enabled: !!noteId,
+    staleTime: 10_000,
   })
 
   const postMutation = useMutation({
@@ -47,11 +56,36 @@ export function SalesNoteDetailPage() {
     onError: (err) => toast.error('ยกเลิกเอกสารไม่สำเร็จ', err instanceof Error ? err.message : undefined),
   })
 
+  const etaxSubmitMutation = useMutation({
+    mutationFn: async () => {
+      if (!noteId) throw new Error('Missing note id')
+      return await submitInvoiceEtax(noteId)
+    },
+    onSuccess: async (res) => {
+      await queryClient.invalidateQueries({ queryKey: ['salesNote', noteId] })
+      await queryClient.invalidateQueries({ queryKey: ['sales-note-etax', noteId] })
+      await queryClient.invalidateQueries({ queryKey: ['etax'] })
+      toast.success(
+        'Submit e-Tax สำเร็จ',
+        res.document?.name ? `ETax document: ${res.document.name}` : undefined,
+      )
+    },
+    onError: (err) => {
+      toast.error('Submit e-Tax ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+    },
+  })
+
   const templateId =
     (note?.noteType === 'credit'
       ? studioSettings.defaultTemplateIdByDocType?.sales_credit_note
       : studioSettings.defaultTemplateIdByDocType?.sales_debit_note) ||
     (note?.noteType === 'credit' ? FALLBACK_TPL_SALES_CREDIT : FALLBACK_TPL_SALES_DEBIT)
+
+  const etaxDocument = etaxQuery.data?.document
+  const etaxCurrentStep = etaxQuery.data?.currentStep || (etaxDocument ? 'in_progress' : 'not_configured')
+  const etaxNextRoute =
+    etaxQuery.data?.nextRecommendedRoute ||
+    (etaxDocument?.id ? `/accounting/etax?documentId=${etaxDocument.id}` : '/accounting/etax')
 
   const openPrint = (mode: 'print' | 'pdf' | 'edit') => {
     if (!note) return
@@ -180,6 +214,48 @@ export function SalesNoteDetailPage() {
           </div>
         </div>
       </Card>
+
+      <EtaxWorkflowCard
+        summary={etaxQuery.data}
+        submitting={etaxSubmitMutation.isPending}
+        onSubmit={async () => {
+          await etaxSubmitMutation.mutateAsync()
+        }}
+        onOpenPrimary={() => navigate(etaxCurrentStep === 'not_configured' || etaxCurrentStep === 'needs_configuration' ? '/accounting/etax-settings' : etaxNextRoute)}
+        onPoll={
+          etaxDocument?.availableNextActions?.includes('poll')
+            ? async () => {
+                try {
+                  await pollEtaxDocument(etaxDocument.id)
+                  await queryClient.invalidateQueries({ queryKey: ['sales-note-etax', noteId] })
+                  await queryClient.invalidateQueries({ queryKey: ['etax'] })
+                  toast.success('Poll e-Tax สำเร็จ')
+                } catch (err) {
+                  toast.error('Poll e-Tax ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+                }
+              }
+            : undefined
+        }
+        onSendEmail={
+          etaxDocument
+            ? async () => {
+                try {
+                  const res = etaxDocument.emailState === 'sent'
+                    ? await resendEtaxDocumentEmail(etaxDocument.id)
+                    : await sendEtaxDocumentEmail(etaxDocument.id)
+                  await queryClient.invalidateQueries({ queryKey: ['sales-note-etax', noteId] })
+                  await queryClient.invalidateQueries({ queryKey: ['etax'] })
+                  toast.success(
+                    res.emailState === 'sent' ? 'ส่ง e-Tax email สำเร็จ' : 'ส่ง e-Tax email แล้ว',
+                    res.emailRecipient || undefined,
+                  )
+                } catch (err) {
+                  toast.error('ส่ง e-Tax email ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+                }
+              }
+            : undefined
+        }
+      />
 
       <DataTable title="รายการ" columns={lineColumns} rows={note.lines || []} />
     </div>

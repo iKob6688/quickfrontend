@@ -64,11 +64,17 @@ export interface EtaxConfigSummary {
   sellerAddressLines: string[]
   sellerAddressText: string
   usage: EtaxUsageSummary
+  submissionMode?: string | null
+  csvPayloadStyle?: string | null
+  csvTransportMode?: string | null
+  configReady?: boolean
 }
 
 export interface EtaxSummaryResponse {
   company: { id: number; name: string }
-  config: EtaxConfigSummary
+  config: EtaxConfigSummary | null
+  configMissing: boolean
+  configMissingReason?: string | null
   actions: {
     canSubmit: boolean
     canPoll: boolean
@@ -156,7 +162,21 @@ export interface EtaxInvoiceSummary {
   eligible: boolean
   hasDocument: boolean
   canSubmit: boolean
+  hasConfig?: boolean
+  configReady?: boolean
+  configMissingReason?: string | null
+  documentEligible?: boolean
+  documentTypeLabel?: string | null
+  currentStep?: string | null
+  nextRecommendedAction?: string | null
+  nextRecommendedRoute?: string | null
   document?: EtaxDocumentRecord | null
+}
+
+export interface EtaxConfigResponse {
+  config: EtaxConfigSummary | null
+  configMissing: boolean
+  configMissingReason?: string | null
 }
 
 export interface EtaxListParams {
@@ -276,6 +296,10 @@ function normalizeConfig(raw: any): EtaxConfigSummary {
     sellerAddressLines: parseStringArray(raw?.sellerAddressLines),
     sellerAddressText: parseText(raw?.sellerAddressText) || '',
     usage: normalizeUsage(raw?.usage),
+    submissionMode: parseText(raw?.submissionMode),
+    csvPayloadStyle: parseText(raw?.csvPayloadStyle),
+    csvTransportMode: parseText(raw?.csvTransportMode),
+    configReady: parseBoolean(raw?.configReady),
   }
 }
 
@@ -372,14 +396,20 @@ export async function getEtaxSummary() {
   const data = await post<any>(`${basePath}/summary`, {})
   return {
     company: data.company,
-    config: normalizeConfig(data.config),
+    config: data?.config ? normalizeConfig(data.config) : null,
+    configMissing: parseBoolean(data?.configMissing),
+    configMissingReason: parseText(data?.configMissingReason),
     actions: data.actions,
   } as EtaxSummaryResponse
 }
 
 export async function getEtaxConfig() {
   const data = await post<any>(`${basePath}/config`, {})
-  return normalizeConfig(data)
+  return {
+    config: data?.config ? normalizeConfig(data.config) : null,
+    configMissing: parseBoolean(data?.configMissing),
+    configMissingReason: parseText(data?.configMissingReason),
+  } as EtaxConfigResponse
 }
 
 export async function updateEtaxConfig(payload: EtaxConfigUpdatePayload) {
@@ -415,6 +445,14 @@ export async function getInvoiceEtax(invoiceId: number) {
     eligible: parseBoolean(data?.eligible),
     hasDocument: parseBoolean(data?.hasDocument),
     canSubmit: parseBoolean(data?.canSubmit),
+    hasConfig: parseBoolean(data?.hasConfig),
+    configReady: parseBoolean(data?.configReady),
+    configMissingReason: parseText(data?.configMissingReason),
+    documentEligible: parseBoolean(data?.documentEligible),
+    documentTypeLabel: parseText(data?.documentTypeLabel),
+    currentStep: parseText(data?.currentStep),
+    nextRecommendedAction: parseText(data?.nextRecommendedAction),
+    nextRecommendedRoute: parseText(data?.nextRecommendedRoute),
     document: data?.document ? normalizeDocument(data.document) : null,
   } as EtaxInvoiceSummary
 }
@@ -426,6 +464,14 @@ export async function submitInvoiceEtax(invoiceId: number) {
     eligible: parseBoolean(data?.etax?.eligible ?? data?.eligible),
     hasDocument: parseBoolean(data?.etax?.hasDocument ?? data?.hasDocument),
     canSubmit: parseBoolean(data?.etax?.canSubmit ?? data?.canSubmit),
+    hasConfig: parseBoolean(data?.etax?.hasConfig ?? data?.hasConfig),
+    configReady: parseBoolean(data?.etax?.configReady ?? data?.configReady),
+    configMissingReason: parseText(data?.etax?.configMissingReason ?? data?.configMissingReason),
+    documentEligible: parseBoolean(data?.etax?.documentEligible ?? data?.documentEligible),
+    documentTypeLabel: parseText(data?.etax?.documentTypeLabel ?? data?.documentTypeLabel),
+    currentStep: parseText(data?.etax?.currentStep ?? data?.currentStep),
+    nextRecommendedAction: parseText(data?.etax?.nextRecommendedAction ?? data?.nextRecommendedAction),
+    nextRecommendedRoute: parseText(data?.etax?.nextRecommendedRoute ?? data?.nextRecommendedRoute),
     document: data?.etax?.document ? normalizeDocument(data.etax.document) : data?.document ? normalizeDocument(data.document) : null,
   } as EtaxInvoiceSummary
 }

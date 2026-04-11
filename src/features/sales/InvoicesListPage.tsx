@@ -313,7 +313,7 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
         title={isReceiptMode ? 'ใบเสร็จรับเงิน' : 'ใบแจ้งหนี้'}
         subtitle={
           isReceiptMode
-            ? 'ค้นหาและเปิดรายการใบเสร็จรับเงิน (เอกสารที่ชำระแล้ว)'
+            ? 'ค้นหาและเปิดรายการใบเสร็จรับเงิน จากนั้นไปต่อ e-Tax ที่หน้าเอกสารต้นทาง'
             : 'ค้นหา ดู และจัดการเอกสารขาย (รูปแบบ UI ใกล้ PEAK)'
         }
         breadcrumb={isReceiptMode ? 'รายรับ · ใบเสร็จรับเงิน' : 'รายรับ · ใบแจ้งหนี้'}
@@ -334,6 +334,11 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
                 + เลือกใบแจ้งหนี้เพื่อสร้างใบเสร็จ
               </Button>
             )}
+            {isReceiptMode ? (
+              <Button size="sm" variant="secondary" onClick={() => navigate('/accounting/etax')}>
+                เปิด e-Tax Workspace
+              </Button>
+            ) : null}
             <Button size="sm" variant="secondary" disabled>
               พิมพ์รายงาน
             </Button>
@@ -439,7 +444,7 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
                   {qDebounced
                     ? 'ไม่พบข้อมูลที่ค้นหา ลองค้นหาด้วยคำอื่น'
                     : isReceiptMode
-                      ? 'ยังไม่มีใบเสร็จรับเงินในระบบ'
+                      ? 'ยังไม่มีใบเสร็จรับเงินในระบบ ให้เริ่มจากรับชำระเงินในหน้าใบแจ้งหนี้ก่อน แล้วค่อยกลับมาออก e-Tax'
                       : 'ยังไม่มีใบแจ้งหนี้ในระบบ'}
                 </p>
               </div>

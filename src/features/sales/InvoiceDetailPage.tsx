@@ -13,6 +13,7 @@ import { RegisterPaymentModal } from '@/features/sales/RegisterPaymentModal'
 import { AmendInvoiceModal } from '@/features/sales/AmendInvoiceModal'
 import { PromptPayQrModal } from '@/features/sales/PromptPayQrModal'
 import { CreateNoteModal } from '@/components/notes/CreateNoteModal'
+import { EtaxWorkflowCard } from '@/features/etax/EtaxWorkflowCard'
 import { useEffect, useState } from 'react'
 import { toast } from '@/lib/toastStore'
 import { useSettingsStore as useStudioSettingsStore } from '@/app/core/storage/settingsStore'
@@ -249,39 +250,18 @@ export function InvoiceDetailPage() {
   })
 
   const etaxDocument = etaxQuery.data?.document
-  const etaxEmailState = etaxDocument?.emailState || 'not_applicable'
-  const etaxStatusTone =
-    etaxDocument?.state === 'done'
-      ? 'green'
-      : etaxDocument?.state === 'error'
-        ? 'red'
-        : etaxDocument?.state === 'processing'
-          ? 'amber'
-          : etaxDocument?.state === 'submitted' || etaxDocument?.state === 'queued'
-            ? 'blue'
-            : 'gray'
-  const etaxStatusLabel =
-    etaxDocument?.state === 'done'
-      ? 'Done'
-      : etaxDocument?.state === 'error'
-        ? 'Error'
-        : etaxDocument?.state === 'processing'
-          ? 'Processing'
-          : etaxDocument?.state === 'submitted'
-            ? 'Submitted'
-            : etaxDocument?.state === 'queued'
-            ? 'Queued'
-            : 'Draft'
   const etaxAvailableActions = etaxDocument?.availableNextActions || []
-  const canSubmitEtaxFromInvoice = Boolean(
-    invoice &&
-      invoice.status === 'posted' &&
-      !etaxSubmitMutation.isPending &&
-      (etaxDocument ? etaxAvailableActions.includes('submit') : etaxQuery.data?.canSubmit !== false),
-  )
-  const canPollEtaxFromInvoice = Boolean(
-    etaxDocument && etaxAvailableActions.includes('poll'),
-  )
+  const etaxCurrentStep = etaxQuery.data?.currentStep || (etaxDocument ? 'in_progress' : 'not_configured')
+  const etaxNextRoute =
+    etaxQuery.data?.nextRecommendedRoute ||
+    (etaxDocument?.id ? `/accounting/etax?documentId=${etaxDocument.id}` : '/accounting/etax')
+  const etaxCtaLabel =
+    etaxCurrentStep === 'not_configured' || etaxCurrentStep === 'needs_configuration'
+      ? 'Open e-Tax Settings'
+      : etaxCurrentStep === 'completed' || etaxCurrentStep === 'in_progress' || etaxCurrentStep === 'needs_attention'
+        ? 'Open e-Tax Workspace'
+        : 'Open e-Tax Workspace'
+  const canPollEtaxFromInvoice = Boolean(etaxDocument && etaxAvailableActions.includes('poll'))
 
   useEffect(() => {
     if (!invoiceId || !invoice) {
@@ -802,87 +782,34 @@ export function InvoiceDetailPage() {
         </div>
       </Card>
 
-      <Card className="p-4 mb-4">
-        <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
-          <div>
-            <div className="qf-section-title mb-2">e-Tax</div>
-            <div className="d-flex align-items-center gap-2 flex-wrap mb-2">
-              <Badge tone={etaxStatusTone}>{etaxStatusLabel}</Badge>
-              <span className="text-muted small">
-                {etaxQuery.data?.eligible ? 'เอกสารนี้ส่ง e-Tax ได้' : 'เอกสารนี้ยังไม่พร้อมสำหรับ e-Tax'}
-              </span>
-            </div>
-            <div className="small text-muted">
-              {etaxDocument
-                ? `ETax ${etaxDocument.name} · INET ${etaxDocument.inetStatus || '—'} · Email ${etaxEmailState}`
-                : 'ยังไม่มี ETax document สำหรับเอกสารนี้'}
-            </div>
-            {etaxDocument?.addressValidationMessage ? (
-              <div className="small text-warning mt-1">
-                {etaxDocument.addressValidationMessage}
-              </div>
-            ) : null}
-            {etaxDocument?.emailLastError ? (
-              <div className="small text-danger mt-1">
-                {etaxDocument.emailLastError}
-              </div>
-            ) : null}
-          </div>
-          <div className="d-flex align-items-center gap-2 flex-wrap justify-content-lg-end">
-            {canSubmitEtaxFromInvoice ? (
-              <Button
-                size="sm"
-                className="text-nowrap"
-                onClick={async () => {
-                  await etaxSubmitMutation.mutateAsync()
-                }}
-                isLoading={etaxSubmitMutation.isPending}
-                disabled={!canSubmitEtaxFromInvoice}
-              >
-                Submit e-Tax
-              </Button>
-            ) : null}
-            <Button
-              size="sm"
-              variant="secondary"
-              className="text-nowrap"
-              onClick={() => navigate('/accounting/etax')}
-            >
-              เปิด e-Tax Workspace
-            </Button>
-            {canPollEtaxFromInvoice ? (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-nowrap"
-                onClick={async () => {
-                  if (!etaxDocument) {
-                    toast.error('ยังไม่มี ETax document', 'Submit e-Tax ก่อน')
-                    return
-                  }
-                  try {
-                    await pollEtaxDocument(etaxDocument.id)
-                    await queryClient.invalidateQueries({ queryKey: ['invoice-etax', invoiceId] })
-                    await queryClient.invalidateQueries({ queryKey: ['etax'] })
-                    toast.success('Poll e-Tax สำเร็จ')
-                  } catch (err) {
-                    toast.error('Poll e-Tax ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
-                  }
-                }}
-                disabled={!canPollEtaxFromInvoice}
-              >
-                Poll Status
-              </Button>
-            ) : null}
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-nowrap"
-              onClick={async () => {
+      <EtaxWorkflowCard
+        summary={etaxQuery.data}
+        submitting={etaxSubmitMutation.isPending}
+        onSubmit={async () => {
+          await etaxSubmitMutation.mutateAsync()
+        }}
+        onOpenPrimary={() => navigate(etaxCurrentStep === 'not_configured' || etaxCurrentStep === 'needs_configuration' ? '/accounting/etax-settings' : etaxNextRoute)}
+        onPoll={
+          canPollEtaxFromInvoice
+            ? async () => {
                 if (!etaxDocument) {
                   toast.error('ยังไม่มี ETax document', 'Submit e-Tax ก่อน')
                   return
                 }
+                try {
+                  await pollEtaxDocument(etaxDocument.id)
+                  await queryClient.invalidateQueries({ queryKey: ['invoice-etax', invoiceId] })
+                  await queryClient.invalidateQueries({ queryKey: ['etax'] })
+                  toast.success('Poll e-Tax สำเร็จ')
+                } catch (err) {
+                  toast.error('Poll e-Tax ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+                }
+              }
+            : undefined
+        }
+        onSendEmail={
+          etaxDocument
+            ? async () => {
                 try {
                   const res = etaxDocument.emailState === 'sent'
                     ? await resendEtaxDocumentEmail(etaxDocument.id)
@@ -896,20 +823,19 @@ export function InvoiceDetailPage() {
                 } catch (err) {
                   toast.error('ส่ง e-Tax email ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
                 }
-              }}
-              disabled={!etaxDocument || !etaxDocument.hasPdfAttachment || etaxDocument.state !== 'done' || etaxSubmitMutation.isPending}
-            >
-              {etaxDocument?.emailState === 'sent' ? 'Resend Email' : 'Send Email'}
-            </Button>
-          </div>
-        </div>
-        {invoice.paymentWorkflow?.queueState === 'pending_approval' ? (
+              }
+            : undefined
+        }
+        primaryLabel={etaxCtaLabel}
+      />
+      {invoice.paymentWorkflow?.queueState === 'pending_approval' ? (
+        <Card className="p-4 mb-4">
           <div className="small text-warning mt-2">
             การรับชำระเงินล่าสุดถูกส่งเข้า approval queue แล้ว
             {invoice.paymentWorkflow.approvalTeamName ? ` · ทีม ${invoice.paymentWorkflow.approvalTeamName}` : ''}
           </div>
-        ) : null}
-      </Card>
+        </Card>
+      ) : null}
 
       <Card className="p-3 mb-4">
         <div className="small text-muted mb-2">สถานะกระบวนการเอกสาร</div>
