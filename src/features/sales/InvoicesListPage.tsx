@@ -272,7 +272,7 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
           return (
             <div className="d-flex justify-content-end gap-2 flex-wrap">
               <Button size="sm" variant="ghost" onClick={() => navigate(`/sales/invoices/${r.id}?action=receipt`)}>
-                ดูใบเสร็จรับเงิน
+                เปิดเอกสาร
               </Button>
               <Button
                 size="sm"
@@ -280,7 +280,7 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
                 isLoading={submittingEtaxId === r.id}
                 disabled={submittingEtaxId === r.id}
               >
-                Submit e-Tax
+                ส่ง e-Tax
               </Button>
             </div>
           )
@@ -290,7 +290,7 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
             <Button size="sm" onClick={() => navigate(`/sales/invoices/${r.id}?action=payment`)}>
               {isReceiptMode ? (isPaid ? 'เปิดเอกสาร' : 'รับชำระเงิน') : 'ชำระเงิน'}
             </Button>
-            {(r.status === 'posted' || r.status === 'paid') && (
+            {!isReceiptMode && (r.status === 'posted' || r.status === 'paid') && (
               <Button
                 size="sm"
                 variant="secondary"
@@ -298,7 +298,7 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
                 isLoading={submittingEtaxId === r.id}
                 disabled={submittingEtaxId === r.id}
               >
-                Submit e-Tax
+                ส่ง e-Tax
               </Button>
             )}
           </div>
@@ -313,7 +313,7 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
         title={isReceiptMode ? 'ใบเสร็จรับเงิน' : 'ใบแจ้งหนี้'}
         subtitle={
           isReceiptMode
-            ? 'ค้นหาและเปิดรายการใบเสร็จรับเงิน จากนั้นไปต่อ e-Tax ที่หน้าเอกสารต้นทาง'
+            ? 'เปิดเอกสารต้นทางเพื่อรับชำระเงิน ออกใบเสร็จ และส่ง e-Tax ต่อจากหน้าเดียวกัน'
             : 'ค้นหา ดู และจัดการเอกสารขาย (รูปแบบ UI ใกล้ PEAK)'
         }
         breadcrumb={isReceiptMode ? 'รายรับ · ใบเสร็จรับเงิน' : 'รายรับ · ใบแจ้งหนี้'}
@@ -444,7 +444,7 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
                   {qDebounced
                     ? 'ไม่พบข้อมูลที่ค้นหา ลองค้นหาด้วยคำอื่น'
                     : isReceiptMode
-                      ? 'ยังไม่มีใบเสร็จรับเงินในระบบ ให้เริ่มจากรับชำระเงินในหน้าใบแจ้งหนี้ก่อน แล้วค่อยกลับมาออก e-Tax'
+                      ? 'ยังไม่มีใบเสร็จรับเงินในระบบ ให้เริ่มจากรับชำระเงินในหน้าใบแจ้งหนี้ก่อน แล้วค่อยส่ง e-Tax จากหน้าเอกสารต้นทาง'
                       : 'ยังไม่มีใบแจ้งหนี้ในระบบ'}
                 </p>
               </div>

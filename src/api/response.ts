@@ -191,7 +191,16 @@ function parseEnvelopeError(err: ApiErrorPayload | null | undefined) {
   const nestedMessage =
     typeof anyErr?.data?.message === 'string' && anyErr.data.message.trim().length ? anyErr.data.message : undefined
   const nestedDetails =
-    anyErr?.details ??
+    (
+      anyErr?.details && typeof anyErr.details === 'object'
+        ? {
+            ...(anyErr.details as Record<string, unknown>),
+            ...(anyErr?.retryable !== undefined ? { retryable: anyErr.retryable } : {}),
+            ...(anyErr?.nextSuggestedAction ? { nextSuggestedAction: anyErr.nextSuggestedAction } : {}),
+            ...(anyErr?.trace_id ? { trace_id: anyErr.trace_id } : {}),
+          }
+        : anyErr?.details
+    ) ??
     (typeof anyErr?.data?.debug === 'string' ? anyErr.data.debug : undefined) ??
     anyErr?.data
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Modal, Spinner } from 'react-bootstrap'
@@ -33,6 +33,7 @@ import {
 import {
   listThaiDistricts,
   listThaiProvinces,
+  resolveThaiAddress,
   listThaiSubDistricts,
 } from '@/api/services/thai-address.service'
 import { normalizeVatNumber, sanitizeVatNumber, thaiVatValidationMessage } from '@/lib/vat'
@@ -360,6 +361,7 @@ export function SalesOrderFormPage() {
   const totalTaxAmount = formData.lines.reduce((sum, line) => sum + (line.totalTax || 0), 0)
   const totalAmount = formData.lines.reduce((sum, line) => sum + (line.total || 0), 0)
   const isQuickPartnerThai = (quickPartner.countryId ?? thailandId) === thailandId
+  const lastResolvedQuickPartnerZipRef = useRef<string>('')
 
   const handleQuickPartnerProvinceChange = async (provinceId: number | null) => {
     const selected = provinceId ? (await listThaiProvinces()).find((item) => item.id === provinceId) : null
@@ -396,7 +398,7 @@ export function SalesOrderFormPage() {
       setQuickPartner((prev) => ({ ...prev, subDistrictId: null, subDistrict: '', zip: '' }))
       return
     }
-    const selected = (await listThaiSubDistricts({ districtId: quickPartner.districtId ?? null })).find(
+    const selected = (await listThaiSubDistricts({ provinceId: quickPartner.provinceId ?? null, districtId: quickPartner.districtId ?? null })).find(
       (item) => item.id === subDistrictId,
     )
     setQuickPartner((prev) => ({
@@ -406,6 +408,41 @@ export function SalesOrderFormPage() {
       zip: selected?.zipCode || '',
     }))
   }
+
+  const resolveQuickPartnerThaiAddress = async () => {
+    if (!isQuickPartnerThai) return
+    const resolved = await resolveThaiAddress({
+      provinceId: quickPartner.provinceId,
+      districtId: quickPartner.districtId,
+      districtName: quickPartner.district,
+      subDistrictName: quickPartner.subDistrict,
+      zipCode: quickPartner.zip,
+    })
+    setQuickPartner((prev) => ({
+      ...prev,
+      provinceId: resolved.province?.id ?? prev.provinceId ?? null,
+      stateId: resolved.province?.stateId ?? prev.stateId ?? null,
+      districtId: resolved.district?.id ?? prev.districtId ?? null,
+      subDistrictId: resolved.subDistrict?.id ?? prev.subDistrictId ?? null,
+      district: resolved.district?.name || prev.district,
+      city: resolved.district?.name || prev.city,
+      subDistrict: resolved.subDistrict?.name || prev.subDistrict,
+      zip: resolved.zipCode || prev.zip,
+    }))
+  }
+
+  useEffect(() => {
+    const zip = String(quickPartner.zip || '').trim()
+    if (!isQuickPartnerThai || zip.length !== 5 || !/^\d{5}$/.test(zip)) {
+      if (!zip) lastResolvedQuickPartnerZipRef.current = ''
+      return
+    }
+    if (lastResolvedQuickPartnerZipRef.current === zip) return
+    lastResolvedQuickPartnerZipRef.current = zip
+    resolveQuickPartnerThaiAddress().catch(() => {
+      lastResolvedQuickPartnerZipRef.current = ''
+    })
+  }, [isQuickPartnerThai, quickPartner.zip])
 
   const submitQuickPartner = async () => {
     if (!quickPartner.name?.trim()) {
@@ -1001,6 +1038,7 @@ export function SalesOrderFormPage() {
               </div>
               <div className="col-md-6">
                 <ThaiSubDistrictSelector
+                  provinceId={quickPartner.provinceId}
                   districtId={quickPartner.districtId}
                   value={quickPartner.subDistrictId}
                   onChange={(value) => {
@@ -1025,6 +1063,9 @@ export function SalesOrderFormPage() {
                 <Input
                   id="quick-partner-district"
                   value={quickPartner.district || ''}
+                  onBlur={() => {
+                    resolveQuickPartnerThaiAddress().catch(() => undefined)
+                  }}
                   onChange={(e) => setQuickPartner((prev) => ({ ...prev, district: e.target.value, city: e.target.value }))}
                 />
               </div>
@@ -1033,6 +1074,9 @@ export function SalesOrderFormPage() {
                 <Input
                   id="quick-partner-subDistrict"
                   value={quickPartner.subDistrict || ''}
+                  onBlur={() => {
+                    resolveQuickPartnerThaiAddress().catch(() => undefined)
+                  }}
                   onChange={(e) => setQuickPartner((prev) => ({ ...prev, subDistrict: e.target.value }))}
                 />
               </div>
@@ -1043,6 +1087,9 @@ export function SalesOrderFormPage() {
             <Input
               id="quick-partner-zip"
               value={quickPartner.zip || ''}
+              onBlur={() => {
+                resolveQuickPartnerThaiAddress().catch(() => undefined)
+              }}
               onChange={(e) => setQuickPartner((prev) => ({ ...prev, zip: e.target.value }))}
             />
           </div>

@@ -255,7 +255,21 @@ export function SalesNoteDetailPage() {
               }
             : undefined
         }
+        primaryLabel={
+          etaxCurrentStep === 'not_configured' || etaxCurrentStep === 'needs_configuration'
+            ? 'ตั้งค่า e-Tax'
+            : etaxCurrentStep === 'completed' || etaxCurrentStep === 'in_progress' || etaxCurrentStep === 'needs_attention'
+              ? 'ติดตามเอกสาร e-Tax'
+              : 'เปิด e-Tax Workspace'
+        }
       />
+
+      <Card className="p-3 mb-4">
+        <div className="small text-muted">
+          e-Tax ของ{note.noteType === 'credit' ? 'ใบลดหนี้' : 'ใบเพิ่มหนี้'}จะออกจากเอกสารใบนี้โดยตรง
+          {note.originalMoveNumber ? ` และอ้างอิงใบต้นฉบับ ${note.originalMoveNumber}` : ''}
+        </div>
+      </Card>
 
       <DataTable title="รายการ" columns={lineColumns} rows={note.lines || []} />
     </div>

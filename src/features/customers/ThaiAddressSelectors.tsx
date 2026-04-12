@@ -85,16 +85,17 @@ export function ThaiDistrictSelector({ provinceId, value, onChange }: DistrictPr
 }
 
 interface SubDistrictProps {
+  provinceId?: number | null
   districtId?: number | null
   value?: number | null
   onChange: (value: number | null) => void
 }
 
-export function ThaiSubDistrictSelector({ districtId, value, onChange }: SubDistrictProps) {
+export function ThaiSubDistrictSelector({ provinceId, districtId, value, onChange }: SubDistrictProps) {
   const query = useQuery({
-    queryKey: ['thai-address', 'subdistricts', districtId],
-    queryFn: () => listThaiSubDistricts({ districtId }),
-    enabled: districtId != null,
+    queryKey: ['thai-address', 'subdistricts', provinceId, districtId],
+    queryFn: () => listThaiSubDistricts({ provinceId, districtId }),
+    enabled: districtId != null || provinceId != null,
     staleTime: 5 * 60_000,
   })
 
@@ -106,7 +107,7 @@ export function ThaiSubDistrictSelector({ districtId, value, onChange }: SubDist
         className="form-select"
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
-        disabled={query.isLoading || districtId == null}
+        disabled={query.isLoading || (districtId == null && provinceId == null)}
       >
         <option value="">เลือกแขวง/ตำบล</option>
         {(query.data || []).map((subDistrict) => (

@@ -32,6 +32,7 @@ import {
 import {
   listThaiDistricts,
   listThaiProvinces,
+  resolveThaiAddress,
   listThaiSubDistricts,
 } from '@/api/services/thai-address.service'
 import { normalizeVatNumber, sanitizeVatNumber, thaiVatValidationMessage } from '@/lib/vat'
@@ -393,6 +394,7 @@ export function PurchaseOrderFormPage() {
     })
 
   const isQuickVendorThai = (quickVendor.countryId ?? thailandId) === thailandId
+  const lastResolvedQuickVendorZipRef = useRef<string>('')
 
   const handleQuickVendorProvinceChange = async (provinceId: number | null) => {
     const selected = provinceId ? (await listThaiProvinces()).find((item) => item.id === provinceId) : null
@@ -429,7 +431,7 @@ export function PurchaseOrderFormPage() {
       setQuickVendor((prev) => ({ ...prev, subDistrictId: null, subDistrict: '', zip: '' }))
       return
     }
-    const selected = (await listThaiSubDistricts({ districtId: quickVendor.districtId ?? null })).find(
+    const selected = (await listThaiSubDistricts({ provinceId: quickVendor.provinceId ?? null, districtId: quickVendor.districtId ?? null })).find(
       (item) => item.id === subDistrictId,
     )
     setQuickVendor((prev) => ({
@@ -439,6 +441,41 @@ export function PurchaseOrderFormPage() {
       zip: selected?.zipCode || '',
     }))
   }
+
+  const resolveQuickVendorThaiAddress = async () => {
+    if (!isQuickVendorThai) return
+    const resolved = await resolveThaiAddress({
+      provinceId: quickVendor.provinceId,
+      districtId: quickVendor.districtId,
+      districtName: quickVendor.district,
+      subDistrictName: quickVendor.subDistrict,
+      zipCode: quickVendor.zip,
+    })
+    setQuickVendor((prev) => ({
+      ...prev,
+      provinceId: resolved.province?.id ?? prev.provinceId ?? null,
+      stateId: resolved.province?.stateId ?? prev.stateId ?? null,
+      districtId: resolved.district?.id ?? prev.districtId ?? null,
+      subDistrictId: resolved.subDistrict?.id ?? prev.subDistrictId ?? null,
+      district: resolved.district?.name || prev.district,
+      city: resolved.district?.name || prev.city,
+      subDistrict: resolved.subDistrict?.name || prev.subDistrict,
+      zip: resolved.zipCode || prev.zip,
+    }))
+  }
+
+  useEffect(() => {
+    const zip = String(quickVendor.zip || '').trim()
+    if (!isQuickVendorThai || zip.length !== 5 || !/^\d{5}$/.test(zip)) {
+      if (!zip) lastResolvedQuickVendorZipRef.current = ''
+      return
+    }
+    if (lastResolvedQuickVendorZipRef.current === zip) return
+    lastResolvedQuickVendorZipRef.current = zip
+    resolveQuickVendorThaiAddress().catch(() => {
+      lastResolvedQuickVendorZipRef.current = ''
+    })
+  }, [isQuickVendorThai, quickVendor.zip])
 
   const submitQuickVendor = async () => {
     if (!quickVendor.name?.trim()) {
@@ -1123,6 +1160,7 @@ export function PurchaseOrderFormPage() {
               </div>
               <div className="col-md-6">
                 <ThaiSubDistrictSelector
+                  provinceId={quickVendor.provinceId}
                   districtId={quickVendor.districtId}
                   value={quickVendor.subDistrictId}
                   onChange={(value) => {
@@ -1147,6 +1185,9 @@ export function PurchaseOrderFormPage() {
                 <Input
                   id="quick-vendor-district"
                   value={quickVendor.district || ''}
+                  onBlur={() => {
+                    resolveQuickVendorThaiAddress().catch(() => undefined)
+                  }}
                   onChange={(e) => setQuickVendor((prev) => ({ ...prev, district: e.target.value, city: e.target.value }))}
                 />
               </div>
@@ -1155,6 +1196,9 @@ export function PurchaseOrderFormPage() {
                 <Input
                   id="quick-vendor-subDistrict"
                   value={quickVendor.subDistrict || ''}
+                  onBlur={() => {
+                    resolveQuickVendorThaiAddress().catch(() => undefined)
+                  }}
                   onChange={(e) => setQuickVendor((prev) => ({ ...prev, subDistrict: e.target.value }))}
                 />
               </div>
@@ -1165,6 +1209,9 @@ export function PurchaseOrderFormPage() {
             <Input
               id="quick-vendor-zip"
               value={quickVendor.zip || ''}
+              onBlur={() => {
+                resolveQuickVendorThaiAddress().catch(() => undefined)
+              }}
               onChange={(e) => setQuickVendor((prev) => ({ ...prev, zip: e.target.value }))}
             />
           </div>

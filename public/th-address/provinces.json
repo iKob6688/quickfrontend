@@ -1,0 +1,772 @@
+[
+  {
+    "id": 1,
+    "code": "1",
+    "name_th": "กรุงเทพมหานคร",
+    "name_en": "Bangkok",
+    "state_name": "กรุงเทพมหานคร",
+    "geography_id": 2,
+    "search_name": "กรุงเทพมหานคร",
+    "search_name_no_prefix": "กรุงเทพมหานคร"
+  },
+  {
+    "id": 2,
+    "code": "2",
+    "name_th": "สมุทรปราการ",
+    "name_en": "Samut Prakan",
+    "state_name": "สมุทรปราการ",
+    "geography_id": 2,
+    "search_name": "สมุทรปราการ",
+    "search_name_no_prefix": "สมุทรปราการ"
+  },
+  {
+    "id": 3,
+    "code": "3",
+    "name_th": "นนทบุรี",
+    "name_en": "Nonthaburi",
+    "state_name": "นนทบุรี",
+    "geography_id": 2,
+    "search_name": "นนทบุรี",
+    "search_name_no_prefix": "นนทบุรี"
+  },
+  {
+    "id": 4,
+    "code": "4",
+    "name_th": "ปทุมธานี",
+    "name_en": "Pathum Thani",
+    "state_name": "ปทุมธานี",
+    "geography_id": 2,
+    "search_name": "ปทุมธานี",
+    "search_name_no_prefix": "ปทุมธานี"
+  },
+  {
+    "id": 5,
+    "code": "5",
+    "name_th": "พระนครศรีอยุธยา",
+    "name_en": "Phra Nakhon Si Ayutthaya",
+    "state_name": "พระนครศรีอยุธยา",
+    "geography_id": 2,
+    "search_name": "พระนครศรีอยุธยา",
+    "search_name_no_prefix": "พระนครศรีอยุธยา"
+  },
+  {
+    "id": 6,
+    "code": "6",
+    "name_th": "อ่างทอง",
+    "name_en": "Ang Thong",
+    "state_name": "อ่างทอง",
+    "geography_id": 2,
+    "search_name": "อ่างทอง",
+    "search_name_no_prefix": "อ่างทอง"
+  },
+  {
+    "id": 7,
+    "code": "7",
+    "name_th": "ลพบุรี",
+    "name_en": "Lopburi",
+    "state_name": "ลพบุรี",
+    "geography_id": 2,
+    "search_name": "ลพบุรี",
+    "search_name_no_prefix": "ลพบุรี"
+  },
+  {
+    "id": 8,
+    "code": "8",
+    "name_th": "สิงห์บุรี",
+    "name_en": "Sing Buri",
+    "state_name": "สิงห์บุรี",
+    "geography_id": 2,
+    "search_name": "สิงห์บุรี",
+    "search_name_no_prefix": "สิงห์บุรี"
+  },
+  {
+    "id": 9,
+    "code": "9",
+    "name_th": "ชัยนาท",
+    "name_en": "Chai Nat",
+    "state_name": "ชัยนาท",
+    "geography_id": 2,
+    "search_name": "ชัยนาท",
+    "search_name_no_prefix": "ชัยนาท"
+  },
+  {
+    "id": 10,
+    "code": "10",
+    "name_th": "สระบุรี",
+    "name_en": "Saraburi",
+    "state_name": "สระบุรี",
+    "geography_id": 2,
+    "search_name": "สระบุรี",
+    "search_name_no_prefix": "สระบุรี"
+  },
+  {
+    "id": 11,
+    "code": "11",
+    "name_th": "ชลบุรี",
+    "name_en": "Chon Buri",
+    "state_name": "ชลบุรี",
+    "geography_id": 5,
+    "search_name": "ชลบุรี",
+    "search_name_no_prefix": "ชลบุรี"
+  },
+  {
+    "id": 12,
+    "code": "12",
+    "name_th": "ระยอง",
+    "name_en": "Rayong",
+    "state_name": "ระยอง",
+    "geography_id": 5,
+    "search_name": "ระยอง",
+    "search_name_no_prefix": "ระยอง"
+  },
+  {
+    "id": 13,
+    "code": "13",
+    "name_th": "จันทบุรี",
+    "name_en": "Chanthaburi",
+    "state_name": "จันทบุรี",
+    "geography_id": 5,
+    "search_name": "จันทบุรี",
+    "search_name_no_prefix": "จันทบุรี"
+  },
+  {
+    "id": 14,
+    "code": "14",
+    "name_th": "ตราด",
+    "name_en": "Trat",
+    "state_name": "ตราด",
+    "geography_id": 5,
+    "search_name": "ตราด",
+    "search_name_no_prefix": "ตราด"
+  },
+  {
+    "id": 15,
+    "code": "15",
+    "name_th": "ฉะเชิงเทรา",
+    "name_en": "Chachoengsao",
+    "state_name": "ฉะเชิงเทรา",
+    "geography_id": 5,
+    "search_name": "ฉะเชิงเทรา",
+    "search_name_no_prefix": "ฉะเชิงเทรา"
+  },
+  {
+    "id": 16,
+    "code": "16",
+    "name_th": "ปราจีนบุรี",
+    "name_en": "Prachin Buri",
+    "state_name": "ปราจีนบุรี",
+    "geography_id": 5,
+    "search_name": "ปราจีนบุรี",
+    "search_name_no_prefix": "ปราจีนบุรี"
+  },
+  {
+    "id": 17,
+    "code": "17",
+    "name_th": "นครนายก",
+    "name_en": "Nakhon Nayok",
+    "state_name": "นครนายก",
+    "geography_id": 2,
+    "search_name": "นครนายก",
+    "search_name_no_prefix": "นครนายก"
+  },
+  {
+    "id": 18,
+    "code": "18",
+    "name_th": "สระแก้ว",
+    "name_en": "Sa Kaeo",
+    "state_name": "สระแก้ว",
+    "geography_id": 5,
+    "search_name": "สระแก้ว",
+    "search_name_no_prefix": "สระแก้ว"
+  },
+  {
+    "id": 19,
+    "code": "19",
+    "name_th": "นครราชสีมา",
+    "name_en": "Nakhon Ratchasima",
+    "state_name": "นครราชสีมา",
+    "geography_id": 3,
+    "search_name": "นครราชสีมา",
+    "search_name_no_prefix": "นครราชสีมา"
+  },
+  {
+    "id": 20,
+    "code": "20",
+    "name_th": "บุรีรัมย์",
+    "name_en": "Buri Ram",
+    "state_name": "บุรีรัมย์",
+    "geography_id": 3,
+    "search_name": "บุรีรัมย์",
+    "search_name_no_prefix": "บุรีรัมย์"
+  },
+  {
+    "id": 21,
+    "code": "21",
+    "name_th": "สุรินทร์",
+    "name_en": "Surin",
+    "state_name": "สุรินทร์",
+    "geography_id": 3,
+    "search_name": "สุรินทร์",
+    "search_name_no_prefix": "สุรินทร์"
+  },
+  {
+    "id": 22,
+    "code": "22",
+    "name_th": "ศรีสะเกษ",
+    "name_en": "Si Sa Ket",
+    "state_name": "ศรีสะเกษ",
+    "geography_id": 3,
+    "search_name": "ศรีสะเกษ",
+    "search_name_no_prefix": "ศรีสะเกษ"
+  },
+  {
+    "id": 23,
+    "code": "23",
+    "name_th": "อุบลราชธานี",
+    "name_en": "Ubon Ratchathani",
+    "state_name": "อุบลราชธานี",
+    "geography_id": 3,
+    "search_name": "อุบลราชธานี",
+    "search_name_no_prefix": "อุบลราชธานี"
+  },
+  {
+    "id": 24,
+    "code": "24",
+    "name_th": "ยโสธร",
+    "name_en": "Yasothon",
+    "state_name": "ยโสธร",
+    "geography_id": 3,
+    "search_name": "ยโสธร",
+    "search_name_no_prefix": "ยโสธร"
+  },
+  {
+    "id": 25,
+    "code": "25",
+    "name_th": "ชัยภูมิ",
+    "name_en": "Chaiyaphum",
+    "state_name": "ชัยภูมิ",
+    "geography_id": 3,
+    "search_name": "ชัยภูมิ",
+    "search_name_no_prefix": "ชัยภูมิ"
+  },
+  {
+    "id": 26,
+    "code": "26",
+    "name_th": "อำนาจเจริญ",
+    "name_en": "Amnat Charoen",
+    "state_name": "อำนาจเจริญ",
+    "geography_id": 3,
+    "search_name": "อำนาจเจริญ",
+    "search_name_no_prefix": "อำนาจเจริญ"
+  },
+  {
+    "id": 27,
+    "code": "27",
+    "name_th": "หนองบัวลำภู",
+    "name_en": "Nong Bua Lam Phu",
+    "state_name": "หนองบัวลำภู",
+    "geography_id": 3,
+    "search_name": "หนองบัวลำภู",
+    "search_name_no_prefix": "หนองบัวลำภู"
+  },
+  {
+    "id": 28,
+    "code": "28",
+    "name_th": "ขอนแก่น",
+    "name_en": "Khon Kaen",
+    "state_name": "ขอนแก่น",
+    "geography_id": 3,
+    "search_name": "ขอนแก่น",
+    "search_name_no_prefix": "ขอนแก่น"
+  },
+  {
+    "id": 29,
+    "code": "29",
+    "name_th": "อุดรธานี",
+    "name_en": "Udon Thani",
+    "state_name": "อุดรธานี",
+    "geography_id": 3,
+    "search_name": "อุดรธานี",
+    "search_name_no_prefix": "อุดรธานี"
+  },
+  {
+    "id": 30,
+    "code": "30",
+    "name_th": "เลย",
+    "name_en": "Loei",
+    "state_name": "เลย",
+    "geography_id": 3,
+    "search_name": "เลย",
+    "search_name_no_prefix": "เลย"
+  },
+  {
+    "id": 31,
+    "code": "31",
+    "name_th": "หนองคาย",
+    "name_en": "Nong Khai",
+    "state_name": "หนองคาย",
+    "geography_id": 3,
+    "search_name": "หนองคาย",
+    "search_name_no_prefix": "หนองคาย"
+  },
+  {
+    "id": 32,
+    "code": "32",
+    "name_th": "มหาสารคาม",
+    "name_en": "Maha Sarakham",
+    "state_name": "มหาสารคาม",
+    "geography_id": 3,
+    "search_name": "มหาสารคาม",
+    "search_name_no_prefix": "มหาสารคาม"
+  },
+  {
+    "id": 33,
+    "code": "33",
+    "name_th": "ร้อยเอ็ด",
+    "name_en": "Roi Et",
+    "state_name": "ร้อยเอ็ด",
+    "geography_id": 3,
+    "search_name": "ร้อยเอ็ด",
+    "search_name_no_prefix": "ร้อยเอ็ด"
+  },
+  {
+    "id": 34,
+    "code": "34",
+    "name_th": "กาฬสินธุ์",
+    "name_en": "Kalasin",
+    "state_name": "กาฬสินธุ์",
+    "geography_id": 3,
+    "search_name": "กาฬสินธุ์",
+    "search_name_no_prefix": "กาฬสินธุ์"
+  },
+  {
+    "id": 35,
+    "code": "35",
+    "name_th": "สกลนคร",
+    "name_en": "Sakon Nakhon",
+    "state_name": "สกลนคร",
+    "geography_id": 3,
+    "search_name": "สกลนคร",
+    "search_name_no_prefix": "สกลนคร"
+  },
+  {
+    "id": 36,
+    "code": "36",
+    "name_th": "นครพนม",
+    "name_en": "Nakhon Phanom",
+    "state_name": "นครพนม",
+    "geography_id": 3,
+    "search_name": "นครพนม",
+    "search_name_no_prefix": "นครพนม"
+  },
+  {
+    "id": 37,
+    "code": "37",
+    "name_th": "มุกดาหาร",
+    "name_en": "Mukdahan",
+    "state_name": "มุกดาหาร",
+    "geography_id": 3,
+    "search_name": "มุกดาหาร",
+    "search_name_no_prefix": "มุกดาหาร"
+  },
+  {
+    "id": 38,
+    "code": "38",
+    "name_th": "เชียงใหม่",
+    "name_en": "Chiang Mai",
+    "state_name": "เชียงใหม่",
+    "geography_id": 1,
+    "search_name": "เชียงใหม่",
+    "search_name_no_prefix": "เชียงใหม่"
+  },
+  {
+    "id": 39,
+    "code": "39",
+    "name_th": "ลำพูน",
+    "name_en": "Lamphun",
+    "state_name": "ลำพูน",
+    "geography_id": 1,
+    "search_name": "ลำพูน",
+    "search_name_no_prefix": "ลำพูน"
+  },
+  {
+    "id": 40,
+    "code": "40",
+    "name_th": "ลำปาง",
+    "name_en": "Lampang",
+    "state_name": "ลำปาง",
+    "geography_id": 1,
+    "search_name": "ลำปาง",
+    "search_name_no_prefix": "ลำปาง"
+  },
+  {
+    "id": 41,
+    "code": "41",
+    "name_th": "อุตรดิตถ์",
+    "name_en": "Uttaradit",
+    "state_name": "อุตรดิตถ์",
+    "geography_id": 1,
+    "search_name": "อุตรดิตถ์",
+    "search_name_no_prefix": "อุตรดิตถ์"
+  },
+  {
+    "id": 42,
+    "code": "42",
+    "name_th": "แพร่",
+    "name_en": "Phrae",
+    "state_name": "แพร่",
+    "geography_id": 1,
+    "search_name": "แพร่",
+    "search_name_no_prefix": "แพร่"
+  },
+  {
+    "id": 43,
+    "code": "43",
+    "name_th": "น่าน",
+    "name_en": "Nan",
+    "state_name": "น่าน",
+    "geography_id": 1,
+    "search_name": "น่าน",
+    "search_name_no_prefix": "น่าน"
+  },
+  {
+    "id": 44,
+    "code": "44",
+    "name_th": "พะเยา",
+    "name_en": "Phayao",
+    "state_name": "พะเยา",
+    "geography_id": 1,
+    "search_name": "พะเยา",
+    "search_name_no_prefix": "พะเยา"
+  },
+  {
+    "id": 45,
+    "code": "45",
+    "name_th": "เชียงราย",
+    "name_en": "Chiang Rai",
+    "state_name": "เชียงราย",
+    "geography_id": 1,
+    "search_name": "เชียงราย",
+    "search_name_no_prefix": "เชียงราย"
+  },
+  {
+    "id": 46,
+    "code": "46",
+    "name_th": "แม่ฮ่องสอน",
+    "name_en": "Mae Hong Son",
+    "state_name": "แม่ฮ่องสอน",
+    "geography_id": 1,
+    "search_name": "แม่ฮ่องสอน",
+    "search_name_no_prefix": "แม่ฮ่องสอน"
+  },
+  {
+    "id": 47,
+    "code": "47",
+    "name_th": "นครสวรรค์",
+    "name_en": "Nakhon Sawan",
+    "state_name": "นครสวรรค์",
+    "geography_id": 2,
+    "search_name": "นครสวรรค์",
+    "search_name_no_prefix": "นครสวรรค์"
+  },
+  {
+    "id": 48,
+    "code": "48",
+    "name_th": "อุทัยธานี",
+    "name_en": "Uthai Thani",
+    "state_name": "อุทัยธานี",
+    "geography_id": 2,
+    "search_name": "อุทัยธานี",
+    "search_name_no_prefix": "อุทัยธานี"
+  },
+  {
+    "id": 49,
+    "code": "49",
+    "name_th": "กำแพงเพชร",
+    "name_en": "Kamphaeng Phet",
+    "state_name": "กำแพงเพชร",
+    "geography_id": 2,
+    "search_name": "กำแพงเพชร",
+    "search_name_no_prefix": "กำแพงเพชร"
+  },
+  {
+    "id": 50,
+    "code": "50",
+    "name_th": "ตาก",
+    "name_en": "Tak",
+    "state_name": "ตาก",
+    "geography_id": 4,
+    "search_name": "ตาก",
+    "search_name_no_prefix": "ตาก"
+  },
+  {
+    "id": 51,
+    "code": "51",
+    "name_th": "สุโขทัย",
+    "name_en": "Sukhothai",
+    "state_name": "สุโขทัย",
+    "geography_id": 2,
+    "search_name": "สุโขทัย",
+    "search_name_no_prefix": "สุโขทัย"
+  },
+  {
+    "id": 52,
+    "code": "52",
+    "name_th": "พิษณุโลก",
+    "name_en": "Phitsanulok",
+    "state_name": "พิษณุโลก",
+    "geography_id": 2,
+    "search_name": "พิษณุโลก",
+    "search_name_no_prefix": "พิษณุโลก"
+  },
+  {
+    "id": 53,
+    "code": "53",
+    "name_th": "พิจิตร",
+    "name_en": "Phichit",
+    "state_name": "พิจิตร",
+    "geography_id": 2,
+    "search_name": "พิจิตร",
+    "search_name_no_prefix": "พิจิตร"
+  },
+  {
+    "id": 54,
+    "code": "54",
+    "name_th": "เพชรบูรณ์",
+    "name_en": "Phetchabun",
+    "state_name": "เพชรบูรณ์",
+    "geography_id": 2,
+    "search_name": "เพชรบูรณ์",
+    "search_name_no_prefix": "เพชรบูรณ์"
+  },
+  {
+    "id": 55,
+    "code": "55",
+    "name_th": "ราชบุรี",
+    "name_en": "Ratchaburi",
+    "state_name": "ราชบุรี",
+    "geography_id": 4,
+    "search_name": "ราชบุรี",
+    "search_name_no_prefix": "ราชบุรี"
+  },
+  {
+    "id": 56,
+    "code": "56",
+    "name_th": "กาญจนบุรี",
+    "name_en": "Kanchanaburi",
+    "state_name": "กาญจนบุรี",
+    "geography_id": 4,
+    "search_name": "กาญจนบุรี",
+    "search_name_no_prefix": "กาญจนบุรี"
+  },
+  {
+    "id": 57,
+    "code": "57",
+    "name_th": "สุพรรณบุรี",
+    "name_en": "Suphan Buri",
+    "state_name": "สุพรรณบุรี",
+    "geography_id": 2,
+    "search_name": "สุพรรณบุรี",
+    "search_name_no_prefix": "สุพรรณบุรี"
+  },
+  {
+    "id": 58,
+    "code": "58",
+    "name_th": "นครปฐม",
+    "name_en": "Nakhon Pathom",
+    "state_name": "นครปฐม",
+    "geography_id": 2,
+    "search_name": "นครปฐม",
+    "search_name_no_prefix": "นครปฐม"
+  },
+  {
+    "id": 59,
+    "code": "59",
+    "name_th": "สมุทรสาคร",
+    "name_en": "Samut Sakhon",
+    "state_name": "สมุทรสาคร",
+    "geography_id": 2,
+    "search_name": "สมุทรสาคร",
+    "search_name_no_prefix": "สมุทรสาคร"
+  },
+  {
+    "id": 60,
+    "code": "60",
+    "name_th": "สมุทรสงคราม",
+    "name_en": "Samut Songkhram",
+    "state_name": "สมุทรสงคราม",
+    "geography_id": 2,
+    "search_name": "สมุทรสงคราม",
+    "search_name_no_prefix": "สมุทรสงคราม"
+  },
+  {
+    "id": 61,
+    "code": "61",
+    "name_th": "เพชรบุรี",
+    "name_en": "Phetchaburi",
+    "state_name": "เพชรบุรี",
+    "geography_id": 4,
+    "search_name": "เพชรบุรี",
+    "search_name_no_prefix": "เพชรบุรี"
+  },
+  {
+    "id": 62,
+    "code": "62",
+    "name_th": "ประจวบคีรีขันธ์",
+    "name_en": "Prachuap Khiri Khan",
+    "state_name": "ประจวบคีรีขันธ์",
+    "geography_id": 4,
+    "search_name": "ประจวบคีรีขันธ์",
+    "search_name_no_prefix": "ประจวบคีรีขันธ์"
+  },
+  {
+    "id": 63,
+    "code": "63",
+    "name_th": "นครศรีธรรมราช",
+    "name_en": "Nakhon Si Thammarat",
+    "state_name": "นครศรีธรรมราช",
+    "geography_id": 6,
+    "search_name": "นครศรีธรรมราช",
+    "search_name_no_prefix": "นครศรีธรรมราช"
+  },
+  {
+    "id": 64,
+    "code": "64",
+    "name_th": "กระบี่",
+    "name_en": "Krabi",
+    "state_name": "กระบี่",
+    "geography_id": 6,
+    "search_name": "กระบี่",
+    "search_name_no_prefix": "กระบี่"
+  },
+  {
+    "id": 65,
+    "code": "65",
+    "name_th": "พังงา",
+    "name_en": "Phangnga",
+    "state_name": "พังงา",
+    "geography_id": 6,
+    "search_name": "พังงา",
+    "search_name_no_prefix": "พังงา"
+  },
+  {
+    "id": 66,
+    "code": "66",
+    "name_th": "ภูเก็ต",
+    "name_en": "Phuket",
+    "state_name": "ภูเก็ต",
+    "geography_id": 6,
+    "search_name": "ภูเก็ต",
+    "search_name_no_prefix": "ภูเก็ต"
+  },
+  {
+    "id": 67,
+    "code": "67",
+    "name_th": "สุราษฎร์ธานี",
+    "name_en": "Surat Thani",
+    "state_name": "สุราษฎร์ธานี",
+    "geography_id": 6,
+    "search_name": "สุราษฎร์ธานี",
+    "search_name_no_prefix": "สุราษฎร์ธานี"
+  },
+  {
+    "id": 68,
+    "code": "68",
+    "name_th": "ระนอง",
+    "name_en": "Ranong",
+    "state_name": "ระนอง",
+    "geography_id": 6,
+    "search_name": "ระนอง",
+    "search_name_no_prefix": "ระนอง"
+  },
+  {
+    "id": 69,
+    "code": "69",
+    "name_th": "ชุมพร",
+    "name_en": "Chumphon",
+    "state_name": "ชุมพร",
+    "geography_id": 6,
+    "search_name": "ชุมพร",
+    "search_name_no_prefix": "ชุมพร"
+  },
+  {
+    "id": 70,
+    "code": "70",
+    "name_th": "สงขลา",
+    "name_en": "Songkhla",
+    "state_name": "สงขลา",
+    "geography_id": 6,
+    "search_name": "สงขลา",
+    "search_name_no_prefix": "สงขลา"
+  },
+  {
+    "id": 71,
+    "code": "71",
+    "name_th": "สตูล",
+    "name_en": "Satun",
+    "state_name": "สตูล",
+    "geography_id": 6,
+    "search_name": "สตูล",
+    "search_name_no_prefix": "สตูล"
+  },
+  {
+    "id": 72,
+    "code": "72",
+    "name_th": "ตรัง",
+    "name_en": "Trang",
+    "state_name": "ตรัง",
+    "geography_id": 6,
+    "search_name": "ตรัง",
+    "search_name_no_prefix": "ตรัง"
+  },
+  {
+    "id": 73,
+    "code": "73",
+    "name_th": "พัทลุง",
+    "name_en": "Phatthalung",
+    "state_name": "พัทลุง",
+    "geography_id": 6,
+    "search_name": "พัทลุง",
+    "search_name_no_prefix": "พัทลุง"
+  },
+  {
+    "id": 74,
+    "code": "74",
+    "name_th": "ปัตตานี",
+    "name_en": "Pattani",
+    "state_name": "ปัตตานี",
+    "geography_id": 6,
+    "search_name": "ปัตตานี",
+    "search_name_no_prefix": "ปัตตานี"
+  },
+  {
+    "id": 75,
+    "code": "75",
+    "name_th": "ยะลา",
+    "name_en": "Yala",
+    "state_name": "ยะลา",
+    "geography_id": 6,
+    "search_name": "ยะลา",
+    "search_name_no_prefix": "ยะลา"
+  },
+  {
+    "id": 76,
+    "code": "76",
+    "name_th": "นราธิวาส",
+    "name_en": "Narathiwat",
+    "state_name": "นราธิวาส",
+    "geography_id": 6,
+    "search_name": "นราธิวาส",
+    "search_name_no_prefix": "นราธิวาส"
+  },
+  {
+    "id": 77,
+    "code": "77",
+    "name_th": "บึงกาฬ",
+    "name_en": "Bueng Kan",
+    "state_name": "บึงกาฬ",
+    "geography_id": 3,
+    "search_name": "บึงกาฬ",
+    "search_name_no_prefix": "บึงกาฬ"
+  }
+]

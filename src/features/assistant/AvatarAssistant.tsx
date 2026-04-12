@@ -170,6 +170,51 @@ export function AvatarAssistant() {
       .forEach((toastItem) => store.remove(toastItem.id))
   }
 
+  const describeAssistantApiError = (err: unknown) => {
+    const apiErr = toApiError(err)
+    const details =
+      apiErr.details && typeof apiErr.details === 'object'
+        ? (apiErr.details as Record<string, unknown>)
+        : null
+    const suggested = String(details?.nextSuggestedAction || '')
+    if (apiErr.code === 'assistant_session_invalid') {
+      return {
+        title: 'Assistant session มีปัญหา',
+        message: 'เซสชันของผู้ช่วยบน production ไม่ตรงกับ runtime ตอนนี้ ลองเริ่มเซสชันใหม่อีกครั้งได้เลย',
+        followUp:
+          suggested === 'restart_session'
+            ? 'ขั้นต่อไป: ปิดหน้าต่างผู้ช่วยแล้วเปิดใหม่ จากนั้นลองคำสั่งเดิมอีกครั้ง'
+            : 'ขั้นต่อไป: ลองเริ่มเซสชันใหม่ หรือให้ผู้ดูแลตรวจ runtime ของ OpenClaw/assistant',
+      }
+    }
+    if (apiErr.code === 'openclaw_session_missing') {
+      return {
+        title: 'OpenClaw ยังไม่พร้อม',
+        message: 'คำสั่งนี้ต้องใช้ OpenClaw session ที่ผูกกับผู้ใช้ก่อน จึงจะทำงานต่อได้',
+        followUp: 'ขั้นต่อไป: ลองใหม่อีกครั้ง ถ้ายังไม่ผ่านให้ผู้ดูแลตรวจ binding ของ OpenClaw session',
+      }
+    }
+    if (apiErr.code === 'access_denied') {
+      return {
+        title: 'สิทธิ์ไม่เพียงพอ',
+        message: 'คำสั่งนี้ถูกปฏิเสธตามสิทธิ์ของผู้ใช้ปัจจุบัน',
+        followUp: 'ขั้นต่อไป: ใช้บัญชีที่มีสิทธิ์มากขึ้นหรือให้ผู้ดูแลช่วยตรวจ policy',
+      }
+    }
+    if (apiErr.code === 'validation_error') {
+      return {
+        title: 'ข้อมูลยังไม่ครบ',
+        message: apiErr.message,
+        followUp: 'ขั้นต่อไป: ตรวจคำสั่งหรือข้อมูลอ้างอิง แล้วลองใหม่อีกครั้ง',
+      }
+    }
+    return {
+      title: 'Assistant error',
+      message: apiErr.message,
+      followUp: 'ขั้นต่อไป: ลองใหม่อีกครั้ง หากยังเกิดซ้ำให้ส่งข้อความนี้ให้ผู้ดูแลตรวจสอบ',
+    }
+  }
+
   const GENERIC_SEARCH_QUERY = new Set([
     'active',
     'inactive',
@@ -841,14 +886,15 @@ export function AvatarAssistant() {
         setHistory((prev) => [...prev, { role: 'assistant', text: 'พร้อมทำงานแล้ว กด "เริ่มทำงาน" ได้เลย' }])
       }
     } catch (err) {
-      const apiErr = toApiError(err)
-      toast.error('Assistant error', apiErr.message)
+      const info = describeAssistantApiError(err)
+      toast.error(info.title, info.message)
       setHistory((prev) => [
         ...prev,
         {
           role: 'assistant',
-          text: 'ขออภัย ตอนนี้ผู้ช่วยยังเชื่อมต่อ backend ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
+          text: info.message,
         },
+        { role: 'assistant', text: info.followUp },
       ])
     } finally {
       setLoading(false)
@@ -950,11 +996,12 @@ export function AvatarAssistant() {
         },
       ])
     } catch (err) {
-      const apiErr = toApiError(err)
-      toast.error('Assistant error', apiErr.message)
+      const info = describeAssistantApiError(err)
+      toast.error(info.title, info.message)
       setHistory((prev) => [
         ...prev,
-        { role: 'assistant', text: `ไม่สามารถยืนยันขั้นตอนนี้ได้: ${apiErr.message}` },
+        { role: 'assistant', text: `ไม่สามารถยืนยันขั้นตอนนี้ได้: ${info.message}` },
+        { role: 'assistant', text: info.followUp },
       ])
     } finally {
       setLoading(false)
@@ -1057,11 +1104,12 @@ export function AvatarAssistant() {
         },
       ])
     } catch (err) {
-      const apiErr = toApiError(err)
-      toast.error('Assistant error', apiErr.message)
+      const info = describeAssistantApiError(err)
+      toast.error(info.title, info.message)
       setHistory((prev) => [
         ...prev,
-        { role: 'assistant', text: `ไม่สามารถเริ่มทำงานได้: ${apiErr.message}` },
+        { role: 'assistant', text: `ไม่สามารถเริ่มทำงานได้: ${info.message}` },
+        { role: 'assistant', text: info.followUp },
       ])
     } finally {
       setLoading(false)
@@ -1121,11 +1169,12 @@ export function AvatarAssistant() {
         ])
       }
     } catch (err) {
-      const apiErr = toApiError(err)
-      toast.error('Assistant error', apiErr.message)
+      const info = describeAssistantApiError(err)
+      toast.error(info.title, info.message)
       setHistory((prev) => [
         ...prev,
-        { role: 'assistant', text: `ไม่สามารถยืนยันรายการได้: ${apiErr.message}` },
+        { role: 'assistant', text: `ไม่สามารถยืนยันรายการได้: ${info.message}` },
+        { role: 'assistant', text: info.followUp },
       ])
     } finally {
       setLoading(false)

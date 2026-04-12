@@ -1,0 +1,9 @@
+{
+  "source": "Cerberus/Thailand-Address via adt_th_localization seed",
+  "generated_at": "2026-04-12T02:10:17.134Z",
+  "counts": {
+    "provinces": 77,
+    "districts": 930,
+    "subdistricts": 7452
+  }
+}

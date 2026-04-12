@@ -38,6 +38,13 @@ export interface EtaxAddressProfile {
   addressText?: string | null
 }
 
+export interface EtaxRuntimeConfig {
+  submissionMode?: string | null
+  csvPayloadStyle?: string | null
+  csvTransportMode?: string | null
+  reason?: string | null
+}
+
 export interface EtaxConfigSummary {
   id: number
   name: string
@@ -68,6 +75,9 @@ export interface EtaxConfigSummary {
   csvPayloadStyle?: string | null
   csvTransportMode?: string | null
   configReady?: boolean
+  storedConfig?: EtaxRuntimeConfig | null
+  effectiveRuntime?: EtaxRuntimeConfig | null
+  runtimeOverrideActive?: boolean
 }
 
 export interface EtaxSummaryResponse {
@@ -75,6 +85,9 @@ export interface EtaxSummaryResponse {
   config: EtaxConfigSummary | null
   configMissing: boolean
   configMissingReason?: string | null
+  storedConfig?: EtaxRuntimeConfig | null
+  effectiveRuntime?: EtaxRuntimeConfig | null
+  runtimeOverrideActive?: boolean
   actions: {
     canSubmit: boolean
     canPoll: boolean
@@ -107,9 +120,13 @@ export interface EtaxDocumentRecord {
   invoiceDate?: string | null
   partnerName?: string | null
   documentType?: string | null
+  documentTypeLabel?: string | null
   serviceCode?: string | null
   submissionMode?: string | null
   csvPayloadStyle?: string | null
+  storedConfig?: EtaxRuntimeConfig | null
+  effectiveRuntime?: EtaxRuntimeConfig | null
+  runtimeOverrideActive?: boolean
   state: EtaxDocumentState
   transactionCode?: string | null
   inetStatus?: EtaxInetStatus
@@ -170,6 +187,9 @@ export interface EtaxInvoiceSummary {
   currentStep?: string | null
   nextRecommendedAction?: string | null
   nextRecommendedRoute?: string | null
+  storedConfig?: EtaxRuntimeConfig | null
+  effectiveRuntime?: EtaxRuntimeConfig | null
+  runtimeOverrideActive?: boolean
   document?: EtaxDocumentRecord | null
 }
 
@@ -177,6 +197,9 @@ export interface EtaxConfigResponse {
   config: EtaxConfigSummary | null
   configMissing: boolean
   configMissingReason?: string | null
+  storedConfig?: EtaxRuntimeConfig | null
+  effectiveRuntime?: EtaxRuntimeConfig | null
+  runtimeOverrideActive?: boolean
 }
 
 export interface EtaxListParams {
@@ -242,6 +265,16 @@ function parseStringArray(v: unknown): string[] {
   return []
 }
 
+function normalizeRuntimeConfig(raw: any): EtaxRuntimeConfig | null {
+  if (!raw || typeof raw !== 'object') return null
+  return {
+    submissionMode: parseText(raw?.submissionMode),
+    csvPayloadStyle: parseText(raw?.csvPayloadStyle),
+    csvTransportMode: parseText(raw?.csvTransportMode),
+    reason: parseText(raw?.reason),
+  }
+}
+
 function parseNumberArray(v: unknown): number[] {
   if (!Array.isArray(v)) return []
   return v
@@ -300,6 +333,9 @@ function normalizeConfig(raw: any): EtaxConfigSummary {
     csvPayloadStyle: parseText(raw?.csvPayloadStyle),
     csvTransportMode: parseText(raw?.csvTransportMode),
     configReady: parseBoolean(raw?.configReady),
+    storedConfig: normalizeRuntimeConfig(raw?.storedConfig),
+    effectiveRuntime: normalizeRuntimeConfig(raw?.effectiveRuntime),
+    runtimeOverrideActive: parseBoolean(raw?.runtimeOverrideActive),
   }
 }
 
@@ -332,9 +368,13 @@ function normalizeDocument(raw: any): EtaxDocumentRecord {
     invoiceDate: parseText(raw?.invoiceDate),
     partnerName: parseText(raw?.partnerName),
     documentType: parseText(raw?.documentType),
+    documentTypeLabel: parseText(raw?.documentTypeLabel),
     serviceCode: parseText(raw?.serviceCode),
     submissionMode: parseText(raw?.submissionMode),
     csvPayloadStyle: parseText(raw?.csvPayloadStyle),
+    storedConfig: normalizeRuntimeConfig(raw?.storedConfig),
+    effectiveRuntime: normalizeRuntimeConfig(raw?.effectiveRuntime),
+    runtimeOverrideActive: parseBoolean(raw?.runtimeOverrideActive),
     state: (raw?.state as EtaxDocumentState) || 'draft',
     transactionCode: parseText(raw?.transactionCode),
     inetStatus: raw?.inetStatus === 'OK' || raw?.inetStatus === 'ER' || raw?.inetStatus === 'PC'
@@ -399,6 +439,9 @@ export async function getEtaxSummary() {
     config: data?.config ? normalizeConfig(data.config) : null,
     configMissing: parseBoolean(data?.configMissing),
     configMissingReason: parseText(data?.configMissingReason),
+    storedConfig: normalizeRuntimeConfig(data?.storedConfig),
+    effectiveRuntime: normalizeRuntimeConfig(data?.effectiveRuntime),
+    runtimeOverrideActive: parseBoolean(data?.runtimeOverrideActive),
     actions: data.actions,
   } as EtaxSummaryResponse
 }
@@ -409,6 +452,9 @@ export async function getEtaxConfig() {
     config: data?.config ? normalizeConfig(data.config) : null,
     configMissing: parseBoolean(data?.configMissing),
     configMissingReason: parseText(data?.configMissingReason),
+    storedConfig: normalizeRuntimeConfig(data?.storedConfig),
+    effectiveRuntime: normalizeRuntimeConfig(data?.effectiveRuntime),
+    runtimeOverrideActive: parseBoolean(data?.runtimeOverrideActive),
   } as EtaxConfigResponse
 }
 
@@ -453,6 +499,9 @@ export async function getInvoiceEtax(invoiceId: number) {
     currentStep: parseText(data?.currentStep),
     nextRecommendedAction: parseText(data?.nextRecommendedAction),
     nextRecommendedRoute: parseText(data?.nextRecommendedRoute),
+    storedConfig: normalizeRuntimeConfig(data?.storedConfig),
+    effectiveRuntime: normalizeRuntimeConfig(data?.effectiveRuntime),
+    runtimeOverrideActive: parseBoolean(data?.runtimeOverrideActive),
     document: data?.document ? normalizeDocument(data.document) : null,
   } as EtaxInvoiceSummary
 }
@@ -472,6 +521,9 @@ export async function submitInvoiceEtax(invoiceId: number) {
     currentStep: parseText(data?.etax?.currentStep ?? data?.currentStep),
     nextRecommendedAction: parseText(data?.etax?.nextRecommendedAction ?? data?.nextRecommendedAction),
     nextRecommendedRoute: parseText(data?.etax?.nextRecommendedRoute ?? data?.nextRecommendedRoute),
+    storedConfig: normalizeRuntimeConfig(data?.etax?.storedConfig ?? data?.storedConfig),
+    effectiveRuntime: normalizeRuntimeConfig(data?.etax?.effectiveRuntime ?? data?.effectiveRuntime),
+    runtimeOverrideActive: parseBoolean(data?.etax?.runtimeOverrideActive ?? data?.runtimeOverrideActive),
     document: data?.etax?.document ? normalizeDocument(data.etax.document) : data?.document ? normalizeDocument(data.document) : null,
   } as EtaxInvoiceSummary
 }

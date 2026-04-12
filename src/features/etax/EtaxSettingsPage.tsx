@@ -43,6 +43,11 @@ function formatFieldLabel(field: string) {
   return map[field] || field
 }
 
+function formatRuntimeLabel(mode?: string | null, style?: string | null) {
+  const parts = [mode, style].filter(Boolean)
+  return parts.length ? parts.join(' · ') : '—'
+}
+
 export function EtaxSettingsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -100,6 +105,9 @@ export function EtaxSettingsPage() {
   const configState = configQuery.data
   const config = configState?.config || null
   const usage = config?.usage
+  const effectiveRuntime = config?.effectiveRuntime || configState?.effectiveRuntime || null
+  const storedConfig = config?.storedConfig || configState?.storedConfig || null
+  const runtimeOverrideActive = Boolean(config?.runtimeOverrideActive || configState?.runtimeOverrideActive)
 
   const isDirty = useMemo(() => {
     if (!draft || !config) return false
@@ -155,7 +163,7 @@ export function EtaxSettingsPage() {
                 {configQuery.isLoading
                   ? 'กำลังโหลด configuration...'
                   : configState?.configMissing
-                    ? 'ยังไม่มี active ETax configuration สำหรับบริษัทนี้'
+                    ? 'ยังไม่มี active ETax configuration สำหรับบริษัทนี้ ให้ไปผูก config ที่ Odoo backend ก่อน'
                     : 'ไม่พบ configuration'}
               </div>
             ) : (
@@ -384,10 +392,16 @@ export function EtaxSettingsPage() {
               </div>
               <div className="small text-muted mt-1">Reference only for the INET provider credential.</div>
               <div className="small text-muted mt-2">
-                Mode: <span className="font-monospace">{config?.submissionMode || '—'}</span>
-                {' · '}
-                CSV style: <span className="font-monospace">{config?.csvPayloadStyle || '—'}</span>
+                Effective runtime: <span className="font-monospace">{formatRuntimeLabel(effectiveRuntime?.submissionMode, effectiveRuntime?.csvPayloadStyle)}</span>
               </div>
+              {runtimeOverrideActive ? (
+                <div className="small text-muted mt-1">
+                  Stored config: <span className="font-monospace">{formatRuntimeLabel(storedConfig?.submissionMode, storedConfig?.csvPayloadStyle)}</span>
+                </div>
+              ) : null}
+              {runtimeOverrideActive ? (
+                <div className="small text-warning mt-2">Runtime override active: production path ใช้ค่าที่ปลอดภัยกว่าค่าที่เก็บใน config</div>
+              ) : null}
               <div className="small mt-2">
                 Address status:{' '}
                 {config?.sellerAddressReviewNeeded ? <Badge tone="amber">Needs review</Badge> : <Badge tone="green">Ready</Badge>}
@@ -400,6 +414,35 @@ export function EtaxSettingsPage() {
               <div className="small mt-2">
                 Credentials:{' '}
                 {config?.configReady ? <Badge tone="green">Ready</Badge> : <Badge tone="amber">Needs review</Badge>}
+              </div>
+            </Card>
+            <Card className="qf-report-card qf-report-card--amber">
+              <div className="small text-muted mb-1">Readiness Checklist</div>
+              <div className="d-flex flex-column gap-2">
+                <div className="d-flex justify-content-between gap-2">
+                  <span>Config active</span>
+                  {config?.active ? <Badge tone="green">พร้อม</Badge> : <Badge tone="gray">ยังไม่พร้อม</Badge>}
+                </div>
+                <div className="d-flex justify-content-between gap-2">
+                  <span>Credentials</span>
+                  {config?.credentialsConfigured ? <Badge tone="green">พร้อม</Badge> : <Badge tone="amber">ตรวจสอบ</Badge>}
+                </div>
+                <div className="d-flex justify-content-between gap-2">
+                  <span>Seller address</span>
+                  {config?.sellerAddressReviewNeeded ? <Badge tone="amber">ตรวจสอบ</Badge> : <Badge tone="green">พร้อม</Badge>}
+                </div>
+                <div className="d-flex justify-content-between gap-2">
+                  <span>Email sender</span>
+                  {config?.emailSenderAddress ? <Badge tone="green">พร้อม</Badge> : <Badge tone="gray">ยังไม่ตั้งค่า</Badge>}
+                </div>
+                <div className="d-flex justify-content-between gap-2">
+                  <span>Effective runtime</span>
+                  {effectiveRuntime?.submissionMode && effectiveRuntime?.csvPayloadStyle ? (
+                    <Badge tone="green">พร้อม</Badge>
+                  ) : (
+                    <Badge tone="amber">ตรวจสอบ</Badge>
+                  )}
+                </div>
               </div>
             </Card>
             <Card className="qf-report-card qf-report-card--green">

@@ -123,6 +123,11 @@ function formatFieldLabel(field: string) {
   return map[field] || field
 }
 
+function formatRuntimeLabel(mode?: string | null, style?: string | null) {
+  const parts = [mode, style].filter(Boolean)
+  return parts.length ? parts.join(' · ') : '—'
+}
+
 export function EtaxDashboardPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -446,6 +451,14 @@ export function EtaxDashboardPage() {
                         ? summary.sellerAddressMissingFields.map(formatFieldLabel).join(', ')
                         : 'Backend-validated, but not a submit blocker in provider mode'}
                     </div>
+                    {!summaryState?.configMissing ? (
+                      <div className="small text-muted mt-2">
+                        Effective runtime:{' '}
+                        <span className="font-monospace">
+                          {formatRuntimeLabel(summary?.effectiveRuntime?.submissionMode, summary?.effectiveRuntime?.csvPayloadStyle)}
+                        </span>
+                      </div>
+                    ) : null}
                   </Card>
                 </div>
       </div>
@@ -515,14 +528,17 @@ export function EtaxDashboardPage() {
                   </div>
                   <div className="small text-muted">
                     {summaryState?.configMissing
-                      ? 'เริ่มจากหน้าใบแจ้งหนี้/ใบเสร็จ แล้วเปิด Settings เพื่อผูก active e-Tax configuration ก่อน'
+                      ? 'ยังไม่มี config ให้เริ่มจากหน้าใบแจ้งหนี้หรือใบเสร็จ แล้วเปิด Settings เพื่อผูก active e-Tax configuration ก่อน'
                       : search
                         ? 'ลองล้างคำค้นหา'
-                        : 'เริ่มจากหน้าใบแจ้งหนี้/ใบเสร็จ แล้วกด Submit e-Tax จากเอกสารต้นทาง'}
+                        : 'ยังไม่มีเอกสาร e-Tax ใน workspace ให้เริ่มจากหน้าใบแจ้งหนี้ ใบเสร็จ หรือใบเพิ่ม/ลดหนี้ แล้วกดส่ง e-Tax จากเอกสารต้นทาง'}
                   </div>
                   <div className="d-flex justify-content-center gap-2 mt-3 flex-wrap">
                     <Button size="sm" variant="secondary" onClick={() => navigate('/sales/invoices')}>
                       ไปหน้าใบแจ้งหนี้
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={() => navigate('/notes?domain=sales')}>
+                      ไปหน้าใบเพิ่ม/ลดหนี้
                     </Button>
                     <Button size="sm" onClick={() => navigate('/accounting/etax-settings')}>
                       เปิด Settings
@@ -557,7 +573,7 @@ export function EtaxDashboardPage() {
             ) : (
               <div className="d-flex flex-column gap-3">
                 <div>
-                  <div className="small text-muted">Invoice</div>
+                  <div className="small text-muted">{currentDoc.documentTypeLabel || 'Document'}</div>
                   <div className="fw-semibold font-monospace">{currentDoc.invoiceNumber || currentDoc.moveName || currentDoc.name}</div>
                   <div className="small text-muted">{currentDoc.partnerName || '—'}</div>
                 </div>
@@ -600,7 +616,7 @@ export function EtaxDashboardPage() {
                       isLoading={submitMutation.isPending && submitMutation.variables === currentDoc.id}
                       disabled={!canSubmitCurrentDoc}
                     >
-                      Submit
+                      ส่ง e-Tax
                     </Button>
                   ) : null}
                   {canPollCurrentDoc ? (
@@ -614,7 +630,7 @@ export function EtaxDashboardPage() {
                       isLoading={pollMutation.isPending && pollMutation.variables === currentDoc.id}
                       disabled={!canPollCurrentDoc}
                     >
-                      Poll
+                      อัปเดตสถานะ
                     </Button>
                   ) : null}
                   {currentAvailableActions.includes('retry') ? (
@@ -625,7 +641,7 @@ export function EtaxDashboardPage() {
                       isLoading={retryMutation.isPending && retryMutation.variables === currentDoc.id}
                       disabled={!currentAvailableActions.includes('retry')}
                     >
-                      Retry
+                      ลองใหม่
                     </Button>
                   ) : null}
                   {currentDoc.canSendEmail ? (
@@ -636,7 +652,7 @@ export function EtaxDashboardPage() {
                       isLoading={sendEmailMutation.isPending && sendEmailMutation.variables === currentDoc.id}
                       disabled={!currentDoc.canSendEmail}
                     >
-                      Send Email
+                      ส่งอีเมลเอกสาร
                     </Button>
                   ) : null}
                   {currentDoc.canResendEmail ? (
@@ -647,7 +663,7 @@ export function EtaxDashboardPage() {
                       isLoading={resendEmailMutation.isPending && resendEmailMutation.variables === currentDoc.id}
                       disabled={!currentDoc.canResendEmail}
                     >
-                      Resend Email
+                      ส่งอีเมลอีกครั้ง
                     </Button>
                   ) : null}
                   {currentAvailableActions.includes('cancel') ? (
@@ -658,7 +674,7 @@ export function EtaxDashboardPage() {
                       isLoading={cancelMutation.isPending && cancelMutation.variables === currentDoc.id}
                       disabled={!currentAvailableActions.includes('cancel')}
                     >
-                      Cancel
+                      ยกเลิก
                     </Button>
                   ) : null}
                 </div>
@@ -679,6 +695,20 @@ export function EtaxDashboardPage() {
                   <div className="small text-muted">
                     XML: {currentDoc.xmlUrl ? 'พร้อม' : 'ยังไม่มี'} · PDF: {currentDoc.pdfUrl ? 'พร้อม' : 'ยังไม่มี'}
                   </div>
+                  <div className="small text-muted mt-2">
+                    Effective runtime:{' '}
+                    <span className="font-monospace">
+                      {formatRuntimeLabel(currentDoc.effectiveRuntime?.submissionMode, currentDoc.effectiveRuntime?.csvPayloadStyle)}
+                    </span>
+                  </div>
+                  {currentDoc.runtimeOverrideActive ? (
+                    <div className="small text-muted">
+                      Stored config:{' '}
+                      <span className="font-monospace">
+                        {formatRuntimeLabel(currentDoc.storedConfig?.submissionMode, currentDoc.storedConfig?.csvPayloadStyle)}
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="rounded-3 border bg-white p-3">

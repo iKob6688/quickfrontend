@@ -257,10 +257,10 @@ export function InvoiceDetailPage() {
     (etaxDocument?.id ? `/accounting/etax?documentId=${etaxDocument.id}` : '/accounting/etax')
   const etaxCtaLabel =
     etaxCurrentStep === 'not_configured' || etaxCurrentStep === 'needs_configuration'
-      ? 'Open e-Tax Settings'
+      ? 'ตั้งค่า e-Tax'
       : etaxCurrentStep === 'completed' || etaxCurrentStep === 'in_progress' || etaxCurrentStep === 'needs_attention'
-        ? 'Open e-Tax Workspace'
-        : 'Open e-Tax Workspace'
+        ? 'ติดตามเอกสาร e-Tax'
+        : 'เปิด e-Tax Workspace'
   const canPollEtaxFromInvoice = Boolean(etaxDocument && etaxAvailableActions.includes('poll'))
 
   useEffect(() => {
