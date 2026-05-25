@@ -190,7 +190,7 @@ export function RegisterPaymentModal({
           {allowAmountEdit && enableWht ? (
             <>
               <div className="mb-3">
-                <Form.Label className="small fw-semibold">WHT code / อัตรา</Form.Label>
+                <Form.Label className="small fw-semibold">รหัสหัก ณ ที่จ่าย / อัตรา</Form.Label>
                 <Form.Select value={whtCode} onChange={(e) => setWhtCode(e.target.value)}>
                   {whtOptions.map((option) => (
                     <option key={option.code} value={option.code}>
@@ -216,7 +216,7 @@ export function RegisterPaymentModal({
                   className="mt-2"
                   type="switch"
                   id="wht-custom-amount"
-                  label="ปรับยอดหักเอง (Custom)"
+                  label="ปรับยอดหักเอง"
                   checked={isCustomWhtAmount}
                   onChange={(e) => setIsCustomWhtAmount(e.target.checked)}
                 />

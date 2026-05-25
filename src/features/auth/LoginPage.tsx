@@ -52,11 +52,11 @@ export function LoginPage() {
                   <div className="small fw-semibold text-uppercase" style={{ letterSpacing: '0.18em' }}>
                     CLT ONLINE
                   </div>
-                  <div className="small text-muted">Odoo 18 Celestial Interface</div>
+                  <div className="small text-muted">ระบบงานบัญชีและเอกสารสำหรับธุรกิจไทย</div>
                 </div>
               </div>
               <div className="d-none d-sm-inline-flex rounded-pill bg-dark text-white px-3 py-1 small">
-                สำหรับธุรกิจไทย · Thai SMEs
+                สำหรับงานบัญชีและแอดมินประจำวัน
               </div>
             </div>
           </div>
@@ -69,7 +69,7 @@ export function LoginPage() {
               </div>
               <h1 className="h4 fw-semibold mb-1">เข้าสู่ระบบ CLT Online</h1>
               <p className="text-muted mb-0">
-                เชื่อมต่อเพื่อจัดการบัญชี ภาษี ใบแจ้งหนี้ และแดชบอร์ด
+                เข้าสู่ระบบเพื่อทำงานเอกสาร บัญชี ภาษี และงานประจำวันได้ต่อเนื่อง
               </p>
             </div>
 
@@ -127,7 +127,7 @@ export function LoginPage() {
               </Button>
 
               <p className="text-muted small mt-3 mb-0">
-                ระบบจะเชื่อมต่อผ่าน CLT middleware ไปยัง ODOO Backend โดยใช้โทเคนที่ปลอดภัยและรองรับหลายบริษัท (Instance ID)
+                ระบบจะเชื่อมต่อกับข้อมูลบริษัทของคุณอย่างปลอดภัย และพาคุณไปยังหน้าทำงานหลักทันทีหลังเข้าสู่ระบบ
               </p>
             </form>
           </div>

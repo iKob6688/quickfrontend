@@ -62,9 +62,9 @@ export function BackendConnectionPage() {
   return (
     <div>
       <PageHeader
-        title="การเชื่อมต่อ Quickfront ↔ Odoo 18"
-        subtitle="สร้างบริษัท + ผู้ดูแลระบบ (admin) ใหม่บน Odoo 18 และเข้าสู่ระบบ Quickfront18 อัตโนมัติ"
-        breadcrumb="Settings · Backend provisioning"
+        title="ตั้งค่าการเชื่อมต่อระบบ"
+        subtitle="สำหรับผู้ดูแลระบบ ใช้สร้างบริษัทใหม่และตั้งค่าการเชื่อมต่อกับ Odoo 18"
+        breadcrumb="ตั้งค่าระบบ · การเชื่อมต่อ"
       />
 
       <div className="mx-auto grid max-w-5xl gap-4 lg:grid-cols-2">

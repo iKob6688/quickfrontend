@@ -29,7 +29,7 @@ export function AmendInvoiceModal({ open, onClose, onSubmit, isSubmitting }: Pro
     e.preventDefault()
     setError(null)
     if (!reason.trim()) {
-      setError('กรุณาระบุเหตุผลในการแก้ไข (Audit trail)')
+      setError('กรุณาระบุเหตุผลในการแก้ไข เพื่อเก็บประวัติการเปลี่ยนแปลง')
       return
     }
     try {
@@ -42,11 +42,11 @@ export function AmendInvoiceModal({ open, onClose, onSubmit, isSubmitting }: Pro
   return (
     <Modal show={open} onHide={handleClose} onExited={resetState} centered>
       <Modal.Header closeButton>
-        <Modal.Title className="h6 fw-semibold mb-0">แก้ไขใบแจ้งหนี้ (Amend)</Modal.Title>
+        <Modal.Title className="h6 fw-semibold mb-0">สร้างฉบับแก้ไขใบแจ้งหนี้</Modal.Title>
       </Modal.Header>
       <Modal.Body>
         <p className="small text-muted mb-3">
-          ใบแจ้งหนี้ที่ “ยืนยันแล้ว” แก้ไขตรง ๆ ไม่ได้ตามหลักบัญชี ระบบจะสร้าง <b>credit note</b> และสร้าง <b>ใบใหม่ (draft)</b> ให้คุณแก้ไขแทน
+          ใบแจ้งหนี้ที่ “ยืนยันแล้ว” แก้ไขตรง ๆ ไม่ได้ตามหลักบัญชี ระบบจะสร้าง <b>ใบลดหนี้</b> และสร้าง <b>ใบใหม่แบบร่าง</b> ให้คุณแก้ไขแทน
         </p>
 
         {error ? (
@@ -81,4 +81,3 @@ export function AmendInvoiceModal({ open, onClose, onSubmit, isSubmitting }: Pro
     </Modal>
   )
 }
-

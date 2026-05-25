@@ -62,6 +62,14 @@
   --qf-bg-0: #f6f8fc;        /* Lightest background */
   --qf-bg-1: #ffffff;        /* Card background */
   --qf-bg-2: #f4f7fb;        /* Subtle surface (table headers, hover) */
+  --qf-bg-3: #edf4fb;        /* Elevated subtle surface */
+
+  /* App shell backgrounds */
+  --qf-body-color: var(--qf-text-strong);
+  --qf-body-bg:
+    radial-gradient(circle at 0% 0%, rgba(201, 60, 141, 0.16) 0, transparent 45%),
+    radial-gradient(circle at 100% 0%, rgba(251, 191, 36, 0.18) 0, transparent 55%),
+    linear-gradient(135deg, #f0f7ff 0%, #c7ecff 30%, #00a8c5 70%, #0b6ea6 100%);
 
   /* Text (contrast verified) */
   --qf-text-strong: #0b1b3a;  /* Primary text (4.5:1 on --qf-bg-0) */
@@ -112,6 +120,8 @@
   --qf-card-border-width: 1px;
   --qf-card-shadow: 0 14px 28px rgba(15, 23, 42, 0.10);
   --qf-card-shadow-hover: 0 18px 40px rgba(15, 23, 42, 0.14);
+  --qf-card-bg: rgba(255, 255, 255, 0.92);
+  --qf-card-hover-bg: rgba(255, 255, 255, 0.96);
 
   /* Form Styles */
   --qf-input-height: 2.75rem;       /* 44px (touch-friendly) */
@@ -126,6 +136,8 @@
   --qf-table-cell-py: 0.875rem;     /* 14px */
   --qf-table-header-bg: rgba(255, 255, 255, 0.35);
   --qf-table-row-divider: rgba(230, 238, 247, 0.4);
+  --qf-table-row-even-bg: rgba(255, 255, 255, 0.4);
+  --qf-table-row-hover-bg: #f4f7fb;
 
   /* Button Styles */
   --qf-button-height-sm: 2rem;      /* 32px */
@@ -142,6 +154,58 @@
   --qf-badge-radius: var(--qf-radius-full);
   --qf-badge-font-size: var(--qf-text-meta);
   --qf-badge-font-weight: var(--qf-weight-bold);
+
+  /* Shared utility surfaces */
+  --qf-overlay-bg: rgba(255, 255, 255, 0.9);
+  --qf-overlay-border: rgba(148, 163, 184, 0.28);
+  --qf-shadow-color: rgba(15, 23, 42, 0.10);
 }
 
+[data-qf-theme='dark'] {
+  --qf-bg-0: #06101f;
+  --qf-bg-1: #0d1b2d;
+  --qf-bg-2: #13243a;
+  --qf-bg-3: #1a2d45;
+
+  --qf-body-color: #e5eefc;
+  --qf-body-bg:
+    radial-gradient(circle at 0% 0%, rgba(125, 66, 245, 0.16) 0, transparent 45%),
+    radial-gradient(circle at 100% 0%, rgba(34, 197, 94, 0.14) 0, transparent 50%),
+    linear-gradient(145deg, #06101f 0%, #0b1830 32%, #103257 70%, #0d6f82 100%);
+
+  --qf-text-strong: #f8fbff;
+  --qf-text: #d7e3f3;
+  --qf-text-muted: #94a8c3;
+
+  --qf-border: rgba(148, 163, 184, 0.22);
+  --qf-border-strong: rgba(191, 219, 254, 0.32);
+
+  --qf-primary: #60a5fa;
+  --qf-primary-dark: #3b82f6;
+  --qf-primary-weak: rgba(96, 165, 250, 0.18);
+
+  --qf-success: #34d399;
+  --qf-success-weak: rgba(52, 211, 153, 0.18);
+  --qf-warning: #fbbf24;
+  --qf-warning-weak: rgba(251, 191, 36, 0.18);
+  --qf-danger: #f87171;
+  --qf-danger-weak: rgba(248, 113, 113, 0.18);
+  --qf-info: #60a5fa;
+  --qf-info-weak: rgba(96, 165, 250, 0.18);
+
+  --qf-card-shadow: 0 18px 40px rgba(2, 6, 23, 0.32);
+  --qf-card-shadow-hover: 0 24px 48px rgba(2, 6, 23, 0.42);
+  --qf-card-bg: rgba(10, 21, 38, 0.88);
+  --qf-card-hover-bg: rgba(13, 27, 45, 0.94);
+
+  --qf-input-focus-ring: 2px solid rgba(96, 165, 250, 0.35);
+  --qf-table-header-bg: rgba(15, 30, 52, 0.88);
+  --qf-table-row-divider: rgba(148, 163, 184, 0.12);
+  --qf-table-row-even-bg: rgba(255, 255, 255, 0.02);
+  --qf-table-row-hover-bg: rgba(59, 130, 246, 0.12);
+
+  --qf-overlay-bg: rgba(13, 27, 45, 0.92);
+  --qf-overlay-border: rgba(148, 163, 184, 0.22);
+  --qf-shadow-color: rgba(2, 6, 23, 0.30);
+}
 

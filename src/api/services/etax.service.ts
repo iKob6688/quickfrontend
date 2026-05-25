@@ -465,7 +465,7 @@ export async function updateEtaxConfig(payload: EtaxConfigUpdatePayload) {
 
 export async function listEtaxDocuments(params?: EtaxListParams) {
   const data = await post<any>(`${basePath}/documents/list`, {
-    ...(params?.state ? { state: params.state } : {}),
+    ...(params?.state && params.state !== 'all' ? { state: params.state } : {}),
     ...(params?.q ? { q: params.q } : {}),
     ...(params?.limit != null ? { limit: params.limit } : {}),
     ...(params?.offset != null ? { offset: params.offset } : {}),

@@ -67,11 +67,11 @@ function documentMetaLine(summary?: EtaxInvoiceSummary | null) {
   const document = summary?.document
   if (!document) {
     if (summary?.currentStep === 'not_configured' || summary?.currentStep === 'needs_configuration') {
-      return 'ยังไม่มี ETax document สำหรับเอกสารนี้'
+      return 'ยังไม่มีเอกสาร e-Tax สำหรับเอกสารนี้'
     }
-    return 'ยังไม่มี ETax document ให้เริ่มจากปุ่มหลักของการ์ดนี้'
+    return 'ยังไม่มีเอกสาร e-Tax ให้เริ่มจากปุ่มหลักของการ์ดนี้'
   }
-  return `ETax ${document.name} · INET ${document.inetStatus || '—'} · อีเมล ${document.emailState || 'not_applicable'}`
+  return `e-Tax ${document.name} · INET ${document.inetStatus || '—'} · อีเมล ${document.emailState || 'ไม่เกี่ยวข้อง'}`
 }
 
 export function EtaxWorkflowCard({
@@ -113,7 +113,7 @@ export function EtaxWorkflowCard({
           <div className="qf-section-title mb-2">e-Tax</div>
           <div className="d-flex align-items-center gap-2 flex-wrap mb-2">
             <Badge tone={statusTone(summary)}>{statusLabel(summary)}</Badge>
-            {runtimeOverrideActive ? <Badge tone="amber">Runtime override active</Badge> : null}
+            {runtimeOverrideActive ? <Badge tone="amber">มีการบังคับค่า runtime</Badge> : null}
             <span className="text-muted small">{buildPrimaryHint(summary)}</span>
           </div>
           <div className="small text-muted">{documentMetaLine(summary)}</div>
@@ -153,11 +153,11 @@ export function EtaxWorkflowCard({
       <div className="mt-3 rounded-3 border bg-light p-3">
         <div className="small fw-semibold mb-2">ข้อมูลการทำงานจริงของระบบ</div>
         <div className="small text-muted">
-          Effective runtime: <span className="font-monospace">{formatRuntime(effectiveRuntime)}</span>
+          รูปแบบที่ระบบใช้งานจริง: <span className="font-monospace">{formatRuntime(effectiveRuntime)}</span>
         </div>
         {runtimeOverrideActive ? (
           <div className="small text-muted mt-1">
-            Stored configuration: <span className="font-monospace">{formatRuntime(storedConfig)}</span>
+            ค่าที่บันทึกไว้เดิม: <span className="font-monospace">{formatRuntime(storedConfig)}</span>
           </div>
         ) : null}
         {runtimeOverrideActive ? (

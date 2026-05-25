@@ -25,6 +25,7 @@ import {
 import { writeAssistantPageContext, type AssistantPageSelectionRecord } from '@/lib/assistantPageContext'
 
 type FilterState = EtaxDocumentState | 'all'
+type BulkActionKey = 'submit' | 'poll' | 'retry' | 'cancel' | 'send-email' | 'resend-email'
 
 function formatMoney(amount: number | null | undefined, currency = 'THB') {
   const value = Number(amount || 0)
@@ -128,6 +129,34 @@ function formatRuntimeLabel(mode?: string | null, style?: string | null) {
   return parts.length ? parts.join(' · ') : '—'
 }
 
+function bulkActionLabel(action: BulkActionKey) {
+  switch (action) {
+    case 'submit':
+      return 'ส่ง e-Tax'
+    case 'poll':
+      return 'อัปเดตสถานะ'
+    case 'retry':
+      return 'ลองใหม่'
+    case 'cancel':
+      return 'ยกเลิกเอกสาร'
+    case 'send-email':
+      return 'ส่งอีเมล'
+    case 'resend-email':
+      return 'ส่งอีเมลอีกครั้ง'
+    default:
+      return action
+  }
+}
+
+function getSourceDocumentRoute(doc: Pick<EtaxDocumentRecord, 'moveId' | 'documentType'>) {
+  if (!doc.moveId) return null
+  const rawType = (doc.documentType || '').toLowerCase()
+  if (rawType.includes('credit') || rawType.includes('debit') || rawType.includes('note')) {
+    return `/sales/notes/${doc.moveId}`
+  }
+  return `/sales/invoices/${doc.moveId}`
+}
+
 export function EtaxDashboardPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -136,6 +165,8 @@ export function EtaxDashboardPage() {
   const [stateFilter, setStateFilter] = useState<FilterState>('all')
   const [search, setSearch] = useState('')
   const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(null)
+  const [selectedRowIds, setSelectedRowIds] = useState<number[]>([])
+  const [bulkActionKey, setBulkActionKey] = useState<BulkActionKey | null>(null)
   const requestedDocumentId = Number.parseInt(searchParams.get('documentId') || '', 10)
 
   const summaryQuery = useQuery({
@@ -176,6 +207,11 @@ export function EtaxDashboardPage() {
       setSelectedDocumentId(listQuery.data.items[0].id)
     }
   }, [listQuery.data?.items, selectedDocumentId])
+
+  useEffect(() => {
+    const visibleIds = new Set((listQuery.data?.items ?? []).map((item) => item.id))
+    setSelectedRowIds((current) => current.filter((id) => visibleIds.has(id)))
+  }, [listQuery.data?.items])
 
   const detailQuery = useQuery({
     queryKey: ['etax', 'document', selectedDocumentId],
@@ -315,6 +351,8 @@ export function EtaxDashboardPage() {
     () =>
       (listQuery.data?.items ?? []).map((doc) => ({
         id: doc.id,
+        moveId: doc.moveId ?? null,
+        documentType: doc.documentType || '',
         invoiceNumber: doc.invoiceNumber || doc.moveName || doc.name,
         partnerName: doc.partnerName || '—',
         state: doc.state,
@@ -322,22 +360,139 @@ export function EtaxDashboardPage() {
         amountTotal: doc.amountTotal ?? 0,
         currency: doc.currency || 'THB',
         updatedAt: doc.lastPollDate || doc.lastSubmitDate || '',
+        availableNextActions: doc.availableNextActions ?? [],
+        canSendEmail: Boolean(doc.canSendEmail),
+        canResendEmail: Boolean(doc.canResendEmail),
       })),
     [listQuery.data?.items],
   )
 
+  const allVisibleSelected = rows.length > 0 && rows.every((row) => selectedRowIds.includes(row.id))
+  const selectedDocuments = rows.filter((row) => selectedRowIds.includes(row.id))
+  const eligibleRowsByAction = useMemo(
+    () =>
+      ({
+        submit: selectedDocuments.filter((row) => row.availableNextActions.includes('submit')),
+        poll: selectedDocuments.filter((row) => row.availableNextActions.includes('poll')),
+        retry: selectedDocuments.filter((row) => row.availableNextActions.includes('retry')),
+        cancel: selectedDocuments.filter((row) => row.availableNextActions.includes('cancel')),
+        'send-email': selectedDocuments.filter((row) => row.canSendEmail),
+        'resend-email': selectedDocuments.filter((row) => row.canResendEmail),
+      }) as Record<BulkActionKey, typeof selectedDocuments>,
+    [selectedDocuments],
+  )
+
+  const openSourceDocument = (row: { id: number; moveId: number | null; documentType: string }) => {
+    const route = getSourceDocumentRoute({ moveId: row.moveId, documentType: row.documentType })
+    if (!route) {
+      toast.info('ยังไม่มีเอกสารต้นทางให้เปิด', 'รายการนี้ยังไม่เชื่อมกับใบแจ้งหนี้หรือใบเพิ่ม/ลดหนี้')
+      return
+    }
+    navigate(route)
+  }
+
+  const toggleRowSelection = (documentId: number, checked: boolean) => {
+    setSelectedRowIds((current) =>
+      checked ? Array.from(new Set([...current, documentId])) : current.filter((id) => id !== documentId),
+    )
+  }
+
+  const toggleSelectAllVisible = (checked: boolean) => {
+    setSelectedRowIds((current) => {
+      if (!checked) return current.filter((id) => !rows.some((row) => row.id === id))
+      return Array.from(new Set([...current, ...rows.map((row) => row.id)]))
+    })
+  }
+
+  const runBulkAction = async (action: BulkActionKey) => {
+    if (!selectedRowIds.length) {
+      toast.info('ยังไม่ได้เลือกรายการ', 'เลือกเอกสารจากตารางก่อนแล้วจึงจัดการหลายรายการ')
+      return
+    }
+    const actionMap: Record<
+      BulkActionKey,
+      {
+        label: string
+        success: string
+        fn: (documentId: number) => Promise<EtaxDocumentRecord>
+      }
+    > = {
+      submit: { label: 'ส่ง e-Tax', success: 'ส่ง e-Tax ให้รายการที่เลือกแล้ว', fn: submitEtaxDocument },
+      poll: { label: 'อัปเดตสถานะ', success: 'อัปเดตสถานะรายการที่เลือกแล้ว', fn: pollEtaxDocument },
+      retry: { label: 'ลองใหม่', success: 'นำรายการที่เลือกกลับเข้าคิวแล้ว', fn: retryEtaxDocument },
+      cancel: { label: 'ยกเลิกเอกสาร', success: 'ยกเลิกรายการที่เลือกแล้ว', fn: cancelEtaxDocument },
+      'send-email': { label: 'ส่งอีเมล', success: 'ส่งอีเมลให้รายการที่เลือกแล้ว', fn: sendEtaxDocumentEmail },
+      'resend-email': { label: 'ส่งอีเมลอีกครั้ง', success: 'ส่งอีเมลซ้ำให้รายการที่เลือกแล้ว', fn: resendEtaxDocumentEmail },
+    }
+    const targetIds = eligibleRowsByAction[action].map((row) => row.id)
+    if (!targetIds.length) {
+      toast.info('ยังไม่มีรายการที่ทำคำสั่งนี้ได้', `${bulkActionLabel(action)}ได้เฉพาะเอกสารที่อยู่ในสถานะที่รองรับ`)
+      return
+    }
+    const config = actionMap[action]
+    setBulkActionKey(action)
+    try {
+      let successCount = 0
+      for (const documentId of targetIds) {
+        await config.fn(documentId)
+        successCount += 1
+      }
+      toast.success(config.success, `${successCount} รายการ`)
+      if (selectedRowIds.length > targetIds.length) {
+        toast.info('มีบางรายการถูกข้าม', `ระบบข้าม ${selectedRowIds.length - targetIds.length} รายการที่ยังไม่รองรับคำสั่งนี้`)
+      }
+      if (targetIds[0]) setSelectedDocumentId(targetIds[0])
+      await refreshAll()
+    } catch (err) {
+      toast.error(`${config.label}ไม่สำเร็จ`, err instanceof Error ? err.message : undefined)
+    } finally {
+      setBulkActionKey(null)
+    }
+  }
+
   const columns: Column<(typeof rows)[number]>[] = [
+    {
+      key: 'selected',
+      header: (
+        <input
+          type="checkbox"
+          className="form-check-input"
+          checked={allVisibleSelected}
+          aria-label="เลือกรายการทั้งหมด"
+          onChange={(event) => toggleSelectAllVisible(event.target.checked)}
+        />
+      ),
+      className: 'text-center text-nowrap',
+      cell: (row) => (
+        <input
+          type="checkbox"
+          className="form-check-input"
+          checked={selectedRowIds.includes(row.id)}
+          aria-label={`เลือกรายการ ${row.invoiceNumber}`}
+          onChange={(event) => toggleRowSelection(row.id, event.target.checked)}
+        />
+      ),
+    },
     {
       key: 'invoiceNumber',
       header: 'เอกสาร',
       cell: (row) => (
-        <button
-          type="button"
-          className="btn btn-link p-0 fw-semibold text-decoration-none text-start font-monospace"
-          onClick={() => setSelectedDocumentId(row.id)}
-        >
-          {row.invoiceNumber}
-        </button>
+        <div className="d-flex flex-column align-items-start gap-1">
+          <button
+            type="button"
+            className="btn btn-link p-0 fw-semibold text-decoration-none text-start font-monospace"
+            onClick={() => setSelectedDocumentId(row.id)}
+          >
+            {row.invoiceNumber}
+          </button>
+          <button
+            type="button"
+            className="btn btn-link btn-sm p-0 text-decoration-none"
+            onClick={() => openSourceDocument(row)}
+          >
+            เปิดเอกสารต้นทาง
+          </button>
+        </div>
       ),
     },
     {
@@ -393,13 +548,13 @@ export function EtaxDashboardPage() {
   return (
     <div className="qf-etax-page">
       <PageHeader
-        title="e-Tax Operations"
-        subtitle="ติดตามคิว e-Tax, ดูสถานะ INET, และสั่ง submit / poll / retry ได้จากที่เดียว"
-        breadcrumb="Accounting · e-Tax"
+        title="เอกสาร e-Tax"
+        subtitle="ติดตามคิว e-Tax ดูสถานะ INET และจัดการเอกสารจากหน้ารายการเดียว"
+        breadcrumb="บัญชี · เอกสาร e-Tax"
         actions={
           <div className="d-flex flex-wrap gap-2">
             <Button size="sm" variant="secondary" onClick={() => navigate('/accounting/etax-settings')}>
-              เปิด Settings
+              เปิดการตั้งค่า
             </Button>
             <Button size="sm" variant="ghost" onClick={() => void refreshAll()}>
               <i className="bi bi-arrow-clockwise me-1" aria-hidden="true" />
@@ -412,48 +567,48 @@ export function EtaxDashboardPage() {
       <div className="row g-3 mb-3">
         <div className="col-md-6 col-xl-3">
           <Card className="qf-report-card qf-report-card--blue h-100">
-            <div className="small text-muted mb-1">Queue Depth</div>
+            <div className="small text-muted mb-1">จำนวนงานในคิว</div>
             <div className="h4 fw-semibold mb-1">{usage?.queueDepth ?? '—'}</div>
-            <div className="small text-muted">Queued + Submitted + Processing</div>
+            <div className="small text-muted">รวมรายการที่เข้าคิว ส่งแล้ว และกำลังประมวลผล</div>
           </Card>
         </div>
         <div className="col-md-6 col-xl-3">
           <Card className="qf-report-card qf-report-card--green h-100">
-            <div className="small text-muted mb-1">Success Rate</div>
+            <div className="small text-muted mb-1">อัตราสำเร็จ</div>
             <div className="h4 fw-semibold mb-1">{usage ? `${usage.successRate.toFixed(1)}%` : '—'}</div>
-            <div className="small text-muted">Done / in-flight + done + error</div>
+            <div className="small text-muted">เทียบจากงานที่สำเร็จ งานกำลังวิ่ง และงานผิดพลาด</div>
           </Card>
         </div>
         <div className="col-md-6 col-xl-3">
           <Card className="qf-report-card qf-report-card--amber h-100">
-            <div className="small text-muted mb-1">Avg Submit Latency</div>
+            <div className="small text-muted mb-1">เวลาเฉลี่ยในการส่ง</div>
             <div className="h4 fw-semibold mb-1">{usage ? `${Math.round(usage.averageSubmitMs)} ms` : '—'}</div>
-            <div className="small text-muted">sign endpoint</div>
+            <div className="small text-muted">เวลาเฉลี่ยของขั้นตอน sign endpoint</div>
           </Card>
         </div>
         <div className="col-md-6 col-xl-3">
           <Card className="qf-report-card qf-report-card--purple h-100">
-            <div className="small text-muted mb-1">API Logs</div>
+            <div className="small text-muted mb-1">รายการบันทึก API</div>
             <div className="h4 fw-semibold mb-1">{usage?.apiLogCount ?? '—'}</div>
-            <div className="small text-muted">Backend audit trail</div>
+            <div className="small text-muted">ประวัติการทำงานจาก backend</div>
           </Card>
         </div>
                 <div className="col-md-6 col-xl-3">
                   <Card className="qf-report-card qf-report-card--amber h-100">
-                    <div className="small text-muted mb-1">Seller Address</div>
+                    <div className="small text-muted mb-1">ที่อยู่ผู้ขาย</div>
                     <div className="h4 fw-semibold mb-1">
-                      {summaryState?.configMissing ? 'Not configured' : summary?.sellerAddressReviewNeeded ? 'Needs review' : 'Ready'}
+                      {summaryState?.configMissing ? 'ยังไม่ตั้งค่า' : summary?.sellerAddressReviewNeeded ? 'ต้องตรวจสอบ' : 'พร้อมใช้งาน'}
                     </div>
                     <div className="small text-muted">
                       {summaryState?.configMissing
                         ? 'ยังไม่มี active ETax configuration ให้เริ่มงานจากหน้า invoice ก่อนแล้วเปิด Settings เพื่อตรวจสอบการตั้งค่า'
                         : summary?.sellerAddressMissingFields?.length
                         ? summary.sellerAddressMissingFields.map(formatFieldLabel).join(', ')
-                        : 'Backend-validated, but not a submit blocker in provider mode'}
+                        : 'ตรวจสอบจาก backend แล้ว และพร้อมใช้ส่งในโหมดปัจจุบัน'}
                     </div>
                     {!summaryState?.configMissing ? (
                       <div className="small text-muted mt-2">
-                        Effective runtime:{' '}
+                        รูปแบบที่ใช้งานจริง:{' '}
                         <span className="font-monospace">
                           {formatRuntimeLabel(summary?.effectiveRuntime?.submissionMode, summary?.effectiveRuntime?.csvPayloadStyle)}
                         </span>
@@ -470,11 +625,11 @@ export function EtaxDashboardPage() {
               <div className="d-flex flex-column gap-3">
                 <div className="d-flex align-items-start justify-content-between gap-3">
                   <div>
-                    <div className="fw-semibold">Recent ETax Documents</div>
+                    <div className="fw-semibold">รายการเอกสาร e-Tax ล่าสุด</div>
                     <div className="small text-muted">
                       {summaryState?.configMissing
                         ? 'ยังไม่มี config จึงยังเริ่มสร้าง e-Tax document ไม่ได้'
-                        : 'เอกสารล่าสุดที่พร้อมดำเนินการต่อ'}
+                        : 'เลือกรายการเพื่อเปิดดูรายละเอียด เปิดเอกสารต้นทาง หรือจัดการหลายรายการ'}
                     </div>
                   </div>
                   <div className="d-flex gap-2 flex-wrap">
@@ -483,7 +638,7 @@ export function EtaxDashboardPage() {
                       variant="secondary"
                       onClick={() => navigate('/accounting/etax-settings')}
                     >
-                      Settings
+                      การตั้งค่า
                     </Button>
                     <Button size="sm" onClick={() => void refreshAll()}>
                       รีเฟรช
@@ -497,11 +652,11 @@ export function EtaxDashboardPage() {
                     items={[
                       { key: 'all', label: 'ทั้งหมด', count: summary?.usage.totalDocuments ?? 0 },
                       { key: 'draft', label: 'ร่าง' },
-                      { key: 'queued', label: 'Queue' },
-                      { key: 'submitted', label: 'Submitted' },
-                      { key: 'processing', label: 'Processing' },
-                      { key: 'done', label: 'Done' },
-                      { key: 'error', label: 'Error' },
+                      { key: 'queued', label: 'เข้าคิว' },
+                      { key: 'submitted', label: 'ส่งแล้ว' },
+                      { key: 'processing', label: 'กำลังประมวลผล' },
+                      { key: 'done', label: 'สำเร็จ' },
+                      { key: 'error', label: 'ผิดพลาด' },
                     ]}
                   />
                   <div style={{ minWidth: 240 }}>
@@ -513,6 +668,80 @@ export function EtaxDashboardPage() {
                     />
                   </div>
                 </div>
+                {rows.length > 0 ? (
+                  <div className="d-flex flex-column gap-2 rounded-3 border bg-light p-3">
+                    <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+                      <div>
+                        <div className="fw-semibold">จัดการจากรายการ</div>
+                        <div className="small text-muted">
+                          เลือกเอกสารจากตารางเพื่อสั่งงานหลายรายการ โดยไม่เปลี่ยน flow เดิมของแต่ละเอกสาร
+                        </div>
+                      </div>
+                      <Badge tone={selectedRowIds.length > 0 ? 'blue' : 'gray'}>
+                        เลือกแล้ว {selectedRowIds.length} รายการ
+                      </Badge>
+                    </div>
+                    <div className="d-flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => void runBulkAction('submit')}
+                        disabled={eligibleRowsByAction.submit.length === 0}
+                        isLoading={bulkActionKey === 'submit'}
+                      >
+                        ส่ง e-Tax{eligibleRowsByAction.submit.length > 0 ? ` (${eligibleRowsByAction.submit.length})` : ''}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => void runBulkAction('poll')}
+                        disabled={eligibleRowsByAction.poll.length === 0}
+                        isLoading={bulkActionKey === 'poll'}
+                      >
+                        อัปเดตสถานะ{eligibleRowsByAction.poll.length > 0 ? ` (${eligibleRowsByAction.poll.length})` : ''}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => void runBulkAction('retry')}
+                        disabled={eligibleRowsByAction.retry.length === 0}
+                        isLoading={bulkActionKey === 'retry'}
+                      >
+                        ลองใหม่{eligibleRowsByAction.retry.length > 0 ? ` (${eligibleRowsByAction.retry.length})` : ''}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => void runBulkAction('send-email')}
+                        disabled={eligibleRowsByAction['send-email'].length === 0}
+                        isLoading={bulkActionKey === 'send-email'}
+                      >
+                        ส่งอีเมล{eligibleRowsByAction['send-email'].length > 0 ? ` (${eligibleRowsByAction['send-email'].length})` : ''}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => void runBulkAction('cancel')}
+                        disabled={eligibleRowsByAction.cancel.length === 0}
+                        isLoading={bulkActionKey === 'cancel'}
+                      >
+                        ยกเลิก{eligibleRowsByAction.cancel.length > 0 ? ` (${eligibleRowsByAction.cancel.length})` : ''}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setSelectedRowIds([])}
+                        disabled={selectedRowIds.length === 0 || bulkActionKey !== null}
+                      >
+                        ล้างการเลือก
+                      </Button>
+                    </div>
+                    {selectedRowIds.length > 0 ? (
+                      <div className="small text-muted">
+                        แถวสีฟ้าอ่อนคือรายการที่เลือก และแถวสีน้ำเงินเข้มคือรายการที่กำลังเปิดดูรายละเอียด
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             }
           >
@@ -521,6 +750,13 @@ export function EtaxDashboardPage() {
               columns={columns}
               rows={rows}
               rowKey={(r) => r.id}
+              rowClassName={(row) =>
+                row.id === selectedDocumentId
+                  ? 'table-primary'
+                  : selectedRowIds.includes(row.id)
+                    ? 'table-info'
+                    : undefined
+              }
               empty={
                 <div className="py-4 text-center">
                   <div className="fw-semibold">
@@ -555,8 +791,8 @@ export function EtaxDashboardPage() {
             header={
               <div className="d-flex align-items-center justify-content-between gap-2">
                 <div>
-                  <div className="fw-semibold">Document Detail</div>
-                  <div className="small text-muted">รายละเอียดและคำสั่งด่วน</div>
+                  <div className="fw-semibold">รายละเอียดเอกสาร</div>
+                  <div className="small text-muted">ดูสถานะและสั่งงานต่อจากรายการที่เลือก</div>
                 </div>
                 {currentDoc ? <Badge tone={stateTone(currentDoc.state)}>{stateLabel(currentDoc.state)}</Badge> : null}
               </div>
@@ -573,33 +809,49 @@ export function EtaxDashboardPage() {
             ) : (
               <div className="d-flex flex-column gap-3">
                 <div>
-                  <div className="small text-muted">{currentDoc.documentTypeLabel || 'Document'}</div>
+                  <div className="small text-muted">{currentDoc.documentTypeLabel || 'เอกสาร'}</div>
                   <div className="fw-semibold font-monospace">{currentDoc.invoiceNumber || currentDoc.moveName || currentDoc.name}</div>
                   <div className="small text-muted">{currentDoc.partnerName || '—'}</div>
+                  <div className="d-flex flex-wrap gap-2 mt-2">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        const route = getSourceDocumentRoute(currentDoc)
+                        if (!route) {
+                          toast.info('ยังไม่มีเอกสารต้นทางให้เปิด')
+                          return
+                        }
+                        navigate(route)
+                      }}
+                    >
+                      เปิดเอกสารต้นทาง
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="row g-2">
                   <div className="col-6">
                     <div className="rounded-3 border bg-light p-3">
-                      <div className="small text-muted">Amount</div>
+                      <div className="small text-muted">มูลค่ารวม</div>
                       <div className="fw-semibold">{formatMoney(currentDoc.amountTotal, currentDoc.currency || 'THB')}</div>
                     </div>
                   </div>
                   <div className="col-6">
                   <div className="rounded-3 border bg-light p-3">
-                    <div className="small text-muted">INET</div>
+                      <div className="small text-muted">INET</div>
                     <div className="fw-semibold">{currentDoc.inetStatus || '—'}</div>
                   </div>
                 </div>
                   <div className="col-6">
                     <div className="rounded-3 border bg-light p-3">
-                      <div className="small text-muted">Submit Attempts</div>
+                      <div className="small text-muted">จำนวนครั้งที่ส่ง</div>
                       <div className="fw-semibold">{currentDoc.submitCount ?? 0}</div>
                     </div>
                   </div>
                   <div className="col-6">
                     <div className="rounded-3 border bg-light p-3">
-                      <div className="small text-muted">Poll Attempts</div>
+                      <div className="small text-muted">จำนวนครั้งที่เช็กสถานะ</div>
                       <div className="fw-semibold">{currentDoc.pollCount ?? 0}</div>
                     </div>
                   </div>
@@ -680,30 +932,30 @@ export function EtaxDashboardPage() {
                 </div>
 
                 <div className="rounded-3 border bg-light p-3">
-                  <div className="small fw-semibold mb-2">Current Status</div>
+                  <div className="small fw-semibold mb-2">สถานะปัจจุบัน</div>
                   <div className="small text-muted">
                     {currentStatusMessage}
                   </div>
                   <div className={`small mt-2 ${currentDoc.addressReviewNeeded ? 'text-danger' : 'text-success'}`}>
                     {currentDoc.addressReviewNeeded
-                      ? `Address review required: ${currentDoc.addressMissingFields?.map(formatFieldLabel).join(', ') || 'unknown'}`
-                      : 'Address ready for buyer / ship-to INET submission'}
+                      ? `ต้องตรวจสอบข้อมูลที่อยู่: ${currentDoc.addressMissingFields?.map(formatFieldLabel).join(', ') || 'ไม่ทราบจุดที่ขาด'}`
+                      : 'ข้อมูลที่อยู่พร้อมสำหรับส่งเข้า INET'}
                   </div>
                   <div className="small text-muted mt-2">
-                    Transaction: <span className="font-monospace">{currentDoc.transactionCode || '—'}</span>
+                    เลข Transaction: <span className="font-monospace">{currentDoc.transactionCode || '—'}</span>
                   </div>
                   <div className="small text-muted">
                     XML: {currentDoc.xmlUrl ? 'พร้อม' : 'ยังไม่มี'} · PDF: {currentDoc.pdfUrl ? 'พร้อม' : 'ยังไม่มี'}
                   </div>
                   <div className="small text-muted mt-2">
-                    Effective runtime:{' '}
+                    รูปแบบที่ใช้งานจริง:{' '}
                     <span className="font-monospace">
                       {formatRuntimeLabel(currentDoc.effectiveRuntime?.submissionMode, currentDoc.effectiveRuntime?.csvPayloadStyle)}
                     </span>
                   </div>
                   {currentDoc.runtimeOverrideActive ? (
                     <div className="small text-muted">
-                      Stored config:{' '}
+                      ค่าที่บันทึกไว้:{' '}
                       <span className="font-monospace">
                         {formatRuntimeLabel(currentDoc.storedConfig?.submissionMode, currentDoc.storedConfig?.csvPayloadStyle)}
                       </span>
@@ -712,24 +964,24 @@ export function EtaxDashboardPage() {
                 </div>
 
                 <div className="rounded-3 border bg-white p-3">
-                  <div className="small fw-semibold mb-2">Email Delivery</div>
+                  <div className="small fw-semibold mb-2">การส่งอีเมล</div>
                   <div className="d-flex flex-column gap-1">
                     <div className="small text-muted">
-                      Enabled: {currentDoc.emailDeliveryEnabled ? <Badge tone="green">Yes</Badge> : <Badge tone="gray">No</Badge>}
+                      เปิดใช้งาน: {currentDoc.emailDeliveryEnabled ? <Badge tone="green">ใช่</Badge> : <Badge tone="gray">ไม่ใช่</Badge>}
                     </div>
                     <div className="small text-muted">
-                      State: <Badge tone={emailTone(currentDoc.emailState)}>
+                      สถานะ: <Badge tone={emailTone(currentDoc.emailState)}>
                         {emailLabel(currentDoc.emailState)}
                       </Badge>
                     </div>
                     <div className="small text-muted">
-                      Recipient: <span className="font-monospace">{currentDoc.emailRecipient || '—'}</span>
+                      ผู้รับ: <span className="font-monospace">{currentDoc.emailRecipient || '—'}</span>
                     </div>
                     <div className="small text-muted">
-                      Sent At: {currentDoc.emailSentAt ? new Date(currentDoc.emailSentAt).toLocaleString('th-TH') : '—'}
+                      ส่งล่าสุดเมื่อ: {currentDoc.emailSentAt ? new Date(currentDoc.emailSentAt).toLocaleString('th-TH') : '—'}
                     </div>
                     <div className="small text-muted">
-                      Retry Count: <span className="font-monospace">{currentDoc.emailRetryCount ?? 0}</span>
+                      จำนวนครั้งที่ลองส่ง: <span className="font-monospace">{currentDoc.emailRetryCount ?? 0}</span>
                     </div>
                     <div className="small text-danger">
                       {currentDoc.emailLastError || ''}
@@ -738,7 +990,7 @@ export function EtaxDashboardPage() {
                 </div>
 
                 <div className="rounded-3 border bg-white p-3">
-                  <div className="small fw-semibold mb-2">Recent Logs</div>
+                  <div className="small fw-semibold mb-2">บันทึกล่าสุด</div>
                   {detailQuery.data?.logs?.length ? (
                     <div className="d-flex flex-column gap-2">
                       {detailQuery.data.logs.slice(0, 5).map((log) => (

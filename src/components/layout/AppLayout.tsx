@@ -8,6 +8,8 @@ import { ConfigBanner } from '@/components/system/ConfigBanner'
 import { AvatarAssistant } from '@/features/assistant/AvatarAssistant'
 import { listApprovalTasks } from '@/api/services/approval.service'
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { getThemeMode, setThemeMode, type ThemeMode } from '@/lib/themeMode'
 
 type NavItem = { path: string; label: string; scope?: string }
 
@@ -33,6 +35,12 @@ export function AppLayout() {
     staleTime: 20_000,
   })
   const approvalBadgeCount = approvalTasksQuery.data?.pendingCount ?? 0
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(() => getThemeMode())
+
+  const restrictedScopeTitle = (scope?: string) =>
+    scope
+      ? `สิทธิ์ของคุณยังไม่ครอบคลุมเมนูนี้ ต้องเปิดสิทธิ์ ${scope} ก่อน เมนูจะพยายามเปิดตามสิทธิ์ที่ backend อนุญาต`
+      : undefined
 
   // Scope gating (prod-grade): only hide items that would 403 consistently.
   // Dashboard stays visible even if KPI scope is missing; page will degrade gracefully.
@@ -43,11 +51,6 @@ export function AppLayout() {
     }
   > = [
     { path: '/dashboard', label: 'แดชบอร์ด', icon: 'bi-speedometer2' },
-    { path: '/accounting/reports', label: 'รายงานบัญชี', scope: 'accounting_reports', icon: 'bi-graph-up-arrow' },
-    { path: '/accounting/tax-settings', label: 'VAT and Taxes', scope: 'accounting_reports', icon: 'bi-percent' },
-    { path: '/accounting/etax', label: 'e-Tax', scope: 'etax', icon: 'bi-receipt-cutoff' },
-    { path: '/customers', label: 'รายชื่อติดต่อ', scope: 'contacts', icon: 'bi-people' },
-    { path: '/products', label: 'สินค้า', scope: 'products', icon: 'bi-box-seam' },
     { path: '/sales/orders', label: 'ใบเสนอราคา/SO', scope: 'invoice', icon: 'bi-file-earmark-text' },
     { path: '/sales/invoices', label: 'ใบแจ้งหนี้', scope: 'invoice', icon: 'bi-receipt' },
     { path: '/sales/receipts', label: 'ใบเสร็จรับเงิน', scope: 'invoice', icon: 'bi-receipt-cutoff' },
@@ -55,16 +58,27 @@ export function AppLayout() {
     { path: '/purchases/orders', label: 'ใบสั่งซื้อ', scope: 'purchase', icon: 'bi-cart' },
     { path: '/purchases/requests', label: 'คำขอซื้อ', scope: 'purchase', icon: 'bi-clipboard-check' },
     { path: '/expenses', label: 'รายจ่าย', scope: 'expense', icon: 'bi-cash-stack' },
-    { path: '/accounting/document-review', label: 'Review Inbox', scope: 'accounting_reports', icon: 'bi-inboxes' },
-    { path: '/excel-import', label: 'Excel', scope: 'excel', icon: 'bi-file-earmark-spreadsheet' },
-    { path: '/reports-studio', label: 'Reports Studio', mobileLabel: 'Reports\nStudio', icon: 'bi-layout-text-window-reverse' },
+    { path: '/accounting/document-review', label: 'กล่องงานตรวจสอบ', scope: 'accounting_reports', icon: 'bi-inboxes' },
+    { path: '/accounting/reports', label: 'รายงานบัญชี', scope: 'accounting_reports', icon: 'bi-graph-up-arrow' },
+    { path: '/accounting/etax', label: 'เอกสาร e-Tax', scope: 'etax', icon: 'bi-receipt-cutoff' },
+    { path: '/accounting/tax-settings', label: 'ตั้งค่า VAT/ภาษี', scope: 'accounting_reports', icon: 'bi-percent' },
+    { path: '/customers', label: 'รายชื่อติดต่อ', scope: 'contacts', icon: 'bi-people' },
+    { path: '/products', label: 'สินค้า/บริการ', scope: 'products', icon: 'bi-box-seam' },
+    { path: '/excel-import', label: 'นำเข้า Excel', scope: 'excel', icon: 'bi-file-earmark-spreadsheet' },
+    { path: '/reports-studio', label: 'สตูดิโอรายงาน', mobileLabel: 'สตูดิโอ\nรายงาน', icon: 'bi-layout-text-window-reverse' },
     // Provisioning is an admin/dev feature; keep behind auth scope.
-    { path: '/backend-connection', label: 'การเชื่อมต่อ', scope: 'auth', icon: 'bi-plug' },
+    { path: '/backend-connection', label: 'ตั้งค่าการเชื่อมต่อ', scope: 'auth', icon: 'bi-plug' },
   ]
 
   const handleLogout = async () => {
     await logout()
     navigate('/login', { replace: true })
+  }
+
+  const toggleThemeMode = () => {
+    const nextMode: ThemeMode = themeMode === 'light' ? 'dark' : 'light'
+    setThemeMode(nextMode)
+    setThemeModeState(nextMode)
   }
 
   return (
@@ -90,13 +104,25 @@ export function AppLayout() {
                     {user?.companyName ?? 'Odoo 18'}
                   </p>
                   <p className="small mb-0 text-truncate" style={{ maxWidth: '200px', fontSize: '0.6875rem' }}>
-                    Thai SME Accounting
+                    ระบบงานบัญชีสำหรับธุรกิจไทย
                   </p>
                 </div>
               </div>
               <div className="d-flex align-items-center gap-2">
+                <button
+                  type="button"
+                  onClick={toggleThemeMode}
+                  className="btn btn-sm btn-link text-white text-decoration-none border border-white border-opacity-25 qf-theme-toggle"
+                  title={themeMode === 'light' ? 'สลับเป็นโหมดมืด' : 'สลับเป็นโหมดสว่าง'}
+                  aria-label={themeMode === 'light' ? 'สลับเป็นโหมดมืด' : 'สลับเป็นโหมดสว่าง'}
+                >
+                  <span className="d-inline-flex align-items-center gap-2">
+                    <i className={`bi ${themeMode === 'light' ? 'bi-moon-stars' : 'bi-sun'}`} aria-hidden="true" />
+                    <span className="d-none d-sm-inline">{themeMode === 'light' ? 'โหมดมืด' : 'โหมดสว่าง'}</span>
+                  </span>
+                </button>
                 <span className="badge bg-white bg-opacity-15 d-none d-sm-inline">
-                  EN
+                  TH
                 </span>
                 {user && (
                   <span className="small fw-semibold d-none d-sm-inline">
@@ -117,7 +143,7 @@ export function AppLayout() {
         </div>
 
         {/* Tab navigation (desktop) */}
-        <div className="d-none d-sm-block border-bottom bg-white bg-opacity-85" style={{ backdropFilter: 'blur(12px)' }}>
+        <div className="d-none d-sm-block border-bottom qf-top-nav-surface" style={{ backdropFilter: 'blur(12px)' }}>
           <div className="container-fluid px-4 py-2">
             <nav className="d-flex gap-1">
               {navItems.map((item) => {
@@ -158,7 +184,7 @@ export function AppLayout() {
                     }`}
                     title={
                       !allowed && item.scope
-                        ? `ต้องเปิด scope: ${item.scope} (คลิกเพื่อลองเข้าดู - Backend จะ enforce scopes)`
+                        ? restrictedScopeTitle(item.scope)
                         : undefined
                     }
                   >
@@ -214,7 +240,7 @@ export function AppLayout() {
                     }
                   }}
                   className={`qf-mobile-nav__item ${active ? 'is-active' : ''} ${!allowed ? 'opacity-50' : ''}`}
-                  title={!allowed && item.scope ? `ต้องเปิด scope: ${item.scope} (คลิกเพื่อลองเข้าดู - Backend จะ enforce scopes)` : undefined}
+                  title={!allowed && item.scope ? restrictedScopeTitle(item.scope) : undefined}
                 >
                   <i className={`bi ${item.icon} qf-mobile-nav__icon`} aria-hidden="true" />
                   <span className="qf-mobile-nav__label">

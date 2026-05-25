@@ -171,7 +171,7 @@ export function InvoiceDetailPage() {
       toast.error('ยังพิมพ์ใบเสร็จไม่ได้', 'ต้องมีรายการรับชำระเงินก่อน')
       return
     }
-    toast.info('เปิดหน้าพิมพ์ (Reports Studio)', `Template: ${templateId}`)
+    toast.info('เปิดหน้าพิมพ์ (Reports Studio)', `เทมเพลต: ${templateId}`)
     const url = `/reports-studio/print/${templateId}?recordId=${encodeURIComponent(receiptRecordId)}`
     window.open(url, '_blank', 'noopener,noreferrer')
   }
@@ -181,7 +181,7 @@ export function InvoiceDetailPage() {
       toast.error('ยังสร้าง PDF ใบเสร็จไม่ได้', 'ต้องมีรายการรับชำระเงินก่อน')
       return
     }
-    toast.info('เปิด PDF (Reports Studio)', `Template: ${templateId}`)
+    toast.info('เปิด PDF (Reports Studio)', `เทมเพลต: ${templateId}`)
     // Open the print page directly to avoid the preview -> print double-tab hop.
     const url = `/reports-studio/print/${templateId}?recordId=${encodeURIComponent(receiptRecordId)}`
     window.open(url, '_blank', 'noopener,noreferrer')
@@ -202,7 +202,7 @@ export function InvoiceDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['taxReports'] })
       if (result.paymentWorkflow?.queueState === 'pending_approval') {
         toast.success(
-          'ส่งรายการรับชำระเข้า approval queue แล้ว',
+          'ส่งรายการรับชำระเข้า queue อนุมัติแล้ว',
           result.paymentWorkflow.approvalTeamName
             ? `ทีมอนุมัติ: ${result.paymentWorkflow.approvalTeamName}`
             : 'รอการอนุมัติก่อนออกใบเสร็จ',
@@ -240,12 +240,12 @@ export function InvoiceDetailPage() {
       await queryClient.invalidateQueries({ queryKey: ['invoice-etax', invoiceId] })
       await queryClient.invalidateQueries({ queryKey: ['etax'] })
       toast.success(
-        'Submit e-Tax สำเร็จ',
-        res.document?.name ? `ETax document: ${res.document.name}` : undefined,
+        'ส่ง e-Tax สำเร็จ',
+        res.document?.name ? `เอกสาร e-Tax: ${res.document.name}` : undefined,
       )
     },
     onError: (err) => {
-      toast.error('Submit e-Tax ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+      toast.error('ส่ง e-Tax ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
     },
   })
 
@@ -400,7 +400,7 @@ export function InvoiceDetailPage() {
         <Alert variant="danger">
           <p className="fw-semibold mb-2">เกิดข้อผิดพลาด</p>
           <p className="small mb-0">
-            {error instanceof Error ? error.message : 'Unknown error'}
+            {error instanceof Error ? error.message : 'ไม่ทราบสาเหตุ'}
           </p>
         </Alert>
         <Button onClick={() => navigate('/sales/invoices')}>
@@ -531,15 +531,15 @@ export function InvoiceDetailPage() {
   const printSections = [
     {
       key: 'invoice',
-      title: 'Invoice',
+      title: 'ใบแจ้งหนี้',
       badge: 'เอกสารจริง',
       badgeTone: 'blue' as const,
       description: 'พิมพ์จากใบแจ้งหนี้นี้',
       enabled: true,
       helperText: 'ไม่อิงการรับชำระ',
-      printLabel: 'พิมพ์ Invoice',
-      pdfLabel: 'PDF Invoice',
-      templateLabel: 'แก้ไข Template Invoice',
+      printLabel: 'พิมพ์ใบแจ้งหนี้',
+      pdfLabel: 'PDF ใบแจ้งหนี้',
+      templateLabel: 'แก้ไขเทมเพลตใบแจ้งหนี้',
       onPrint: () => {
         setPrintMenuOpen(false)
         const url = `/reports-studio/print/${rsTplInvoice}?recordId=${encodeURIComponent(String(invoice.id))}`
@@ -564,7 +564,7 @@ export function InvoiceDetailPage() {
       enabled: Boolean(receiptRecordId),
       printLabel: 'พิมพ์ใบเสร็จรับเงิน',
       pdfLabel: 'PDF ใบเสร็จรับเงิน',
-      templateLabel: 'แก้ไข Template แบบเต็ม',
+      templateLabel: 'แก้ไขเทมเพลตแบบเต็ม',
       helperText: receiptRecordId ? 'ใช้ข้อมูลรับชำระล่าสุด' : 'ต้องมีรายการรับชำระก่อน',
       onPrint: () => {
         setPrintMenuOpen(false)
@@ -588,7 +588,7 @@ export function InvoiceDetailPage() {
       enabled: Boolean(receiptRecordId && hasFinalReceipt),
       printLabel: 'พิมพ์ใบเสร็จอย่างย่อ',
       pdfLabel: 'PDF ใบเสร็จอย่างย่อ',
-      templateLabel: 'แก้ไข Template อย่างย่อ',
+      templateLabel: 'แก้ไขเทมเพลตอย่างย่อ',
       helperText: hasFinalReceipt ? 'พร้อมพิมพ์' : 'ยังชำระไม่ครบ',
       onPrint: () => {
         setPrintMenuOpen(false)
@@ -722,7 +722,7 @@ export function InvoiceDetailPage() {
                 onClick={() => setAmendOpen(true)}
                 isLoading={amendMutation.isPending}
               >
-                แก้ไข (Amend)
+                สร้างฉบับแก้ไข
               </Button>
             )}
             {invoice.status === 'draft' && (
@@ -731,7 +731,7 @@ export function InvoiceDetailPage() {
                 onClick={() => postMutation.mutate()}
                 isLoading={postMutation.isPending}
               >
-                Confirm → Invoice
+                ยืนยันใบแจ้งหนี้
               </Button>
             )}
             {invoice.status === 'posted' && (
@@ -793,16 +793,16 @@ export function InvoiceDetailPage() {
           canPollEtaxFromInvoice
             ? async () => {
                 if (!etaxDocument) {
-                  toast.error('ยังไม่มี ETax document', 'Submit e-Tax ก่อน')
+                  toast.error('ยังไม่มีเอกสาร e-Tax', 'กรุณาส่ง e-Tax ก่อน')
                   return
                 }
                 try {
                   await pollEtaxDocument(etaxDocument.id)
                   await queryClient.invalidateQueries({ queryKey: ['invoice-etax', invoiceId] })
                   await queryClient.invalidateQueries({ queryKey: ['etax'] })
-                  toast.success('Poll e-Tax สำเร็จ')
+                  toast.success('อัปเดตสถานะ e-Tax สำเร็จ')
                 } catch (err) {
-                  toast.error('Poll e-Tax ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+                  toast.error('อัปเดตสถานะ e-Tax ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
                 }
               }
             : undefined
@@ -817,11 +817,11 @@ export function InvoiceDetailPage() {
                   await queryClient.invalidateQueries({ queryKey: ['invoice-etax', invoiceId] })
                   await queryClient.invalidateQueries({ queryKey: ['etax'] })
                   toast.success(
-                    res.emailState === 'sent' ? 'ส่ง e-Tax email สำเร็จ' : 'ส่ง e-Tax email แล้ว',
+                    res.emailState === 'sent' ? 'ส่งอีเมล e-Tax สำเร็จ' : 'ส่งอีเมล e-Tax แล้ว',
                     res.emailRecipient || undefined,
                   )
                 } catch (err) {
-                  toast.error('ส่ง e-Tax email ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+                  toast.error('ส่งอีเมล e-Tax ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
                 }
               }
             : undefined
@@ -850,7 +850,7 @@ export function InvoiceDetailPage() {
           <span className="text-muted small">→</span>
           <Badge tone={hasFinalReceipt ? 'green' : 'gray'}>ใบเสร็จ/ใบกำกับภาษี</Badge>
           {payments.length > 1 ? (
-            <span className="small text-muted">({payments.length} payments / รองรับแบ่งชำระ)</span>
+            <span className="small text-muted">({payments.length} รายการรับชำระ / รองรับการแบ่งชำระ)</span>
           ) : null}
         </div>
       </Card>
@@ -904,7 +904,7 @@ export function InvoiceDetailPage() {
                       variant="outline-secondary"
                       onClick={section.onEdit}
                     >
-                      Template
+                      เทมเพลต
                     </BootstrapButton>
                   </div>
                 </div>
@@ -915,8 +915,8 @@ export function InvoiceDetailPage() {
           <hr />
           <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-md-between gap-2">
             <div>
-              <div className="fw-semibold">Fallback</div>
-              <div className="small text-muted">ใช้ PDF เดิมของ invoice หากไม่ต้องการผ่าน Reports Studio</div>
+              <div className="fw-semibold">ทางเลือกสำรอง</div>
+              <div className="small text-muted">ใช้ PDF เดิมของใบแจ้งหนี้ หากไม่ต้องการพิมพ์ผ่าน Reports Studio</div>
             </div>
             <BootstrapButton
               variant="outline-secondary"
@@ -938,9 +938,9 @@ export function InvoiceDetailPage() {
       <div className="row g-4">
         <div className="col-lg-8">
           <Card>
-            <div className="d-flex justify-content-between align-items-center mb-3">
-              <h5 className="h6 fw-semibold mb-0">รายละเอียดสินค้า/บริการ</h5>
-            </div>
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h5 className="h6 fw-semibold mb-0">รายละเอียดสินค้า/บริการ</h5>
+          </div>
             <DataTable
               plain
               columns={lineColumns}
@@ -1031,7 +1031,7 @@ export function InvoiceDetailPage() {
                                   )}
                                 </td>
                               )}
-                              <td className="small">{payment.method || 'Manual'}</td>
+                              <td className="small">{payment.method || 'กรอกเอง'}</td>
                               <td className="text-end font-monospace fw-semibold">
                                 {(payment.appliedAmount ?? payment.amount).toLocaleString('th-TH', {
                                   minimumFractionDigits: 2,
@@ -1168,6 +1168,7 @@ export function InvoiceDetailPage() {
         open={paymentOpen}
         onClose={() => setPaymentOpen(false)}
         currency={invoice.currency}
+        title="บันทึกรับชำระเงิน"
         defaultAmount={Math.max(0, amountDue)}
         maxAmount={Math.max(0, amountDue)}
         enableWht

@@ -88,6 +88,7 @@ export function PromptPayQrModal({ open, onClose, defaultAmount, reference, cust
             {payload ? (
               <div className="mt-3">
                 <div className="small text-muted mb-1">EMV Payload</div>
+                
                 <textarea className="form-control form-control-sm font-monospace" rows={4} value={payload} readOnly />
               </div>
             ) : null}
@@ -101,7 +102,7 @@ export function PromptPayQrModal({ open, onClose, defaultAmount, reference, cust
                   <div className="small text-muted mt-2">ให้ลูกค้าสแกน QR เพื่อชำระเงิน</div>
                 </>
               ) : (
-                <div className="text-muted small">กรอก PromptPay และจำนวนเงินเพื่อสร้าง QR</div>
+                <div className="text-muted small">กรอกหมายเลข PromptPay และจำนวนเงิน เพื่อสร้าง QR สำหรับรับชำระ</div>
               )}
             </div>
           </div>
@@ -109,10 +110,9 @@ export function PromptPayQrModal({ open, onClose, defaultAmount, reference, cust
       </Modal.Body>
       <Modal.Footer className="d-flex gap-2">
         <Button variant="secondary" onClick={onClose}>ปิด</Button>
-        <Button variant="secondary" onClick={() => void copyPayload()} disabled={!payload}>คัดลอก Payload</Button>
-        <Button onClick={handleSave} disabled={!payload}>บันทึกค่า/ใช้งาน</Button>
+        <Button variant="secondary" onClick={() => void copyPayload()} disabled={!payload}>คัดลอกชุดข้อมูล</Button>
+        <Button onClick={handleSave} disabled={!payload}>บันทึกและใช้งาน</Button>
       </Modal.Footer>
     </Modal>
   )
 }
-

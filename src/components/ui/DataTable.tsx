@@ -18,12 +18,13 @@ export function DataTable<T>(props: {
   empty?: ReactNode
   className?: string
   rowKey?: (row: T, index: number) => string | number
+  rowClassName?: (row: T, index: number) => string | undefined
   /** When true, renders table without the Card wrapper (useful when you already are inside a Card) */
   plain?: boolean
   /** Allow dropdown menus (e.g. combobox in cells) to overflow vertically */
   allowMenuOverflow?: boolean
 }) {
-  const { title, right, columns, rows, empty, className, rowKey, plain, allowMenuOverflow } = props
+  const { title, right, columns, rows, empty, className, rowKey, rowClassName, plain, allowMenuOverflow } = props
 
   const content = (
     <>
@@ -54,7 +55,7 @@ export function DataTable<T>(props: {
               </tr>
             ) : (
               rows.map((row, idx) => (
-                <tr key={rowKey ? rowKey(row, idx) : idx}>
+                <tr key={rowKey ? rowKey(row, idx) : idx} className={rowClassName?.(row, idx)}>
                   {columns.map((c) => (
                     <td key={c.key} className={twMerge('qf-td', c.className)}>
                       {c.cell(row)}

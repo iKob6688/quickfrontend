@@ -235,7 +235,7 @@ export function InvoiceFormPage() {
           <div className="d-flex align-items-center gap-2">
             {!isEdit && draftSavedAt ? (
               <span className="small text-muted">
-                autosaved {formatDateTime(draftSavedAt)}
+                บันทึกแบบร่างอัตโนมัติ {formatDateTime(draftSavedAt)}
               </span>
             ) : null}
             <Button
@@ -254,7 +254,7 @@ export function InvoiceFormPage() {
           <div className="col-lg-8">
             {!isEdit && draftPendingRestore ? (
               <Alert variant="warning" className="small">
-                <div className="fw-semibold mb-1">พบ draft ที่บันทึกไว้</div>
+                <div className="fw-semibold mb-1">พบแบบร่างที่บันทึกไว้</div>
                 <div className="mb-2">
                   เวลา: {formatDateTime(draftUpdatedAt, 'ไม่ทราบเวลา')}
                 </div>
@@ -265,10 +265,10 @@ export function InvoiceFormPage() {
                     onClick={() => {
                       setFormData(draftPendingRestore)
                       setDraftPendingRestore(null)
-                      toast.info('กู้ draft สำเร็จ')
+                      toast.info('กู้แบบร่างสำเร็จ')
                     }}
                   >
-                    กู้ draft
+                    กู้แบบร่าง
                   </Button>
                   <Button
                     type="button"
@@ -280,7 +280,7 @@ export function InvoiceFormPage() {
                       setDraftUpdatedAt(null)
                     }}
                   >
-                    ลบ draft
+                    ลบแบบร่าง
                   </Button>
                 </div>
               </Alert>
@@ -307,7 +307,7 @@ export function InvoiceFormPage() {
                     options={customerItems.map<ComboboxOption>((p) => ({
                       id: p.id,
                       label: p.name,
-                      meta: p.vat ? `VAT: ${p.vat}` : p.email ? p.email : `ID: ${p.id}`,
+                      meta: p.vat ? `เลขผู้เสียภาษี: ${p.vat}` : p.email ? p.email : `รหัส: ${p.id}`,
                     }))}
                     total={customerTotal}
                     emptyText="ไม่พบลูกค้า (ลองพิมพ์คำอื่น)"
@@ -317,7 +317,7 @@ export function InvoiceFormPage() {
                     }}
                   />
                   <div className="small text-muted mt-2">
-                    Tip: พิมพ์อย่างน้อย 1 ตัวอักษรเพื่อค้นหา • ใช้ ↑/↓ และ Enter เพื่อเลือก • Esc เพื่อปิด
+                    พิมพ์อย่างน้อย 1 ตัวอักษรเพื่อค้นหา • ใช้ ↑/↓ และ Enter เพื่อเลือก • Esc เพื่อปิด
                   </div>
 
                   {selectedCustomerQuery.data ? (
@@ -326,7 +326,7 @@ export function InvoiceFormPage() {
                       <span className="fw-semibold">
                         {selectedCustomerQuery.data.displayName}
                       </span>{' '}
-                      (ID: {formData.customerId})
+                      (รหัส: {formData.customerId})
                       <div className="d-flex gap-2 mt-2">
                         <Button size="sm" variant="ghost" type="button" onClick={() => navigate(`/customers/${formData.customerId}`)}>
                           เปิดรายละเอียดลูกค้า

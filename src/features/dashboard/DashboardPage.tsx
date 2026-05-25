@@ -375,8 +375,8 @@ export function DashboardPage() {
     <div>
       <PageHeader
         title="แดชบอร์ดภาพรวมธุรกิจ"
-        subtitle="ภาพรวมยอดขาย รายจ่าย กำไร และสถานะใบแจ้งหนี้สำหรับ Quickfront18"
-        breadcrumb="Home · Dashboard"
+        subtitle="สรุปงานประจำ ยอดขาย รายจ่าย กำไร และสถานะเอกสารที่ต้องติดตาม"
+        breadcrumb="หน้าแรก · แดชบอร์ด"
         actions={
           <div className="d-flex gap-2">
             <Button 
@@ -419,7 +419,7 @@ export function DashboardPage() {
         <div className="mb-3">
           <Card className="p-3">
             <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-              <div className="fw-semibold">เลือกการ์ดที่ต้องการแสดงบน Dashboard</div>
+              <div className="fw-semibold">เลือกการ์ดที่ต้องการแสดงบนแดชบอร์ด</div>
               <Button
                 size="sm"
                 variant="secondary"
@@ -431,20 +431,20 @@ export function DashboardPage() {
             <div className="row g-2">
               {(
                 [
-                  ['kpis', 'KPI Cards'],
-                  ['invoices', 'Invoices'],
-                  ['products', 'Products'],
-                  ['quotations', 'Quotations'],
-                  ['salesOrders', 'Sale Orders'],
+                  ['kpis', 'การ์ดสรุป'],
+                  ['invoices', 'ใบแจ้งหนี้'],
+                  ['products', 'สินค้า/บริการ'],
+                  ['quotations', 'ใบเสนอราคา'],
+                  ['salesOrders', 'ใบสั่งขาย'],
                   ['accounting', 'รายงานบัญชี'],
                   ['etax', 'e-Tax'],
-                  ['purchaseOrders', 'Purchase Orders'],
-                  ['purchaseRequests', 'Purchase Requests'],
-                  ['approvals', 'Approval Inbox'],
+                  ['purchaseOrders', 'ใบสั่งซื้อ'],
+                  ['purchaseRequests', 'คำขอซื้อ'],
+                  ['approvals', 'งานรออนุมัติ'],
                   ['ai', 'ERPTH AI'],
-                  ['excel', 'Excel Import'],
-                  ['backend', 'Backend'],
-                  ['connection', 'Connection'],
+                  ['excel', 'นำเข้า Excel'],
+                  ['backend', 'ระบบหลังบ้าน'],
+                  ['connection', 'สถานะการเชื่อมต่อ'],
                 ] as Array<[DashboardCardKey, string]>
               ).map(([key, label]) => (
                 <div className="col-6 col-md-4 col-xl-3" key={key}>
@@ -475,7 +475,7 @@ export function DashboardPage() {
             <div>
               <div className="fw-semibold">มีงานรออนุมัติ {approvalTasksQuery.data?.pendingCount} รายการ</div>
               <div className="small">
-                คุณสามารถกดอนุมัติหรือปฏิเสธจากหน้า dashboard ได้ทันที หรือเปิด Review Inbox เพื่อดูรายละเอียดทั้งหมด
+                คุณสามารถกดอนุมัติหรือปฏิเสธจากหน้านี้ได้ทันที หรือเปิดกล่องงานตรวจสอบเพื่อดูรายละเอียดทั้งหมด
               </div>
             </div>
             <div className="d-flex gap-2">
@@ -483,7 +483,7 @@ export function DashboardPage() {
                 เปิดคำขอซื้อรออนุมัติ
               </Button>
               <Button size="sm" onClick={() => navigate('/accounting/document-review')}>
-                ไปที่ Review Inbox
+                ไปที่กล่องงานตรวจสอบ
               </Button>
             </div>
           </Alert>
@@ -495,7 +495,7 @@ export function DashboardPage() {
           <>
             <div className="col-md-6 col-xl-3">
               <Card>
-                <p className="small fw-medium text-muted mb-2">Sales (Posted)</p>
+                <p className="small fw-medium text-muted mb-2">ยอดขายที่ยืนยันแล้ว</p>
                 <p className="h6 fw-semibold mb-2">
                   {kpiQuery.isLoading
                     ? 'กำลังโหลด...'
@@ -515,7 +515,7 @@ export function DashboardPage() {
             </div>
             <div className="col-md-6 col-xl-3">
               <Card>
-                <p className="small fw-medium text-muted mb-2">Receivables (Open)</p>
+                <p className="small fw-medium text-muted mb-2">ยอดลูกหนี้คงค้าง</p>
                 <p className="h6 fw-semibold mb-2">
                   {kpiQuery.isLoading
                     ? 'กำลังโหลด...'
@@ -535,7 +535,7 @@ export function DashboardPage() {
             </div>
             <div className="col-md-6 col-xl-3">
               <Card>
-                <p className="small fw-medium text-muted mb-2">Overdue</p>
+                <p className="small fw-medium text-muted mb-2">ยอดเกินกำหนดชำระ</p>
                 <p className="h6 fw-semibold mb-2">
                   {kpiQuery.isLoading
                     ? 'กำลังโหลด...'
@@ -603,7 +603,7 @@ export function DashboardPage() {
             className="qf-dashboard-card qf-dashboard-card-invoices h-100"
           >
             <div className="d-flex align-items-center justify-content-between mb-2">
-              <p className="small fw-medium text-muted mb-0">Invoices</p>
+              <p className="small fw-medium text-muted mb-0">ใบแจ้งหนี้</p>
               <i className="bi bi-receipt text-primary" style={{ fontSize: '1.5rem' }}></i>
             </div>
             <p className="h6 fw-semibold mb-2">
@@ -622,7 +622,7 @@ export function DashboardPage() {
             className="qf-dashboard-card h-100"
           >
             <div className="d-flex align-items-center justify-content-between mb-2">
-              <p className="small fw-medium text-muted mb-0">Products</p>
+              <p className="small fw-medium text-muted mb-0">สินค้า/บริการ</p>
               <i className="bi bi-box-seam" style={{ fontSize: '1.5rem', color: '#0ea5e9' }}></i>
             </div>
             <p className="h6 fw-semibold mb-2">
@@ -645,7 +645,7 @@ export function DashboardPage() {
             className="qf-dashboard-card h-100"
           >
             <div className="d-flex align-items-center justify-content-between mb-2">
-              <p className="small fw-medium text-muted mb-0">Quotations</p>
+              <p className="small fw-medium text-muted mb-0">ใบเสนอราคา</p>
               <i className="bi bi-file-earmark-text" style={{ fontSize: '1.5rem', color: '#0ea5e9' }}></i>
             </div>
             <p className="h6 fw-semibold mb-2">
@@ -664,7 +664,7 @@ export function DashboardPage() {
             className="qf-dashboard-card h-100"
           >
             <div className="d-flex align-items-center justify-content-between mb-2">
-              <p className="small fw-medium text-muted mb-0">Sale Orders</p>
+              <p className="small fw-medium text-muted mb-0">ใบสั่งขาย</p>
               <i className="bi bi-cart-check" style={{ fontSize: '1.5rem', color: '#16a34a' }}></i>
             </div>
             <p className="h6 fw-semibold mb-2">
@@ -705,20 +705,20 @@ export function DashboardPage() {
               <p className="small fw-medium text-muted mb-0">e-Tax</p>
               <i className="bi bi-receipt-cutoff" style={{ fontSize: '1.5rem', color: '#0f766e' }}></i>
             </div>
-            <p className="h6 fw-semibold mb-2">
-              {etaxQuery.isLoading
-                ? 'กำลังโหลด...'
-                : etaxQuery.isError
-                  ? '—'
-                  : `${etaxQuery.data?.config?.usage?.queueDepth ?? 0} queued`}
-            </p>
-            <p className="small text-muted mb-2">
-              Success {etaxQuery.data?.config?.usage ? `${etaxQuery.data.config.usage.successRate.toFixed(1)}%` : '—'} · Logs {etaxQuery.data?.config?.usage?.apiLogCount ?? '—'}
-            </p>
-            <div className="d-flex align-items-center justify-content-between">
-              <span className="small text-muted">
-                {etaxQuery.data?.config?.name || 'Backend-managed workflow'}
-              </span>
+              <p className="h6 fw-semibold mb-2">
+                {etaxQuery.isLoading
+                  ? 'กำลังโหลด...'
+                  : etaxQuery.isError
+                    ? '—'
+                  : `${etaxQuery.data?.config?.usage?.queueDepth ?? 0} รายการในคิว`}
+              </p>
+              <p className="small text-muted mb-2">
+              สำเร็จ {etaxQuery.data?.config?.usage ? `${etaxQuery.data.config.usage.successRate.toFixed(1)}%` : '—'} · บันทึก {etaxQuery.data?.config?.usage?.apiLogCount ?? '—'}
+              </p>
+              <div className="d-flex align-items-center justify-content-between">
+                <span className="small text-muted">
+                {etaxQuery.data?.config?.name || 'workflow ที่ดูแลจาก backend'}
+                </span>
               <Button
                 size="sm"
                 variant="ghost"
@@ -727,7 +727,7 @@ export function DashboardPage() {
                   navigate('/accounting/etax-settings')
                 }}
               >
-                Settings
+                ตั้งค่า
               </Button>
             </div>
           </Card>
@@ -740,7 +740,7 @@ export function DashboardPage() {
             className="qf-dashboard-card qf-dashboard-card-purchases h-100"
           >
             <div className="d-flex align-items-center justify-content-between mb-2">
-              <p className="small fw-medium text-muted mb-0">Purchase Orders</p>
+              <p className="small fw-medium text-muted mb-0">ใบสั่งซื้อ</p>
               <i className="bi bi-cart text-success" style={{ fontSize: '1.5rem' }}></i>
             </div>
             <p className="h6 fw-semibold mb-2">
@@ -770,7 +770,7 @@ export function DashboardPage() {
             className="qf-dashboard-card qf-dashboard-card-requests h-100"
           >
             <div className="d-flex align-items-center justify-content-between mb-2">
-              <p className="small fw-medium text-muted mb-0">Purchase Requests</p>
+              <p className="small fw-medium text-muted mb-0">คำขอซื้อ</p>
               <i className="bi bi-clipboard-check" style={{ fontSize: '1.5rem', color: '#ec4899' }}></i>
             </div>
             <p className="h6 fw-semibold mb-2">
@@ -797,12 +797,12 @@ export function DashboardPage() {
             <Card className="h-100">
               <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
                 <div>
-                  <p className="small fw-medium text-muted mb-1">Approval Inbox</p>
+                  <p className="small fw-medium text-muted mb-1">งานรออนุมัติ</p>
                   <p className="h6 fw-semibold mb-1">งานรออนุมัติของฉัน</p>
                   <p className="small text-muted mb-0">ผูกกับ backend approval queue และ process ได้จากหน้าหลัก</p>
                 </div>
                 <Button size="sm" variant="ghost" onClick={() => navigate('/accounting/document-review')}>
-                  เปิด Review Inbox
+                  เปิดกล่องงานตรวจสอบ
                 </Button>
               </div>
 
@@ -897,7 +897,7 @@ export function DashboardPage() {
           >
             <div className="d-flex align-items-center justify-content-between mb-2">
               <p className="small fw-medium mb-0" style={{ opacity: 0.9 }}>
-                ERPTH AI
+                ผู้ช่วย AI
               </p>
               <div className="d-flex align-items-center gap-2">
                 <select
@@ -926,7 +926,7 @@ export function DashboardPage() {
             <p className="small mb-2" style={{ opacity: 0.95 }}>
               ภาษา Assistant: {assistantLang === 'th_TH' ? 'ไทย (ค่าเริ่มต้น)' : 'English'}
             </p>
-            <div className="small" style={{ opacity: 0.95 }}>
+                <div className="small" style={{ opacity: 0.95 }}>
               {aiTasksQuery.isLoading ? (
                 <div>กำลังโหลด task...</div>
               ) : aiTasksQuery.isError ? (
@@ -954,7 +954,7 @@ export function DashboardPage() {
                             className="btn btn-link btn-sm p-0 text-white text-decoration-underline"
                             onClick={() => navigate(task.source?.route || '/agent')}
                           >
-                            {task.source?.label || 'Source'}
+                            {task.source?.label || 'แหล่งที่มา'}
                           </button>
                         </div>
                       </div>
@@ -973,7 +973,7 @@ export function DashboardPage() {
             className="qf-dashboard-card qf-dashboard-card-excel h-100"
           >
             <div className="d-flex align-items-center justify-content-between mb-2">
-              <p className="small fw-medium text-muted mb-0">Excel Import</p>
+              <p className="small fw-medium text-muted mb-0">นำเข้า Excel</p>
               <i className="bi bi-file-earmark-spreadsheet text-warning" style={{ fontSize: '1.5rem' }}></i>
             </div>
             <p className="h6 fw-semibold mb-2">
@@ -992,7 +992,7 @@ export function DashboardPage() {
             className="qf-dashboard-card qf-dashboard-card-backend h-100"
           >
             <div className="d-flex align-items-center justify-content-between mb-2">
-              <p className="small fw-medium text-muted mb-0">Backend</p>
+              <p className="small fw-medium text-muted mb-0">ระบบหลังบ้าน</p>
               <i className="bi bi-plug text-purple" style={{ fontSize: '1.5rem', color: '#8b5cf6' }}></i>
             </div>
             <p className="h6 fw-semibold mb-2">
@@ -1005,7 +1005,7 @@ export function DashboardPage() {
         </div>}
         {cardVisibility.connection && <div className="col-md-6 col-xl-3">
           <Card className="h-100">
-            <p className="small fw-medium text-muted mb-2">Connection</p>
+            <p className="small fw-medium text-muted mb-2">สถานะการเชื่อมต่อ</p>
             <p className="h6 fw-semibold mb-2">
               {pingQuery.isLoading
                 ? 'กำลังตรวจสอบ...'
@@ -1016,7 +1016,7 @@ export function DashboardPage() {
                     : 'ไม่ทราบสถานะ'}
             </p>
             <p className="small text-muted mb-0">
-              Instance ID: {instancePublicId ?? '—'}
+              รหัส Instance: {instancePublicId ?? '—'}
             </p>
           </Card>
         </div>}
@@ -1080,7 +1080,7 @@ export function DashboardPage() {
               <div className="alert alert-danger mb-0">
                 <div className="fw-semibold">โหลดสรุปบัญชีไม่สำเร็จ</div>
                 <div className="small">
-                  {profitLossQuery.error instanceof Error ? profitLossQuery.error.message : 'Unknown error'}
+                  {profitLossQuery.error instanceof Error ? profitLossQuery.error.message : 'ไม่ทราบสาเหตุ'}
                 </div>
               </div>
             ) : (

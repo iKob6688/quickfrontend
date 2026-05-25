@@ -125,7 +125,7 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
       await queryClient.invalidateQueries({ queryKey: ['etax'] })
       toast.success(
         'Submit e-Tax สำเร็จ',
-        `${invoiceNo || `#${invoiceId}`} → ${res.document?.name || 'ETax document'}`,
+        `${invoiceNo || `#${invoiceId}`} → ${res.document?.name || 'เอกสาร e-Tax'}`,
       )
     } catch (err) {
       toast.error(
@@ -416,7 +416,7 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
         <div className="alert alert-danger">
           <p className="fw-semibold mb-2">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
           <p className="small mb-2">
-            {query.error instanceof Error ? query.error.message : 'Unknown error'}
+            {query.error instanceof Error ? query.error.message : 'ไม่ทราบสาเหตุ'}
           </p>
           <Button size="sm" onClick={() => query.refetch()}>
             ลองอีกครั้ง

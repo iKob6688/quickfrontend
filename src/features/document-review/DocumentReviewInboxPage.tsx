@@ -66,28 +66,28 @@ const FILTER_CONFIG: Record<
   { label: string; states?: DocumentReviewDetail['state'][]; reviewStates?: DocumentReviewStatus[] }
 > = {
   all: { label: 'ทั้งหมด' },
-  new: { label: 'New', states: ['pending', 'classifying', 'extracting', 'normalizing', 'validating', 'suggesting'] },
-  needs_review: { label: 'Needs review', states: ['ready_for_review'], reviewStates: ['pending_review', 'in_review'] },
-  validation_issue: { label: 'Validation issue', states: ['ready_for_review', 'error'] },
-  draft_ready: { label: 'Suggested draft ready', states: ['ready_for_review'], reviewStates: ['confirmed', 'draft_created'] },
-  linked: { label: 'Linked', states: ['linked'] },
-  error: { label: 'Error', states: ['error'] },
+  new: { label: 'เข้าใหม่', states: ['pending', 'classifying', 'extracting', 'normalizing', 'validating', 'suggesting'] },
+  needs_review: { label: 'ต้องตรวจสอบ', states: ['ready_for_review'], reviewStates: ['pending_review', 'in_review'] },
+  validation_issue: { label: 'มีประเด็นตรวจสอบ', states: ['ready_for_review', 'error'] },
+  draft_ready: { label: 'พร้อมสร้าง draft', states: ['ready_for_review'], reviewStates: ['confirmed', 'draft_created'] },
+  linked: { label: 'เชื่อมเอกสารแล้ว', states: ['linked'] },
+  error: { label: 'ผิดพลาด', states: ['error'] },
 }
 
 const DOCUMENT_TYPE_OPTIONS: Array<{ value: DocumentReviewDetail['document_type']; label: string }> = [
-  { value: 'receipt', label: 'Receipt' },
-  { value: 'tax_invoice', label: 'Tax Invoice' },
-  { value: 'vendor_invoice', label: 'Vendor Invoice' },
-  { value: 'payment_slip', label: 'Payment Slip' },
-  { value: 'unknown_document', label: 'Unknown' },
+  { value: 'receipt', label: 'ใบเสร็จรับเงิน' },
+  { value: 'tax_invoice', label: 'ใบกำกับภาษี' },
+  { value: 'vendor_invoice', label: 'ใบแจ้งหนี้ผู้ขาย' },
+  { value: 'payment_slip', label: 'สลิปชำระเงิน' },
+  { value: 'unknown_document', label: 'ยังไม่ทราบประเภท' },
 ]
 
 const REVIEW_STATUS_OPTIONS: Array<{ value: DocumentReviewStatus; label: string }> = [
-  { value: 'pending_review', label: 'Pending review' },
-  { value: 'in_review', label: 'In review' },
-  { value: 'confirmed', label: 'Confirmed' },
-  { value: 'unsupported', label: 'Unsupported' },
-  { value: 'draft_created', label: 'Draft created' },
+  { value: 'pending_review', label: 'รอตรวจสอบ' },
+  { value: 'in_review', label: 'กำลังตรวจสอบ' },
+  { value: 'confirmed', label: 'ยืนยันแล้ว' },
+  { value: 'unsupported', label: 'ไม่รองรับ' },
+  { value: 'draft_created', label: 'สร้าง draft แล้ว' },
 ]
 
 function getStateTone(item: Pick<DocumentReviewListItem, 'state' | 'blocking_issue_count' | 'issue_count'>) {
@@ -102,23 +102,23 @@ function getStateTone(item: Pick<DocumentReviewListItem, 'state' | 'blocking_iss
 function getStateLabel(state: string) {
   switch (state) {
     case 'pending':
-      return 'Pending'
+      return 'รอประมวลผล'
     case 'classifying':
-      return 'Classifying'
+      return 'กำลังแยกประเภท'
     case 'extracting':
-      return 'Extracting'
+      return 'กำลังดึงข้อมูล'
     case 'normalizing':
-      return 'Normalizing'
+      return 'กำลังจัดรูปแบบข้อมูล'
     case 'validating':
-      return 'Validating'
+      return 'กำลังตรวจสอบข้อมูล'
     case 'suggesting':
-      return 'Suggesting'
+      return 'กำลังสร้างคำแนะนำ'
     case 'ready_for_review':
-      return 'Ready for review'
+      return 'พร้อมให้ตรวจสอบ'
     case 'linked':
-      return 'Linked'
+      return 'เชื่อมเอกสารแล้ว'
     case 'error':
-      return 'Error'
+      return 'ผิดพลาด'
     default:
       return state
   }
@@ -127,11 +127,11 @@ function getStateLabel(state: string) {
 function getTargetLabel(target?: string) {
   switch (target) {
     case 'vendor_bill':
-      return 'Create Vendor Bill'
+      return 'สร้างบิลผู้ขาย'
     case 'expense':
-      return 'Create Expense'
+      return 'สร้างค่าใช้จ่าย'
     default:
-      return 'Review only'
+      return 'ตรวจสอบอย่างเดียว'
   }
 }
 
@@ -252,7 +252,7 @@ function isPdfAttachment(attachment?: DocumentReviewAttachment) {
 }
 
 function buildLocalCopilotFallback(prompt: string, detail: DocumentReviewDetail | undefined) {
-  if (!detail) return 'Select a document first so I can explain the extraction context.'
+  if (!detail) return 'เลือกเอกสารก่อน แล้วฉันจะช่วยอธิบายบริบทของผลการดึงข้อมูลให้'
   const lower = prompt.toLowerCase()
   const issueSummary =
     detail.issues.length > 0
@@ -305,7 +305,7 @@ export function DocumentReviewInboxPage() {
   const [copilotMessages, setCopilotMessages] = useState<CopilotMessage[]>([
     {
       role: 'assistant',
-      text: 'I can explain extraction results, validation issues, partner matching, and the safest next ERP action for the selected document.',
+      text: 'ฉันช่วยอธิบายผลการดึงข้อมูล ประเด็นตรวจสอบ การจับคู่คู่ค้า และขั้นตอนถัดไปที่เหมาะสมสำหรับเอกสารที่เลือกได้',
     },
   ])
 
@@ -344,7 +344,7 @@ export function DocumentReviewInboxPage() {
       ])
     },
     onError: (error) => {
-      toast.error('Approval action failed', toApiError(error).message)
+      toast.error('ดำเนินการอนุมัติไม่สำเร็จ', toApiError(error).message)
     },
   })
 
@@ -418,14 +418,14 @@ export function DocumentReviewInboxPage() {
       )
     },
     onSuccess: async () => {
-      toast.success('Saved review changes')
+      toast.success('บันทึกการแก้ไขแล้ว')
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['document-review', 'items'] }),
         queryClient.invalidateQueries({ queryKey: ['document-review', 'detail', selectedId] }),
       ])
     },
     onError: (error) => {
-      toast.error('Failed to save document review', getDocumentReviewErrorMessage(error))
+      toast.error('บันทึกการตรวจเอกสารไม่สำเร็จ', getDocumentReviewErrorMessage(error))
     },
   })
 
@@ -435,14 +435,14 @@ export function DocumentReviewInboxPage() {
       return retryDocumentReview(selectedId)
     },
     onSuccess: async () => {
-      toast.success('Retry parse queued')
+      toast.success('ส่งคิวให้ประมวลผลใหม่แล้ว')
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['document-review', 'items'] }),
         queryClient.invalidateQueries({ queryKey: ['document-review', 'detail', selectedId] }),
       ])
     },
     onError: (error) => {
-      toast.error('Retry parse failed', getDocumentReviewErrorMessage(error))
+      toast.error('สั่งประมวลผลใหม่ไม่สำเร็จ', getDocumentReviewErrorMessage(error))
     },
   })
 
@@ -452,14 +452,14 @@ export function DocumentReviewInboxPage() {
       return markDocumentUnsupported(selectedId)
     },
     onSuccess: async () => {
-      toast.success('Marked as unsupported')
+      toast.success('ทำเครื่องหมายว่าเอกสารนี้ไม่รองรับแล้ว')
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['document-review', 'items'] }),
         queryClient.invalidateQueries({ queryKey: ['document-review', 'detail', selectedId] }),
       ])
     },
     onError: (error) => {
-      toast.error('Unable to mark unsupported', getDocumentReviewErrorMessage(error))
+      toast.error('ทำเครื่องหมายว่าไม่รองรับไม่สำเร็จ', getDocumentReviewErrorMessage(error))
     },
   })
 
@@ -469,7 +469,7 @@ export function DocumentReviewInboxPage() {
       return createDocumentDraft(selectedId)
     },
     onSuccess: async (result) => {
-      toast.success('Draft vendor bill created')
+      toast.success('สร้าง draft บิลผู้ขายแล้ว')
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['document-review', 'items'] }),
         queryClient.invalidateQueries({ queryKey: ['document-review', 'detail', selectedId] }),
@@ -479,13 +479,13 @@ export function DocumentReviewInboxPage() {
       }
     },
     onError: (error) => {
-      toast.error('Draft creation failed', getDocumentReviewErrorMessage(error))
+      toast.error('สร้าง draft ไม่สำเร็จ', getDocumentReviewErrorMessage(error))
     },
   })
 
   const copilotMutation = useMutation({
     mutationFn: async (prompt: string) => {
-      if (!detail) throw new Error('Select a document first')
+      if (!detail) throw new Error('กรุณาเลือกเอกสารก่อน')
       return sendAssistantChat(prompt, {
         workspace: 'document_review',
         extraction: {
@@ -581,7 +581,7 @@ export function DocumentReviewInboxPage() {
 
   const renderPreview = () => {
     if (!selectedAttachment) {
-      return <div className="text-muted small">No attachment available.</div>
+      return <div className="text-muted small">ไม่มีไฟล์แนบสำหรับแสดงตัวอย่าง</div>
     }
     if (isImageAttachment(selectedAttachment)) {
       return <img src={selectedAttachment.preview_url} alt={selectedAttachment.name} className="document-review__image" />
@@ -599,7 +599,7 @@ export function DocumentReviewInboxPage() {
       <div className="document-review__generic-file">
         <i className="bi bi-file-earmark-text fs-2 text-muted" aria-hidden="true" />
         <div className="fw-semibold">{selectedAttachment.name}</div>
-        <div className="small text-muted">Preview is not available for this file type.</div>
+        <div className="small text-muted">ไฟล์ประเภทนี้ยังไม่รองรับการแสดงตัวอย่าง</div>
       </div>
     )
   }
@@ -607,16 +607,16 @@ export function DocumentReviewInboxPage() {
   return (
     <div>
       <PageHeader
-        title="Review Inbox"
-        subtitle="Approval queue and document review stay in one place so pending work can be processed faster."
-        breadcrumb="Accounting · Review Inbox"
+        title="กล่องงานตรวจสอบ"
+        subtitle="รวมงานรออนุมัติและเอกสารที่ต้องตรวจไว้ในที่เดียว เพื่อให้จัดการงานค้างได้เร็วขึ้น"
+        breadcrumb="บัญชี · กล่องงานตรวจสอบ"
         actions={
           <div className="d-flex align-items-center gap-2">
             <Button size="sm" variant="secondary" onClick={() => detailQuery.refetch()} disabled={!selectedId || detailQuery.isFetching}>
-              Refresh detail
+              รีเฟรชรายละเอียด
             </Button>
             <Button size="sm" onClick={() => saveMutation.mutate()} disabled={saveDisabled} isLoading={saveMutation.isPending}>
-              Save corrections
+              บันทึกการแก้ไข
             </Button>
           </div>
         }
@@ -744,7 +744,7 @@ export function DocumentReviewInboxPage() {
               setSearch(event.target.value)
               setOffset(0)
             }}
-            placeholder="Search vendor, document number, or intake"
+            placeholder="ค้นหาชื่อผู้ขาย เลขเอกสาร หรือเลขรับเข้า"
             leftAdornment={<i className="bi bi-search" />}
           />
         </div>
@@ -754,8 +754,8 @@ export function DocumentReviewInboxPage() {
         <Card className="document-review__queue">
           <div className="document-review__section-head">
             <div>
-              <div className="fw-semibold">Queue</div>
-              <div className="small text-muted">Newest first, with validation-heavy items surfaced clearly.</div>
+              <div className="fw-semibold">คิวเอกสาร</div>
+              <div className="small text-muted">เรียงจากรายการล่าสุด และแสดงเอกสารที่มีประเด็นตรวจสอบให้เห็นชัด</div>
             </div>
             <Badge tone="gray">{total}</Badge>
           </div>
@@ -769,7 +769,7 @@ export function DocumentReviewInboxPage() {
               {getDocumentReviewErrorMessage(queueQuery.error)}
             </Alert>
           ) : items.length === 0 ? (
-            <div className="p-4 text-muted small">No documents match the current filters.</div>
+            <div className="p-4 text-muted small">ไม่พบเอกสารตามตัวกรองที่เลือก</div>
           ) : (
             <div className="document-review__queue-list">
               {items.map((item) => (
@@ -782,19 +782,19 @@ export function DocumentReviewInboxPage() {
                   <div className="d-flex justify-content-between gap-2 align-items-start mb-2">
                     <div className="text-start">
                       <div className="fw-semibold text-dark">{item.vendor_name || item.document_number || item.name}</div>
-                      <div className="small text-muted">{item.document_date || 'No date'} · {item.document_type.replace(/_/g, ' ')}</div>
+                      <div className="small text-muted">{item.document_date || 'ไม่ระบุวันที่'} · {item.document_type.replace(/_/g, ' ')}</div>
                     </div>
                     <Badge tone={getStateTone(item)}>{getStateLabel(item.state)}</Badge>
                   </div>
                   <div className="small text-muted text-start mb-2">
-                    {item.total_amount ? asCurrency(item.total_amount, item.currency_name || 'THB') : 'Amount pending'}
+                    {item.total_amount ? asCurrency(item.total_amount, item.currency_name || 'THB') : 'รอยอดเงินจากการประมวลผล'}
                   </div>
                   <div className="d-flex flex-wrap gap-2 text-start">
                     <span className="document-review__meta-pill">
-                      Confidence {(item.classification_confidence || 0).toFixed(2)}
+                      ความมั่นใจ {(item.classification_confidence || 0).toFixed(2)}
                     </span>
                     <span className="document-review__meta-pill">
-                      Issues {item.issue_count}
+                      ประเด็น {item.issue_count}
                     </span>
                     <span className="document-review__meta-pill">
                       {getTargetLabel(item.suggested_target)}
@@ -807,10 +807,10 @@ export function DocumentReviewInboxPage() {
 
           <div className="document-review__pager">
             <Button size="sm" variant="secondary" disabled={offset === 0} onClick={() => setOffset((prev) => Math.max(0, prev - PAGE_SIZE))}>
-              Previous
+              ก่อนหน้า
             </Button>
             <span className="small text-muted">
-              Page {page} / {pageCount}
+              หน้า {page} / {pageCount}
             </span>
             <Button
               size="sm"
@@ -818,7 +818,7 @@ export function DocumentReviewInboxPage() {
               disabled={offset + PAGE_SIZE >= total}
               onClick={() => setOffset((prev) => prev + PAGE_SIZE)}
             >
-              Next
+              ถัดไป
             </Button>
           </div>
         </Card>
@@ -826,7 +826,7 @@ export function DocumentReviewInboxPage() {
         <div className="document-review__center">
           {!selectedId ? (
             <Card>
-              <div className="text-muted">Select a document from the queue to start reviewing.</div>
+              <div className="text-muted">เลือกเอกสารจากคิวทางซ้ายเพื่อเริ่มตรวจสอบ</div>
             </Card>
           ) : detailQuery.isLoading ? (
             <Card>
@@ -837,7 +837,7 @@ export function DocumentReviewInboxPage() {
           ) : detailQuery.isError || !detail || !editor || !suggestionEditor ? (
             <Card>
               <Alert variant="danger" className="mb-0">
-                {detailQuery.isError ? getDocumentReviewErrorMessage(detailQuery.error) : 'Document detail is unavailable.'}
+                {detailQuery.isError ? getDocumentReviewErrorMessage(detailQuery.error) : 'ยังไม่สามารถแสดงรายละเอียดเอกสารได้'}
               </Alert>
             </Card>
           ) : (
@@ -845,8 +845,8 @@ export function DocumentReviewInboxPage() {
               <Card className="mb-4">
                 <div className="document-review__section-head">
                   <div>
-                    <div className="fw-semibold">Original document</div>
-                    <div className="small text-muted">Preview stays visible while corrections are made.</div>
+                    <div className="fw-semibold">เอกสารต้นฉบับ</div>
+                    <div className="small text-muted">ดูตัวอย่างเอกสารไปพร้อมกับแก้ไขข้อมูลได้ในหน้าเดียว</div>
                   </div>
                   <div className="d-flex flex-wrap gap-2">
                     {detail.attachments.map((attachment) => (
@@ -877,9 +877,9 @@ export function DocumentReviewInboxPage() {
               <Card className="mb-4">
                 <div className="document-review__section-head">
                   <div>
-                    <div className="fw-semibold">Extracted data</div>
+                    <div className="fw-semibold">ข้อมูลที่ดึงออกมา</div>
                     <div className="small text-muted">
-                      Provider {detail.provider_key || 'unknown'} {detail.provider_version || ''}
+                      ผู้ให้บริการ {detail.provider_key || 'ไม่ทราบ'} {detail.provider_version || ''}
                     </div>
                   </div>
                   <div className="d-flex flex-wrap gap-2">
@@ -891,23 +891,23 @@ export function DocumentReviewInboxPage() {
                 </div>
                 <div className="row g-3">
                   <div className="col-md-6">
-                    <label className="form-label small text-muted">Vendor</label>
+                    <label className="form-label small text-muted">ผู้ขาย</label>
                     <Input value={editor.vendor_name} onChange={(event) => handleEditorChange('vendor_name', event.target.value)} />
                   </div>
                   <div className="col-md-6">
-                    <label className="form-label small text-muted">Vendor tax ID</label>
+                    <label className="form-label small text-muted">เลขผู้เสียภาษีผู้ขาย</label>
                     <Input value={editor.vendor_tax_id} onChange={(event) => handleEditorChange('vendor_tax_id', event.target.value)} />
                   </div>
                   <div className="col-md-4">
-                    <label className="form-label small text-muted">Document number</label>
+                    <label className="form-label small text-muted">เลขที่เอกสาร</label>
                     <Input value={editor.document_number} onChange={(event) => handleEditorChange('document_number', event.target.value)} />
                   </div>
                   <div className="col-md-4">
-                    <label className="form-label small text-muted">Document date</label>
+                    <label className="form-label small text-muted">วันที่เอกสาร</label>
                     <Input type="date" value={editor.document_date} onChange={(event) => handleEditorChange('document_date', event.target.value)} />
                   </div>
                   <div className="col-md-4">
-                    <label className="form-label small text-muted">Document type</label>
+                    <label className="form-label small text-muted">ประเภทเอกสาร</label>
                     <Form.Select value={editor.document_type} onChange={(event) => handleEditorChange('document_type', event.target.value as EditorState['document_type'])}>
                       {DOCUMENT_TYPE_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -917,19 +917,19 @@ export function DocumentReviewInboxPage() {
                     </Form.Select>
                   </div>
                   <div className="col-md-4">
-                    <label className="form-label small text-muted">Subtotal</label>
+                    <label className="form-label small text-muted">ยอดก่อนภาษี</label>
                     <Input value={editor.subtotal_amount} onChange={(event) => handleEditorChange('subtotal_amount', event.target.value)} />
                   </div>
                   <div className="col-md-4">
-                    <label className="form-label small text-muted">Tax amount</label>
+                    <label className="form-label small text-muted">ยอดภาษี</label>
                     <Input value={editor.tax_amount} onChange={(event) => handleEditorChange('tax_amount', event.target.value)} />
                   </div>
                   <div className="col-md-4">
-                    <label className="form-label small text-muted">Total amount</label>
+                    <label className="form-label small text-muted">ยอดรวม</label>
                     <Input value={editor.total_amount} onChange={(event) => handleEditorChange('total_amount', event.target.value)} />
                   </div>
                   <div className="col-md-6">
-                    <label className="form-label small text-muted">Review status</label>
+                    <label className="form-label small text-muted">สถานะการตรวจสอบ</label>
                     <Form.Select value={editor.review_state} onChange={(event) => handleEditorChange('review_state', event.target.value as DocumentReviewStatus)}>
                       {REVIEW_STATUS_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -939,25 +939,25 @@ export function DocumentReviewInboxPage() {
                     </Form.Select>
                   </div>
                   <div className="col-md-6">
-                    <label className="form-label small text-muted">Matched partner</label>
+                    <label className="form-label small text-muted">คู่ค้าที่จับคู่ได้</label>
                     <div className="document-review__partner-box">
                       <Input
                         value={partnerSearch}
                         onChange={(event) => setPartnerSearch(event.target.value)}
-                        placeholder={currentMatchedPartnerLabel || 'Search partner by name or tax ID'}
+                        placeholder={currentMatchedPartnerLabel || 'ค้นหาคู่ค้าด้วยชื่อหรือเลขผู้เสียภาษี'}
                         leftAdornment={<i className="bi bi-building" />}
                       />
                       {editor.matched_partner_id ? (
                         <div className="small text-muted mt-2">
-                          Selected: <span className="fw-semibold">{currentMatchedPartnerLabel}</span>{' '}
+                          เลือกแล้ว: <span className="fw-semibold">{currentMatchedPartnerLabel}</span>{' '}
                           {matchedPartnerContext ? <span>• {matchedPartnerContext} </span> : null}
                           <button type="button" className="btn btn-link btn-sm p-0 ms-2" onClick={() => handleEditorChange('matched_partner_id', null)}>
-                            Clear
+                            ล้างค่า
                           </button>
                         </div>
                       ) : null}
                       {partnerOptionsQuery.isFetching ? (
-                        <div className="small text-muted mt-2">Searching partners…</div>
+                        <div className="small text-muted mt-2">กำลังค้นหาคู่ค้า...</div>
                       ) : partnerOptions.length > 0 ? (
                         <div className="document-review__partner-results mt-2">
                           {partnerOptions.map((partner: PartnerSummary) => (
@@ -972,7 +972,7 @@ export function DocumentReviewInboxPage() {
                             >
                               <span className="fw-semibold">{partner.name}</span>
                               <span className="small text-muted">
-                                {[partner.vat || 'No tax ID', partner.stateName || ''].filter(Boolean).join(' • ')}
+                                {[partner.vat || 'ไม่มีเลขผู้เสียภาษี', partner.stateName || ''].filter(Boolean).join(' • ')}
                               </span>
                             </button>
                           ))}
@@ -988,15 +988,15 @@ export function DocumentReviewInboxPage() {
                   <Card className="h-100">
                     <div className="document-review__section-head">
                       <div>
-                        <div className="fw-semibold">Validation issues</div>
-                        <div className="small text-muted">Warnings and blockers remain review-visible.</div>
+                        <div className="fw-semibold">ประเด็นที่ต้องตรวจสอบ</div>
+                        <div className="small text-muted">แยกคำเตือนและจุดที่บล็อกการทำงานให้เห็นชัดเจน</div>
                       </div>
                       <Badge tone={detail.issues.some((issue) => issue.severity === 'blocking') ? 'red' : 'amber'}>
                         {detail.issues.length}
                       </Badge>
                     </div>
                     {detail.issues.length === 0 ? (
-                      <div className="small text-muted">No validation issues are currently stored.</div>
+                      <div className="small text-muted">ยังไม่มีประเด็นตรวจสอบในเอกสารนี้</div>
                     ) : (
                       <div className="d-flex flex-column gap-3">
                         {detail.issues.map((issue) => (
@@ -1006,8 +1006,8 @@ export function DocumentReviewInboxPage() {
                               <Badge tone={getIssueTone(issue)}>{issue.severity}</Badge>
                             </div>
                             <div className="small mb-1">{issue.message}</div>
-                            {issue.field_name ? <div className="small text-muted">Field: {issue.field_name}</div> : null}
-                            {issue.suggested_action ? <div className="small text-muted">Fix: {issue.suggested_action}</div> : null}
+                            {issue.field_name ? <div className="small text-muted">ฟิลด์: {issue.field_name}</div> : null}
+                            {issue.suggested_action ? <div className="small text-muted">วิธีแก้: {issue.suggested_action}</div> : null}
                           </div>
                         ))}
                       </div>
@@ -1018,8 +1018,8 @@ export function DocumentReviewInboxPage() {
                   <Card className="h-100">
                     <div className="document-review__section-head">
                       <div>
-                        <div className="fw-semibold">Suggested action</div>
-                        <div className="small text-muted">Nothing is posted automatically. Review stays explicit.</div>
+                        <div className="fw-semibold">คำแนะนำการดำเนินการ</div>
+                        <div className="small text-muted">ระบบจะไม่โพสต์รายการอัตโนมัติ ต้องให้ผู้ใช้ยืนยันทุกครั้ง</div>
                       </div>
                       <Badge tone={detail.suggested_target === 'vendor_bill' ? 'blue' : detail.suggested_target === 'expense' ? 'amber' : 'gray'}>
                         {getTargetLabel(detail.suggested_target)}
@@ -1027,8 +1027,8 @@ export function DocumentReviewInboxPage() {
                     </div>
                     <div className="document-review__summary-grid">
                       <div>
-                        <div className="small text-muted">Suggested partner</div>
-                        <div className="fw-semibold">{detail.accounting_suggestion?.suggested_partner_name || detail.matched_partner_name || 'Needs review'}</div>
+                        <div className="small text-muted">คู่ค้าที่แนะนำ</div>
+                        <div className="fw-semibold">{detail.accounting_suggestion?.suggested_partner_name || detail.matched_partner_name || 'ต้องตรวจสอบ'}</div>
                         {matchedPartnerContext ? <div className="small text-muted">{matchedPartnerContext}</div> : null}
                       </div>
                       <div>
@@ -1036,27 +1036,27 @@ export function DocumentReviewInboxPage() {
                         <div className="fw-semibold">{asCurrency(detail.total_amount, detail.currency_name || 'THB')}</div>
                       </div>
                       <div>
-                        <div className="small text-muted">Validation summary</div>
-                        <div>{detail.validation_summary || 'No summary available.'}</div>
+                        <div className="small text-muted">สรุปผลการตรวจสอบ</div>
+                        <div>{detail.validation_summary || 'ยังไม่มีสรุปผลการตรวจสอบ'}</div>
                       </div>
                       <div>
-                        <div className="small text-muted">Matching summary</div>
-                        <div>{detail.matching_summary || 'No matching summary available.'}</div>
+                        <div className="small text-muted">สรุปการจับคู่ข้อมูล</div>
+                        <div>{detail.matching_summary || 'ยังไม่มีสรุปการจับคู่ข้อมูล'}</div>
                       </div>
                     </div>
                     {detail.accounting_suggestion ? (
                       <div className="mt-4">
                         <div className="document-review__section-head mb-3">
                           <div>
-                            <div className="fw-semibold">AI accounting mapping</div>
+                            <div className="fw-semibold">คำแนะนำการลงบัญชีจาก AI</div>
                             <div className="small text-muted">
-                              Confidence {(detail.accounting_suggestion.confidence_score || 0).toFixed(2)} • transparent and editable
+                              ความมั่นใจ {(detail.accounting_suggestion.confidence_score || 0).toFixed(2)} • ปรับแก้ได้ทุกค่า
                             </div>
                           </div>
                         </div>
                         <div className="row g-3">
                           <div className="col-md-6">
-                            <label className="form-label small text-muted">Suggested account</label>
+                            <label className="form-label small text-muted">บัญชีที่แนะนำ</label>
                             <Form.Select
                               value={suggestionEditor.suggested_account_id || ''}
                               onChange={(event) =>
@@ -1065,7 +1065,7 @@ export function DocumentReviewInboxPage() {
                                   event.target.value ? Number(event.target.value) : null,
                                 )}
                             >
-                              <option value="">Needs review</option>
+                              <option value="">ต้องตรวจสอบ</option>
                               {detail.accounting_suggestion.account_candidates.map((candidate) => (
                                 <option key={candidate.id} value={candidate.id}>
                                   {candidate.code ? `${candidate.code} · ` : ''}
@@ -1075,7 +1075,7 @@ export function DocumentReviewInboxPage() {
                             </Form.Select>
                           </div>
                           <div className="col-md-6">
-                            <label className="form-label small text-muted">Suggested journal</label>
+                            <label className="form-label small text-muted">สมุดรายวันที่แนะนำ</label>
                             <Form.Select
                               value={suggestionEditor.suggested_journal_id || ''}
                               onChange={(event) =>
@@ -1084,7 +1084,7 @@ export function DocumentReviewInboxPage() {
                                   event.target.value ? Number(event.target.value) : null,
                                 )}
                             >
-                              <option value="">Needs review</option>
+                              <option value="">ต้องตรวจสอบ</option>
                               {detail.accounting_suggestion.journal_candidates.map((candidate) => (
                                 <option key={candidate.id} value={candidate.id}>
                                   {candidate.name} ({candidate.confidence.toFixed(2)})
@@ -1093,7 +1093,7 @@ export function DocumentReviewInboxPage() {
                             </Form.Select>
                           </div>
                           <div className="col-md-6">
-                            <label className="form-label small text-muted">Suggested tax</label>
+                            <label className="form-label small text-muted">ภาษีที่แนะนำ</label>
                             <Form.Select
                               value={suggestionEditor.suggested_tax_ids[0] || ''}
                               onChange={(event) =>
@@ -1102,7 +1102,7 @@ export function DocumentReviewInboxPage() {
                                   event.target.value ? [Number(event.target.value)] : [],
                                 )}
                             >
-                              <option value="">No tax mapped</option>
+                              <option value="">ยังไม่ได้จับคู่ภาษี</option>
                               {detail.accounting_suggestion.tax_candidates.map((candidate) => (
                                 <option key={candidate.id} value={candidate.id}>
                                   {candidate.name} ({candidate.confidence.toFixed(2)})
@@ -1111,7 +1111,7 @@ export function DocumentReviewInboxPage() {
                             </Form.Select>
                           </div>
                           <div className="col-md-6">
-                            <label className="form-label small text-muted">Suggested analytic account</label>
+                            <label className="form-label small text-muted">บัญชีวิเคราะห์ที่แนะนำ</label>
                             <Form.Select
                               value={suggestionEditor.suggested_analytic_account_id || ''}
                               onChange={(event) =>
@@ -1120,7 +1120,7 @@ export function DocumentReviewInboxPage() {
                                   event.target.value ? Number(event.target.value) : null,
                                 )}
                             >
-                              <option value="">No analytic mapping</option>
+                              <option value="">ยังไม่ได้จับคู่บัญชีวิเคราะห์</option>
                               {detail.accounting_suggestion.analytic_candidates.map((candidate) => (
                                 <option key={candidate.id} value={candidate.id}>
                                   {candidate.name} ({candidate.confidence.toFixed(2)})
@@ -1130,11 +1130,11 @@ export function DocumentReviewInboxPage() {
                           </div>
                           <div className="col-12">
                           <div className="document-review__issue">
-                              <div className="small text-muted mb-2">Suggestion explanation</div>
-                              <div>{detail.accounting_suggestion.suggestion_explanation || 'No explanation stored.'}</div>
+                              <div className="small text-muted mb-2">เหตุผลของคำแนะนำ</div>
+                              <div>{detail.accounting_suggestion.suggestion_explanation || 'ยังไม่มีคำอธิบายที่บันทึกไว้'}</div>
                               {detail.accounting_suggestion.partner_candidates.length > 0 ? (
                                 <div className="small text-muted mt-2">
-                                  Top partner candidates:{' '}
+                                  คู่ค้าที่เข้าเงื่อนไขมากที่สุด:{' '}
                                   {detail.accounting_suggestion.partner_candidates
                                     .slice(0, 3)
                                     .map((candidate) => {
@@ -1149,7 +1149,7 @@ export function DocumentReviewInboxPage() {
                               ) : null}
                               {detail.accounting_suggestion.duplicate_summary ? (
                                 <div className="small text-muted mt-2">
-                                  Duplicate check: {detail.accounting_suggestion.duplicate_summary}
+                                  ผลตรวจรายการซ้ำ: {detail.accounting_suggestion.duplicate_summary}
                                 </div>
                               ) : null}
                             </div>
@@ -1164,13 +1164,13 @@ export function DocumentReviewInboxPage() {
                         disabled={detail.suggested_target === 'review_only' || detail.issues.some((issue) => issue.severity === 'blocking')}
                         isLoading={createDraftMutation.isPending}
                       >
-                        Confirm draft creation
+                        ยืนยันสร้าง draft
                       </Button>
                       <Button size="sm" variant="secondary" onClick={() => retryMutation.mutate()} isLoading={retryMutation.isPending}>
-                        Retry parse
+                        ประมวลผลใหม่
                       </Button>
                       <Button size="sm" variant="secondary" onClick={() => unsupportedMutation.mutate()} isLoading={unsupportedMutation.isPending}>
-                        Mark unsupported
+                        ทำเครื่องหมายว่าไม่รองรับ
                       </Button>
                       {detail.linked_model && detail.linked_res_id ? (
                         <Button
@@ -1184,7 +1184,7 @@ export function DocumentReviewInboxPage() {
                             window.open(`/web#id=${detail.linked_res_id}&model=${detail.linked_model}&view_type=form`, '_blank', 'noopener,noreferrer')
                           }}
                         >
-                          Open linked record
+                          เปิดเอกสารที่เชื่อมไว้
                         </Button>
                       ) : null}
                     </div>
@@ -1199,10 +1199,10 @@ export function DocumentReviewInboxPage() {
           <div className="document-review__section-head">
             <div>
               <div className="fw-semibold">AI Copilot</div>
-              <div className="small text-muted">Context-aware explanations and suggestions only.</div>
+              <div className="small text-muted">ช่วยอธิบายบริบทและให้คำแนะนำ โดยยังคงให้ผู้ใช้เป็นผู้ยืนยันทุกขั้นตอน</div>
             </div>
             <Button size="sm" variant="ghost" onClick={() => setCopilotOpen((prev) => !prev)}>
-              {copilotOpen ? 'Collapse' : 'Open'}
+              {copilotOpen ? 'ย่อ' : 'เปิด'}
             </Button>
           </div>
 
@@ -1210,23 +1210,23 @@ export function DocumentReviewInboxPage() {
             <>
               <div className="document-review__copilot-actions">
                 <button type="button" className="document-review__meta-pill" onClick={() => sendCopilotPrompt('Explain this extraction result.')}>
-                  Explain extraction
+                  อธิบายผลการดึงข้อมูล
                 </button>
                 <button type="button" className="document-review__meta-pill" onClick={() => sendCopilotPrompt('Explain the validation issues on this document.')}>
-                  Explain validation
+                  อธิบายประเด็นตรวจสอบ
                 </button>
                 <button type="button" className="document-review__meta-pill" onClick={() => sendCopilotPrompt('Suggest the best vendor match for this document.')}>
-                  Suggest vendor match
+                  แนะนำการจับคู่ผู้ขาย
                 </button>
                 <button type="button" className="document-review__meta-pill" onClick={() => sendCopilotPrompt('Suggest the safest accounting path for this document.')}>
-                  Suggest accounting path
+                  แนะนำขั้นตอนทางบัญชี
                 </button>
               </div>
 
               <div className="document-review__copilot-feed">
                 {copilotMessages.map((message, index) => (
                   <div key={`${message.role}-${index}`} className={`document-review__copilot-message is-${message.role}`}>
-                    <div className="small fw-semibold mb-1">{message.role === 'assistant' ? 'Copilot' : 'You'}</div>
+                    <div className="small fw-semibold mb-1">{message.role === 'assistant' ? 'Copilot' : 'คุณ'}</div>
                     <div>{message.text}</div>
                     {message.meta ? <div className="small text-muted mt-2">{message.meta}</div> : null}
                   </div>
@@ -1236,7 +1236,7 @@ export function DocumentReviewInboxPage() {
                     <div className="small fw-semibold mb-1">Copilot</div>
                     <div className="d-flex align-items-center gap-2">
                       <Spinner animation="border" size="sm" />
-                      <span>Thinking through the current document…</span>
+                      <span>กำลังวิเคราะห์เอกสารที่เลือก...</span>
                     </div>
                   </div>
                 ) : null}
@@ -1248,22 +1248,22 @@ export function DocumentReviewInboxPage() {
                   rows={4}
                   value={copilotInput}
                   onChange={(event) => setCopilotInput(event.target.value)}
-                  placeholder="Ask why this document was classified a certain way, request a vendor-match explanation, or ask for the safest next action."
+                  placeholder="ถามเหตุผลของการจัดประเภทเอกสาร ขอคำอธิบายการจับคู่ผู้ขาย หรือถามขั้นตอนถัดไปที่ปลอดภัยที่สุด"
                 />
                 <div className="d-flex justify-content-between align-items-center mt-2">
-                  <div className="small text-muted">Copilot suggests. Accountants confirm.</div>
+                  <div className="small text-muted">Copilot ช่วยแนะนำ แต่ผู้ใช้เป็นผู้ยืนยันทุกครั้ง</div>
                   <Button
                     size="sm"
                     onClick={() => sendCopilotPrompt(copilotInput)}
                     disabled={!copilotInput.trim() || copilotMutation.isPending || !detail}
                   >
-                    Send
+                    ส่งคำถาม
                   </Button>
                 </div>
               </div>
             </>
           ) : (
-            <div className="small text-muted">Re-open the panel to ask for extraction explanations and review suggestions.</div>
+            <div className="small text-muted">เปิดแผงนี้อีกครั้งเพื่อขอคำอธิบายผลการดึงข้อมูลและคำแนะนำในการตรวจสอบ</div>
           )}
         </Card>
       </div> : null}
