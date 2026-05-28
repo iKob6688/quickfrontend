@@ -17,6 +17,8 @@ export function AppLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const logout = useAuthStore((s) => s.logout)
+  const switchCompany = useAuthStore((s) => s.switchCompany)
+  const isSwitchingCompany = useAuthStore((s) => s.isSwitchingCompany)
   const user = useAuthStore((s) => s.user)
   const isWide =
     location.pathname.startsWith('/reports-studio/editor') ||
@@ -81,6 +83,8 @@ export function AppLayout() {
     setThemeModeState(nextMode)
   }
 
+  const canSwitchCompany = Boolean(user && user.companies && user.companies.length > 1)
+
   return (
     <div className={`d-flex flex-column min-vh-100 ${hideMobileNav ? 'qf-layout--mobile-form' : ''}`}>
       {/* PEAK-like Top Gradient Header */}
@@ -107,6 +111,28 @@ export function AppLayout() {
                     ระบบงานบัญชีสำหรับธุรกิจไทย
                   </p>
                 </div>
+                {canSwitchCompany ? (
+                  <div className="d-none d-md-block">
+                    <select
+                      className="form-select form-select-sm bg-white bg-opacity-90"
+                      style={{ minWidth: '240px' }}
+                      value={String(user?.companyId ?? '')}
+                      onChange={(e) => {
+                        const nextCompanyId = Number(e.target.value)
+                        if (!Number.isFinite(nextCompanyId) || !user || nextCompanyId === user.companyId) return
+                        void switchCompany(nextCompanyId)
+                      }}
+                      disabled={isSwitchingCompany}
+                      aria-label="เลือกบริษัทที่ต้องการใช้งาน"
+                    >
+                      {user?.companies.map((company) => (
+                        <option key={company.id} value={company.id}>
+                          {company.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
               </div>
               <div className="d-flex align-items-center gap-2">
                 <button

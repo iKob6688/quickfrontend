@@ -5,6 +5,7 @@ import {
   getMe,
   login as apiLogin,
   logout as apiLogout,
+  switchCompany as apiSwitchCompany,
 } from '@/api/services/auth.service'
 import { clearOfflineData } from '@/offline/syncEngine'
 import { clearAuthStorage, setAccessToken, getAccessToken } from '@/lib/authToken'
@@ -26,6 +27,8 @@ interface AuthState {
   login: (payload: LoginPayload) => Promise<void>
   logout: () => Promise<void>
   loadMe: () => Promise<void>
+  isSwitchingCompany: boolean
+  switchCompany: (companyId: number) => Promise<void>
 }
 
 function resolveInstanceId(user: MeResponse | null): string | null {
@@ -42,6 +45,7 @@ export const useAuthStore = create<AuthState>()(
       accessToken: getAccessToken(),
       isAuthenticated: !!getAccessToken(),
       isLoading: false,
+      isSwitchingCompany: false,
       instancePublicId: getInstanceId(),
       async login(payload) {
         set({ isLoading: true, error: undefined })
@@ -136,6 +140,37 @@ export const useAuthStore = create<AuthState>()(
             instancePublicId: null,
             error: toApiError(err).message,
           })
+        }
+      },
+      async switchCompany(companyId) {
+        const prevUser = useAuthStore.getState().user
+        const allowedCompanies = prevUser?.companies ?? []
+        if (!allowedCompanies.some((company) => company.id === companyId)) {
+          throw new Error('ไม่มีสิทธิ์ใช้งานบริษัทที่เลือก')
+        }
+        const previousInstanceId = getInstanceId()
+
+        set({ isSwitchingCompany: true, error: undefined })
+        try {
+          setInstanceId(String(companyId))
+          await apiSwitchCompany(companyId)
+          const me = await getMe()
+          const meAllowedScopes = (me as unknown as { allowed_scopes?: string[] | string }).allowed_scopes
+          setRuntimeAllowedScopes(meAllowedScopes || null)
+          const resolvedInstanceId = resolveInstanceId(me) ?? String(companyId)
+          setInstanceId(resolvedInstanceId)
+          set({
+            user: me,
+            instancePublicId: resolvedInstanceId,
+            isSwitchingCompany: false,
+          })
+        } catch (err) {
+          setInstanceId(previousInstanceId)
+          set({
+            isSwitchingCompany: false,
+            error: toApiError(err).message,
+          })
+          throw err
         }
       },
     }),

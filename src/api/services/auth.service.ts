@@ -32,6 +32,11 @@ export interface MeResponse extends AuthUser {
   companies: { id: number; name: string }[]
 }
 
+export interface SwitchCompanyResponse {
+  companyId: number
+  companyName: string
+}
+
 export interface RegisterCompanyPayload {
   companyName: string
   adminEmail: string
@@ -259,6 +264,38 @@ async function logoutViaWebSession() {
   if (preferredErr) throw preferredErr instanceof Error ? preferredErr : new ApiError('Odoo web session logout failed')
 }
 
+async function switchCompanyViaWebSession(companyId: number) {
+  let lastErr: unknown = null
+  let rootPathErr: unknown = null
+  for (const baseURL of webSessionBaseUrlCandidates()) {
+    try {
+      await apiClient.post(
+        '/web/session/switch_company',
+        {
+          jsonrpc: '2.0',
+          method: 'call',
+          params: {
+            cids: String(companyId),
+          },
+          id: Date.now(),
+        },
+        {
+          baseURL,
+          withCredentials: true,
+          maxRedirects: 0,
+          timeout: Number.isFinite(AUTH_TIMEOUT_MS) && AUTH_TIMEOUT_MS > 0 ? AUTH_TIMEOUT_MS : 15000,
+        },
+      )
+      return
+    } catch (e) {
+      if (baseURL === '' || /\/api$/i.test(String(import.meta.env.VITE_API_BASE_URL ?? ''))) rootPathErr = e
+      lastErr = e
+    }
+  }
+  const preferredErr = rootPathErr || lastErr
+  if (preferredErr) throw preferredErr instanceof Error ? preferredErr : new ApiError('Odoo web session switch company failed')
+}
+
 export async function login(payload: LoginPayload) {
   const body = makeRpc({
     login: payload.login,
@@ -326,6 +363,23 @@ export async function logout() {
     if (is404Error(err)) {
       await logoutViaWebSession()
       return
+    }
+    throw err
+  }
+}
+
+export async function switchCompany(companyId: number) {
+  const body = makeRpc({ company_id: companyId })
+  try {
+    const response = await apiClient.post(`${basePath}/switch_company`, body, {
+      timeout: Number.isFinite(AUTH_TIMEOUT_MS) && AUTH_TIMEOUT_MS > 0 ? AUTH_TIMEOUT_MS : 15000,
+    })
+    return unwrapResponse<SwitchCompanyResponse>(response)
+  } catch (err) {
+    const status = (err as { response?: { status?: number } })?.response?.status
+    if (is404Error(err) || status === 405 || isRecoverableAuthTransportError(err)) {
+      await switchCompanyViaWebSession(companyId)
+      return { companyId, companyName: '' }
     }
     throw err
   }
