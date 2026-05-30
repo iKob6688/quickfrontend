@@ -278,24 +278,116 @@ export function ProductsListPage() {
         </div>
       ) : (
         <div className="d-flex flex-column gap-3">
-          <DataTable
-            title={`รายการสินค้า (${rows.length})`}
-            right={
+          <div className="d-none d-md-block">
+            <DataTable
+              title={`รายการสินค้า (${rows.length})`}
+              right={
+                <Button size="sm" variant="ghost" onClick={() => query.refetch()}>
+                  <i className="bi bi-arrow-clockwise me-1"></i>
+                  รีเฟรช
+                </Button>
+              }
+              columns={columns}
+              rows={rows}
+              rowKey={(r) => r.id}
+              empty={
+                <div>
+                  <p className="h6 fw-semibold mb-2">ยังไม่มีสินค้า</p>
+                  <p className="small text-muted mb-0">{qDebounced ? 'ไม่พบผลลัพธ์ที่ค้นหา' : 'เริ่มต้นด้วยการเพิ่มสินค้าใหม่'}</p>
+                </div>
+              }
+            />
+          </div>
+
+          <div className="d-md-none">
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <div className="small fw-semibold">รายการสินค้า ({rows.length})</div>
               <Button size="sm" variant="ghost" onClick={() => query.refetch()}>
                 <i className="bi bi-arrow-clockwise me-1"></i>
                 รีเฟรช
               </Button>
-            }
-            columns={columns}
-            rows={rows}
-            rowKey={(r) => r.id}
-            empty={
-              <div>
-                <p className="h6 fw-semibold mb-2">ยังไม่มีสินค้า</p>
-                <p className="small text-muted mb-0">{qDebounced ? 'ไม่พบผลลัพธ์ที่ค้นหา' : 'เริ่มต้นด้วยการเพิ่มสินค้าใหม่'}</p>
-              </div>
-            }
-          />
+            </div>
+            <div className="d-flex flex-column gap-2">
+              {rows.length === 0 ? (
+                <div className="text-center text-muted small py-4 border rounded-3 bg-white">
+                  {qDebounced ? 'ไม่พบผลลัพธ์ที่ค้นหา' : 'ยังไม่มีสินค้า'}
+                </div>
+              ) : (
+                rows.map((r) => (
+                  <div key={r.id} className="border rounded-3 bg-white p-3 shadow-sm">
+                    <div className="d-flex align-items-start gap-2 mb-2">
+                      <input
+                        className="form-check-input mt-1"
+                        type="checkbox"
+                        aria-label={`เลือกสินค้า ${r.name}`}
+                        checked={Boolean(selected[r.id])}
+                        onChange={(e) => {
+                          const checked = e.target.checked
+                          setSelected((prev) => {
+                            const next = { ...prev }
+                            if (!checked) delete next[r.id]
+                            else next[r.id] = true
+                            return next
+                          })
+                        }}
+                      />
+                      <img
+                        src={productImageSrc(r)}
+                        alt={r.name}
+                        width={42}
+                        height={42}
+                        style={{ borderRadius: 8, objectFit: 'cover', border: '1px solid #e2e8f0' }}
+                        onError={(e) => {
+                          ;(e.currentTarget as HTMLImageElement).src = '/vite.svg'
+                        }}
+                      />
+                      <div className="flex-grow-1 min-w-0">
+                        <button
+                          type="button"
+                          className="btn btn-link p-0 fw-semibold text-decoration-none text-start text-truncate w-100"
+                          onClick={() => navigate(`/products/${r.id}/edit`)}
+                        >
+                          {r.name}
+                        </button>
+                        <div className="small text-muted font-monospace text-truncate">{r.defaultCode}</div>
+                      </div>
+                      <Badge tone={r.active ? 'green' : 'gray'}>{r.active ? 'ใช้งาน' : 'ปิด'}</Badge>
+                    </div>
+                    <div className="d-flex justify-content-between small">
+                      <span className="text-muted">หน่วย</span>
+                      <span>{r.uom}</span>
+                    </div>
+                    <div className="d-flex justify-content-between small">
+                      <span className="text-muted">คงเหลือ</span>
+                      <span className="font-monospace">
+                        {typeof r.qtyAvailable === 'number' ? r.qtyAvailable.toLocaleString('th-TH', { maximumFractionDigits: 2 }) : '—'}
+                      </span>
+                    </div>
+                    <div className="d-flex justify-content-between small mb-2">
+                      <span className="text-muted">ราคาขาย</span>
+                      <span className="font-monospace">
+                        {Number(r.listPrice || 0).toLocaleString('th-TH', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>
+                    <div className="d-flex flex-wrap gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => navigate('/sales/orders/new?orderType=quotation')}>
+                        ใบเสนอราคา
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => navigate('/sales/orders/new?orderType=sale')}>
+                        Sale Order
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => navigate(`/products/${r.id}/edit`)}>
+                        แก้ไข
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
 
           <div className="d-flex justify-content-between align-items-center">
             <div className="small text-muted">แสดงแล้ว {rows.length} รายการ</div>

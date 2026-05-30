@@ -155,9 +155,14 @@ export const useAuthStore = create<AuthState>()(
           setInstanceId(String(companyId))
           await apiSwitchCompany(companyId)
           const me = await getMe()
+          if (me.companyId !== companyId) {
+            throw new Error(
+              `Backend ยังไม่เปลี่ยนบริษัท (ต้องการ ${companyId} แต่ได้ ${me.companyId ?? 'unknown'})`,
+            )
+          }
           const meAllowedScopes = (me as unknown as { allowed_scopes?: string[] | string }).allowed_scopes
           setRuntimeAllowedScopes(meAllowedScopes || null)
-          const resolvedInstanceId = resolveInstanceId(me) ?? String(companyId)
+          const resolvedInstanceId = String(companyId)
           setInstanceId(resolvedInstanceId)
           set({
             user: me,

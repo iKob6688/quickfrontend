@@ -9,12 +9,29 @@ import { Label } from '@/components/ui/Label'
 import { AppLogo } from '@/components/icons/AppLogo'
 import { BrandIcon } from '@/components/icons/BrandIcon'
 
+function toUserLoginError(raw?: string) {
+  const text = String(raw || '').trim()
+  if (!text) return ''
+  const lower = text.toLowerCase()
+  if (lower.includes('invalid credentials') || lower.includes('unauthorized')) {
+    return 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบแล้วลองใหม่อีกครั้ง'
+  }
+  if (lower.includes('backend ตอบกลับเป็นหน้า html') || lower.includes('/web/session/get_session_info')) {
+    return 'ระบบเชื่อมต่อเซิร์ฟเวอร์ไม่สมบูรณ์ชั่วคราว กรุณาลองใหม่อีกครั้ง หรือติดต่อผู้ดูแลระบบ'
+  }
+  if (lower.includes('network') || lower.includes('timeout') || lower.includes('ไม่พบ route')) {
+    return 'ไม่สามารถเชื่อมต่อระบบได้ในขณะนี้ กรุณาตรวจสอบเครือข่ายหรือแจ้งผู้ดูแลระบบ'
+  }
+  return 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'
+}
+
 export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const login = useAuthStore((s) => s.login)
   const isLoading = useAuthStore((s) => s.isLoading)
   const error = useAuthStore((s) => s.error)
+  const userError = toUserLoginError(error)
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -111,9 +128,9 @@ export function LoginPage() {
                 />
               </div>
 
-              {error ? (
+              {userError ? (
                 <div className="alert alert-danger small py-2 mb-3" style={{ whiteSpace: 'pre-line' }}>
-                  {error}
+                  {userError}
                 </div>
               ) : null}
 

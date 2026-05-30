@@ -264,38 +264,6 @@ async function logoutViaWebSession() {
   if (preferredErr) throw preferredErr instanceof Error ? preferredErr : new ApiError('Odoo web session logout failed')
 }
 
-async function switchCompanyViaWebSession(companyId: number) {
-  let lastErr: unknown = null
-  let rootPathErr: unknown = null
-  for (const baseURL of webSessionBaseUrlCandidates()) {
-    try {
-      await apiClient.post(
-        '/web/session/switch_company',
-        {
-          jsonrpc: '2.0',
-          method: 'call',
-          params: {
-            cids: String(companyId),
-          },
-          id: Date.now(),
-        },
-        {
-          baseURL,
-          withCredentials: true,
-          maxRedirects: 0,
-          timeout: Number.isFinite(AUTH_TIMEOUT_MS) && AUTH_TIMEOUT_MS > 0 ? AUTH_TIMEOUT_MS : 15000,
-        },
-      )
-      return
-    } catch (e) {
-      if (baseURL === '' || /\/api$/i.test(String(import.meta.env.VITE_API_BASE_URL ?? ''))) rootPathErr = e
-      lastErr = e
-    }
-  }
-  const preferredErr = rootPathErr || lastErr
-  if (preferredErr) throw preferredErr instanceof Error ? preferredErr : new ApiError('Odoo web session switch company failed')
-}
-
 export async function login(payload: LoginPayload) {
   const body = makeRpc({
     login: payload.login,
@@ -378,7 +346,10 @@ export async function switchCompany(companyId: number) {
   } catch (err) {
     const status = (err as { response?: { status?: number } })?.response?.status
     if (is404Error(err) || status === 405 || isRecoverableAuthTransportError(err)) {
-      await switchCompanyViaWebSession(companyId)
+      // Backward compatibility:
+      // Some deployments don't expose /auth/switch_company yet.
+      // Frontend can still request company-scoped /me via X-Instance-ID and
+      // use backend response as the source of truth.
       return { companyId, companyName: '' }
     }
     throw err

@@ -17,6 +17,42 @@
   box-sizing: border-box;
 }
 
+.qf-mobile-company-switch {
+  position: sticky;
+  top: 72px;
+  z-index: 1010;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.26);
+  background:
+    linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(241, 245, 249, 0.94)),
+    rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+.qf-mobile-company-switch__label {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.qf-mobile-company-switch__select {
+  min-height: 42px;
+  border: 1px solid rgba(59, 130, 246, 0.22);
+  border-radius: 14px;
+  background-color: #fff;
+  color: #0f172a;
+  font-weight: 800;
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.08);
+}
+
+.qf-mobile-company-switch__select:focus {
+  border-color: rgba(37, 99, 235, 0.58);
+  box-shadow: 0 0 0 0.22rem rgba(37, 99, 235, 0.14);
+}
+
 html,
 body,
 #root {
@@ -956,6 +992,22 @@ body {
 
 .qf-app .qf-so-page input[type='number'] {
   -moz-appearance: textfield;
+}
+
+.qf-app .qf-key-input {
+  caret-color: #0f172a !important;
+  color: #0f172a !important;
+}
+
+.qf-app .qf-key-input::placeholder {
+  color: rgba(15, 23, 42, 0.5) !important;
+}
+
+.qf-app .qf-admin-setup-page .qf-pro-card {
+  border-radius: 1rem;
+  border: 1px solid rgba(91, 108, 255, 0.14);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.98));
 }
 
 .qf-app .qf-so-page .qf-so-line__total-box {

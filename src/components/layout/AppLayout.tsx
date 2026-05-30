@@ -8,8 +8,9 @@ import { ConfigBanner } from '@/components/system/ConfigBanner'
 import { AvatarAssistant } from '@/features/assistant/AvatarAssistant'
 import { listApprovalTasks } from '@/api/services/approval.service'
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { getThemeMode, setThemeMode, type ThemeMode } from '@/lib/themeMode'
+import { toast } from '@/lib/toastStore'
 
 type NavItem = { path: string; label: string; scope?: string }
 
@@ -19,6 +20,7 @@ export function AppLayout() {
   const logout = useAuthStore((s) => s.logout)
   const switchCompany = useAuthStore((s) => s.switchCompany)
   const isSwitchingCompany = useAuthStore((s) => s.isSwitchingCompany)
+  const instancePublicId = useAuthStore((s) => s.instancePublicId)
   const user = useAuthStore((s) => s.user)
   const isWide =
     location.pathname.startsWith('/reports-studio/editor') ||
@@ -38,6 +40,10 @@ export function AppLayout() {
   })
   const approvalBadgeCount = approvalTasksQuery.data?.pendingCount ?? 0
   const [themeMode, setThemeModeState] = useState<ThemeMode>(() => getThemeMode())
+  const [showAssistantWidget, setShowAssistantWidget] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true
+    return window.innerWidth >= 768
+  })
 
   const restrictedScopeTitle = (scope?: string) =>
     scope
@@ -83,7 +89,27 @@ export function AppLayout() {
     setThemeModeState(nextMode)
   }
 
+  useEffect(() => {
+    const syncAssistantVisibility = () => {
+      setShowAssistantWidget(window.innerWidth >= 768)
+    }
+    syncAssistantVisibility()
+    window.addEventListener('resize', syncAssistantVisibility)
+    return () => window.removeEventListener('resize', syncAssistantVisibility)
+  }, [])
+
   const canSwitchCompany = Boolean(user && user.companies && user.companies.length > 1)
+  const handleCompanyChange = async (nextCompanyId: number) => {
+    if (!user || !Number.isFinite(nextCompanyId) || nextCompanyId === Number(instancePublicId || 0)) return
+    try {
+      await switchCompany(nextCompanyId)
+      // Force full refresh so every page/query reloads with the new company scope.
+      window.location.reload()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'เปลี่ยนบริษัทไม่สำเร็จ'
+      toast.error('เปลี่ยนบริษัทไม่สำเร็จ', msg)
+    }
+  }
 
   return (
     <div className={`d-flex flex-column min-vh-100 ${hideMobileNav ? 'qf-layout--mobile-form' : ''}`}>
@@ -116,11 +142,10 @@ export function AppLayout() {
                     <select
                       className="form-select form-select-sm bg-white bg-opacity-90"
                       style={{ minWidth: '240px' }}
-                      value={String(user?.companyId ?? '')}
+                      value={String(instancePublicId ?? user?.companyId ?? '')}
                       onChange={(e) => {
                         const nextCompanyId = Number(e.target.value)
-                        if (!Number.isFinite(nextCompanyId) || !user || nextCompanyId === user.companyId) return
-                        void switchCompany(nextCompanyId)
+                        void handleCompanyChange(nextCompanyId)
                       }}
                       disabled={isSwitchingCompany}
                       aria-label="เลือกบริษัทที่ต้องการใช้งาน"
@@ -228,6 +253,33 @@ export function AppLayout() {
         </div>
       </header>
 
+      {canSwitchCompany && !hideMobileNav ? (
+        <div className="qf-mobile-company-switch d-md-none">
+          <div className="container-fluid px-3 py-2">
+            <label className="qf-mobile-company-switch__label" htmlFor="qf-mobile-company-select">
+              บริษัทที่ใช้งาน
+            </label>
+            <select
+              id="qf-mobile-company-select"
+              className="form-select form-select-sm qf-mobile-company-switch__select"
+              value={String(instancePublicId ?? user?.companyId ?? '')}
+              onChange={(e) => {
+                const nextCompanyId = Number(e.target.value)
+                void handleCompanyChange(nextCompanyId)
+              }}
+              disabled={isSwitchingCompany}
+              aria-label="เลือกบริษัทที่ต้องการใช้งาน"
+            >
+              {user?.companies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      ) : null}
+
       {/* Main content */}
       <PageContainer className={`flex-1 qf-content ${hideMobileNav ? 'qf-content--mobile-form' : ''}`} fluid={isWide}>
         <main className="min-w-0 flex-1">
@@ -281,7 +333,7 @@ export function AppLayout() {
           </div>
         </nav>
       ) : null}
-      <AvatarAssistant />
+      {showAssistantWidget ? <AvatarAssistant /> : null}
     </div>
   )
 }

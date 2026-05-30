@@ -80,6 +80,8 @@ export function AgentDashboardPage() {
               value={agentTokenInput}
               onChange={(e) => setAgentTokenInput(e.target.value)}
               placeholder="วาง Agent Token ที่นี่"
+              autoFocus
+              className="qf-key-input font-monospace"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && agentTokenInput.trim()) {
                   handleSetToken()
@@ -95,6 +97,7 @@ export function AgentDashboardPage() {
               variant="primary"
               onClick={handleSetToken}
               disabled={!agentTokenInput.trim()}
+              className="fw-semibold"
             >
               บันทึก Token
             </Button>
@@ -320,4 +323,3 @@ export function AgentDashboardPage() {
     </div>
   )
 }
-

@@ -60,7 +60,7 @@ export function BackendConnectionPage() {
   }
 
   return (
-    <div>
+    <div className="qf-admin-setup-page">
       <PageHeader
         title="ตั้งค่าการเชื่อมต่อระบบ"
         subtitle="สำหรับผู้ดูแลระบบ ใช้สร้างบริษัทใหม่และตั้งค่าการเชื่อมต่อกับ Odoo 18"
@@ -69,11 +69,12 @@ export function BackendConnectionPage() {
 
       <div className="mx-auto grid max-w-5xl gap-4 lg:grid-cols-2">
         <Card
+          className="qf-pro-card"
           header={
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <TokenIcon size={20} />
-                <span className="text-sm font-medium text-surfaceDark">
+                <span className="text-sm fw-semibold text-surfaceDark">
                   สร้างบริษัทใหม่ + Admin
                 </span>
               </div>
@@ -90,7 +91,7 @@ export function BackendConnectionPage() {
                 required
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
-                className="w-full rounded-2xl border border-primary/25 bg-bgLight/90 px-3 py-2 text-sm text-surfaceDark outline-none ring-primary/40 placeholder:text-surfaceDark/40 focus:border-accentGold focus:bg-white focus:ring-2"
+                className="qf-key-input w-full rounded-3 border border-primary/25 bg-white px-3 py-2 text-sm fw-medium text-surfaceDark outline-none ring-primary/30 placeholder:text-surfaceDark/45 focus:border-accentGold focus:bg-white focus:ring-2"
                 placeholder="เช่น Quickfront Demo Co., Ltd."
               />
               <InlineHelp>
@@ -113,7 +114,7 @@ export function BackendConnectionPage() {
                 required
                 value={adminEmail}
                 onChange={(e) => setAdminEmail(e.target.value)}
-                className="w-full rounded-2xl border border-primary/25 bg-bgLight/90 px-3 py-2 text-sm text-surfaceDark outline-none ring-primary/40 placeholder:text-surfaceDark/40 focus:border-accentGold focus:bg-white focus:ring-2"
+                className="qf-key-input w-full rounded-3 border border-primary/25 bg-white px-3 py-2 text-sm fw-medium text-surfaceDark outline-none ring-primary/30 placeholder:text-surfaceDark/45 focus:border-accentGold focus:bg-white focus:ring-2"
                 placeholder="admin@example.com"
               />
               <InlineHelp>
@@ -130,7 +131,7 @@ export function BackendConnectionPage() {
             <Button
               type="submit"
               size="md"
-              className="mt-2 w-full"
+              className="mt-2 w-full fw-semibold"
               isLoading={isSubmitting}
             >
               สร้างบริษัทและเข้าสู่ระบบด้วย Admin ใหม่
@@ -146,10 +147,11 @@ export function BackendConnectionPage() {
         </Card>
 
         <Card
+          className="qf-pro-card"
           header={
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-surfaceDark">
+                <span className="text-sm fw-semibold text-surfaceDark">
                   การแสดงวันที่ใน React
                 </span>
               </div>
@@ -168,7 +170,7 @@ export function BackendConnectionPage() {
                     dateDisplayFormat: e.target.value as 'DD/MM/YYYY' | 'DD-MM-YYYY' | 'D MMMM YYYY',
                   })
                 }
-                className="w-full rounded-2xl border border-primary/25 bg-bgLight/90 px-3 py-2 text-sm text-surfaceDark outline-none ring-primary/40 focus:border-accentGold focus:bg-white focus:ring-2"
+                className="w-full rounded-3 border border-primary/25 bg-white px-3 py-2 text-sm fw-medium text-surfaceDark outline-none ring-primary/30 focus:border-accentGold focus:bg-white focus:ring-2"
               >
                 <option value="DD/MM/YYYY">DD/MM/YYYY</option>
                 <option value="DD-MM-YYYY">DD-MM-YYYY</option>
@@ -186,7 +188,7 @@ export function BackendConnectionPage() {
                     dateCalendar: e.target.value as 'gregorian' | 'buddhist',
                   })
                 }
-                className="w-full rounded-2xl border border-primary/25 bg-bgLight/90 px-3 py-2 text-sm text-surfaceDark outline-none ring-primary/40 focus:border-accentGold focus:bg-white focus:ring-2"
+                className="w-full rounded-3 border border-primary/25 bg-white px-3 py-2 text-sm fw-medium text-surfaceDark outline-none ring-primary/30 focus:border-accentGold focus:bg-white focus:ring-2"
               >
                 <option value="buddhist">พ.ศ.</option>
                 <option value="gregorian">ค.ศ.</option>
@@ -199,11 +201,12 @@ export function BackendConnectionPage() {
         </Card>
 
         <Card
+          className="qf-pro-card"
           header={
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <ConnectionStatusIcon status={result ? 'connected' : 'pending'} />
-                <span className="text-sm font-medium text-surfaceDark">
+                <span className="text-sm fw-semibold text-surfaceDark">
                   ผลการสร้างบริษัท / การเชื่อมต่อ
                 </span>
               </div>

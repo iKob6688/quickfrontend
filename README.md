@@ -609,6 +609,19 @@ interface ApiEnvelope<T> {
   - Subsequent `/api/th/v1/auth/me` calls.
 - Clearing auth (manual logout or `401`) removes both the token and the instance ID from storage, ensuring the next session cannot leak to a previous Odoo instance.
 
+### ERPTH multi-company filtering
+
+ERPTH treats the selected Odoo company as a backend-enforced security scope, not a frontend-only filter.
+
+- The company selector is shown when `/auth/login` or `/auth/me` returns more than one allowed company.
+- Desktop shows the selector in the header; mobile shows a dedicated `บริษัทที่ใช้งาน` selector below the header so it is always reachable under 768px.
+- When a user selects a company, the frontend calls `POST /api/th/v1/auth/switch_company`, refreshes `/auth/me`, stores the selected company id as `qf18_instance_public_id`, and reloads the page so all React Query data refetches with the new scope.
+- The frontend rejects the switch if backend `/auth/me` does not confirm the selected `companyId`.
+- The backend must validate that the selected company is in `res.users.company_ids` and must scope all business routes from `X-Instance-ID`.
+- List/detail routes for purchase requests, purchase orders, products, contacts/partners, invoices, billing profiles, and notes must return data for `env.company` only.
+- Product and contact master data intentionally excludes `company_id = False` global records. Assign `company_id` in Odoo if a master record should appear in ERPTH for a specific company.
+- Payload fields such as `companyId` or `company_id` are not trusted as scope selectors; if they differ from the backend-selected company, the API returns `company_forbidden`.
+
 ### Authentication endpoints
 
 Implemented in `src/api/endpoints/auth.ts` using the `/api/th/v1/auth` namespace:
