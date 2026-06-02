@@ -36,6 +36,40 @@ It talks to a middleware backend over JSON APIs, supports offline-first usage, a
    npm run dev
    ```
 
+## Production Mobile/Desktop Navigation
+
+ERPTH uses a compact navigation model so the app remains usable on narrow screens and avoids overloaded desktop menus.
+
+- Desktop shows only primary workflow tabs in one line:
+  - Dashboard
+  - Quotation/SO
+  - Invoices
+  - Receipts
+  - Expenses
+  - Accounting Reports
+  - More
+- The desktop `More` menu contains secondary modules such as purchase, credit/debit notes, review inbox, e-Tax, tax settings, contacts, products, Excel import, Reports Studio, and connection settings.
+- Mobile bottom navigation is intentionally limited to five thumb-friendly items, ordered to match the desktop workflow:
+  - Home
+  - Quotation
+  - Invoice
+  - Receipt
+  - Menu
+- Mobile list pages use card layouts instead of horizontal tables where supported by the shared `DataTable` component.
+- Page-level actions are docked near the bottom on mobile so primary work can be done one-handed.
+
+### Mobile QA Commands
+
+Run these checks after changing layout, navigation, table, or page-header behavior:
+
+```bash
+npm run build:dev
+node scripts/mobile-route-audit.mjs
+node scripts/nav-layout-audit.mjs
+```
+
+The route audit logs mobile viewport metrics for core list, form, and detail workflows. The nav audit verifies desktop top-nav density, desktop `More` menu coverage, mobile menu order, and horizontal overflow.
+
 ### Troubleshooting `ECONNREFUSED` Error
 
 If you see `ECONNREFUSED` when starting the dev server, it means the backend Odoo service isn't running.

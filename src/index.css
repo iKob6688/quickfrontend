@@ -744,11 +744,27 @@ body {
 .qf-report-card--slate { border-top: 3px solid #64748B; }
 
 /* Top nav buttons */
+.qf-app .qf-top-nav {
+  flex-wrap: nowrap;
+  overflow: visible;
+}
+
 .qf-app .qf-top-nav-btn {
   border-radius: 10px !important;
   min-height: 36px;
-  padding: 0.45rem 0.9rem;
+  padding: 0.45rem 0.82rem;
   font-weight: 700;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.qf-app .qf-top-nav-btn__label,
+.qf-app .qf-top-nav-btn__label span {
+  white-space: nowrap;
+}
+
+.qf-app .qf-top-nav-btn--more {
+  margin-left: auto;
 }
 
 .qf-app .qf-top-nav-btn--idle {
@@ -761,6 +777,80 @@ body {
 
 [data-qf-theme='dark'] .qf-app .qf-top-nav-btn--idle {
   background: rgba(13, 27, 45, 0.76) !important;
+}
+
+.qf-app .qf-desktop-more {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  right: 1.5rem;
+  z-index: 1040;
+  width: min(560px, calc(100vw - 3rem));
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.18);
+  padding: 0.75rem;
+  backdrop-filter: blur(14px);
+}
+
+[data-qf-theme='dark'] .qf-app .qf-desktop-more {
+  background: rgba(8, 18, 34, 0.98);
+  border-color: var(--qf-border);
+}
+
+.qf-app .qf-desktop-more__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--qf-text-strong);
+  font-weight: 800;
+  margin-bottom: 0.55rem;
+}
+
+.qf-app .qf-desktop-more__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.qf-app .qf-desktop-more__item {
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 11px;
+  background: rgba(248, 250, 252, 0.94);
+  color: var(--qf-text);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.65rem;
+  text-align: left;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.qf-app .qf-desktop-more__item i {
+  flex: 0 0 auto;
+  color: #2563eb;
+}
+
+.qf-app .qf-desktop-more__item span {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.qf-app .qf-desktop-more__item.is-active {
+  border-color: rgba(37, 99, 235, 0.4);
+  background: rgba(47, 128, 237, 0.14);
+  color: #1d4ed8;
+}
+
+[data-qf-theme='dark'] .qf-app .qf-desktop-more__item {
+  background: rgba(15, 23, 42, 0.68);
 }
 
 /* Segmented tabs */

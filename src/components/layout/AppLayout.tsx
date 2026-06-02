@@ -58,18 +58,19 @@ export function AppLayout() {
       icon: string
       mobileLabel?: string
       showOnMobile?: boolean
+      showOnDesktop?: boolean
     }
   > = [
-    { path: '/dashboard', label: 'แดชบอร์ด', mobileLabel: 'หน้าหลัก', icon: 'bi-speedometer2', showOnMobile: true },
-    { path: '/sales/orders', label: 'ใบเสนอราคา/SO', scope: 'invoice', icon: 'bi-file-earmark-text' },
-    { path: '/sales/invoices', label: 'ใบแจ้งหนี้', mobileLabel: 'ใบแจ้งหนี้', scope: 'invoice', icon: 'bi-receipt', showOnMobile: true },
-    { path: '/sales/receipts', label: 'ใบเสร็จรับเงิน', mobileLabel: 'ใบเสร็จ', scope: 'invoice', icon: 'bi-receipt-cutoff', showOnMobile: true },
+    { path: '/dashboard', label: 'แดชบอร์ด', mobileLabel: 'หน้าหลัก', icon: 'bi-speedometer2', showOnMobile: true, showOnDesktop: true },
+    { path: '/sales/orders', label: 'ใบเสนอราคา/SO', mobileLabel: 'ใบเสนอ', scope: 'invoice', icon: 'bi-file-earmark-text', showOnMobile: true, showOnDesktop: true },
+    { path: '/sales/invoices', label: 'ใบแจ้งหนี้', mobileLabel: 'ใบแจ้งหนี้', scope: 'invoice', icon: 'bi-receipt', showOnMobile: true, showOnDesktop: true },
+    { path: '/sales/receipts', label: 'ใบเสร็จรับเงิน', mobileLabel: 'ใบเสร็จ', scope: 'invoice', icon: 'bi-receipt-cutoff', showOnMobile: true, showOnDesktop: true },
     { path: '/notes', label: 'ใบเพิ่ม/ลดหนี้', scope: 'invoice', icon: 'bi-journal-minus' },
     { path: '/purchases/orders', label: 'ใบสั่งซื้อ', scope: 'purchase', icon: 'bi-cart' },
     { path: '/purchases/requests', label: 'คำขอซื้อ', scope: 'purchase', icon: 'bi-clipboard-check' },
-    { path: '/expenses', label: 'รายจ่าย', mobileLabel: 'รายจ่าย', scope: 'expense', icon: 'bi-cash-stack', showOnMobile: true },
+    { path: '/expenses', label: 'รายจ่าย', scope: 'expense', icon: 'bi-cash-stack', showOnDesktop: true },
     { path: '/accounting/document-review', label: 'กล่องงานตรวจสอบ', scope: 'accounting_reports', icon: 'bi-inboxes' },
-    { path: '/accounting/reports', label: 'รายงานบัญชี', scope: 'accounting_reports', icon: 'bi-graph-up-arrow' },
+    { path: '/accounting/reports', label: 'รายงานบัญชี', scope: 'accounting_reports', icon: 'bi-graph-up-arrow', showOnDesktop: true },
     { path: '/accounting/etax', label: 'เอกสาร e-Tax', scope: 'etax', icon: 'bi-receipt-cutoff' },
     { path: '/accounting/tax-settings', label: 'ตั้งค่า VAT/ภาษี', scope: 'accounting_reports', icon: 'bi-percent' },
     { path: '/customers', label: 'รายชื่อติดต่อ', scope: 'contacts', icon: 'bi-people' },
@@ -82,6 +83,9 @@ export function AppLayout() {
   const mobileNavItems = navItems.filter((item) => item.showOnMobile)
   const mobileMoreNavItems = navItems.filter((item) => !item.showOnMobile)
   const isMobileMoreActive = mobileMoreNavItems.some((item) => location.pathname.startsWith(item.path))
+  const desktopNavItems = navItems.filter((item) => item.showOnDesktop)
+  const desktopMoreNavItems = navItems.filter((item) => !item.showOnDesktop)
+  const isDesktopMoreActive = desktopMoreNavItems.some((item) => location.pathname.startsWith(item.path))
 
   const handleLogout = async () => {
     await logout()
@@ -202,9 +206,9 @@ export function AppLayout() {
 
         {/* Tab navigation (desktop) */}
         <div className="d-none d-sm-block border-bottom qf-top-nav-surface" style={{ backdropFilter: 'blur(12px)' }}>
-          <div className="container-fluid px-4 py-2">
-            <nav className="d-flex gap-1">
-              {navItems.map((item) => {
+          <div className="container-fluid px-4 py-2 position-relative">
+            <nav className="qf-top-nav d-flex align-items-center gap-2" aria-label="เมนูหลัก">
+              {desktopNavItems.map((item) => {
                 const allowed = !item.scope || hasScope(item.scope)
                 const active = location.pathname.startsWith(item.path)
                 
@@ -223,6 +227,7 @@ export function AppLayout() {
                     key={item.path}
                     type="button"
                     onClick={() => {
+                      setIsMobileMenuOpen(false)
                       if (allowed) {
                         navigate(item.path)
                       } else {
@@ -246,7 +251,7 @@ export function AppLayout() {
                         : undefined
                     }
                   >
-                    <span className="d-inline-flex align-items-center gap-2">
+                    <span className="qf-top-nav-btn__label d-inline-flex align-items-center gap-2">
                       <span>{item.label}</span>
                       {item.path === '/accounting/document-review' && approvalBadgeCount > 0 ? (
                         <span className="badge rounded-pill bg-danger">{approvalBadgeCount}</span>
@@ -255,7 +260,62 @@ export function AppLayout() {
                   </button>
                 )
               })}
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen((open) => !open)}
+                className={`btn btn-sm rounded qf-top-nav-btn qf-top-nav-btn--more ${
+                  isDesktopMoreActive || isMobileMenuOpen
+                    ? 'btn-primary qf-top-nav-btn--active'
+                    : 'btn-outline-secondary qf-top-nav-btn--idle'
+                }`}
+                aria-expanded={isMobileMenuOpen}
+                aria-controls="qf-desktop-more-menu"
+              >
+                <span className="qf-top-nav-btn__label d-inline-flex align-items-center gap-2">
+                  <i className="bi bi-grid-3x3-gap" aria-hidden="true" />
+                  <span>เพิ่มเติม</span>
+                </span>
+              </button>
             </nav>
+            {isMobileMenuOpen ? (
+              <div className="qf-desktop-more" id="qf-desktop-more-menu">
+                <div className="qf-desktop-more__head">
+                  <span>เมนูเพิ่มเติม</span>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-link text-decoration-none"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    aria-label="ปิดเมนูเพิ่มเติม"
+                  >
+                    <i className="bi bi-x-lg" aria-hidden="true" />
+                  </button>
+                </div>
+                <div className="qf-desktop-more__grid">
+                  {desktopMoreNavItems.map((item) => {
+                    const allowed = !item.scope || hasScope(item.scope)
+                    const active = location.pathname.startsWith(item.path)
+                    return (
+                      <button
+                        key={item.path}
+                        type="button"
+                        onClick={() => {
+                          setIsMobileMenuOpen(false)
+                          navigate(item.path)
+                        }}
+                        className={`qf-desktop-more__item ${active ? 'is-active' : ''} ${!allowed ? 'opacity-50' : ''}`}
+                        title={!allowed && item.scope ? restrictedScopeTitle(item.scope) : undefined}
+                      >
+                        <i className={`bi ${item.icon}`} aria-hidden="true" />
+                        <span>{item.label}</span>
+                        {item.path === '/accounting/document-review' && approvalBadgeCount > 0 ? (
+                          <span className="badge rounded-pill bg-danger ms-auto">{approvalBadgeCount}</span>
+                        ) : null}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </header>
