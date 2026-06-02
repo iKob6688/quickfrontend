@@ -44,6 +44,7 @@ export function AppLayout() {
     if (typeof window === 'undefined') return true
     return window.innerWidth >= 768
   })
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const restrictedScopeTitle = (scope?: string) =>
     scope
@@ -56,16 +57,17 @@ export function AppLayout() {
     NavItem & {
       icon: string
       mobileLabel?: string
+      showOnMobile?: boolean
     }
   > = [
-    { path: '/dashboard', label: 'แดชบอร์ด', icon: 'bi-speedometer2' },
+    { path: '/dashboard', label: 'แดชบอร์ด', mobileLabel: 'หน้าหลัก', icon: 'bi-speedometer2', showOnMobile: true },
     { path: '/sales/orders', label: 'ใบเสนอราคา/SO', scope: 'invoice', icon: 'bi-file-earmark-text' },
-    { path: '/sales/invoices', label: 'ใบแจ้งหนี้', scope: 'invoice', icon: 'bi-receipt' },
-    { path: '/sales/receipts', label: 'ใบเสร็จรับเงิน', scope: 'invoice', icon: 'bi-receipt-cutoff' },
+    { path: '/sales/invoices', label: 'ใบแจ้งหนี้', mobileLabel: 'ใบแจ้งหนี้', scope: 'invoice', icon: 'bi-receipt', showOnMobile: true },
+    { path: '/sales/receipts', label: 'ใบเสร็จรับเงิน', mobileLabel: 'ใบเสร็จ', scope: 'invoice', icon: 'bi-receipt-cutoff', showOnMobile: true },
     { path: '/notes', label: 'ใบเพิ่ม/ลดหนี้', scope: 'invoice', icon: 'bi-journal-minus' },
     { path: '/purchases/orders', label: 'ใบสั่งซื้อ', scope: 'purchase', icon: 'bi-cart' },
     { path: '/purchases/requests', label: 'คำขอซื้อ', scope: 'purchase', icon: 'bi-clipboard-check' },
-    { path: '/expenses', label: 'รายจ่าย', scope: 'expense', icon: 'bi-cash-stack' },
+    { path: '/expenses', label: 'รายจ่าย', mobileLabel: 'รายจ่าย', scope: 'expense', icon: 'bi-cash-stack', showOnMobile: true },
     { path: '/accounting/document-review', label: 'กล่องงานตรวจสอบ', scope: 'accounting_reports', icon: 'bi-inboxes' },
     { path: '/accounting/reports', label: 'รายงานบัญชี', scope: 'accounting_reports', icon: 'bi-graph-up-arrow' },
     { path: '/accounting/etax', label: 'เอกสาร e-Tax', scope: 'etax', icon: 'bi-receipt-cutoff' },
@@ -77,6 +79,9 @@ export function AppLayout() {
     // Provisioning is an admin/dev feature; keep behind auth scope.
     { path: '/backend-connection', label: 'ตั้งค่าการเชื่อมต่อ', scope: 'auth', icon: 'bi-plug' },
   ]
+  const mobileNavItems = navItems.filter((item) => item.showOnMobile)
+  const mobileMoreNavItems = navItems.filter((item) => !item.showOnMobile)
+  const isMobileMoreActive = mobileMoreNavItems.some((item) => location.pathname.startsWith(item.path))
 
   const handleLogout = async () => {
     await logout()
@@ -119,13 +124,14 @@ export function AppLayout() {
           background: 'linear-gradient(90deg, #5B6CFF 0%, #3C9BEF 45%, #18D2C0 100%)',
           boxShadow: '0 14px 28px rgba(15, 23, 42, 0.10)'
         }}>
-          <div className="container-fluid px-4 py-3">
-            <div className="d-flex align-items-center justify-content-between">
-              <div className="d-flex align-items-center gap-3">
+          <div className="container-fluid qf-header__inner px-4 py-3">
+            <div className="d-flex align-items-center justify-content-between gap-3">
+              <div className="d-flex align-items-center gap-3 min-w-0">
                 <button
                   type="button"
                   onClick={() => navigate('/dashboard')}
                   className="btn btn-link p-0 text-white text-decoration-none"
+                  aria-label="กลับไปหน้าแดชบอร์ด"
                 >
                   <AppLogo size="sm" tone="light" />
                 </button>
@@ -159,7 +165,7 @@ export function AppLayout() {
                   </div>
                 ) : null}
               </div>
-              <div className="d-flex align-items-center gap-2">
+              <div className="d-flex align-items-center gap-2 qf-header__actions">
                 <button
                   type="button"
                   onClick={toggleThemeMode}
@@ -186,7 +192,8 @@ export function AppLayout() {
                   onClick={handleLogout}
                   className="text-white"
                 >
-                  ออกจากระบบ
+                  <i className="bi bi-box-arrow-right d-sm-none" aria-hidden="true" />
+                  <span className="d-none d-sm-inline">ออกจากระบบ</span>
                 </Button>
               </div>
             </div>
@@ -298,7 +305,7 @@ export function AppLayout() {
           }}
         >
           <div className="qf-mobile-nav__inner container-fluid">
-            {navItems.map((item) => {
+            {mobileNavItems.map((item) => {
               const allowed = !item.scope || hasScope(item.scope)
               const active = location.pathname.startsWith(item.path)
               
@@ -307,6 +314,7 @@ export function AppLayout() {
                   key={item.path}
                   type="button"
                   onClick={() => {
+                    setIsMobileMenuOpen(false)
                     if (allowed) {
                       navigate(item.path)
                     } else {
@@ -330,8 +338,56 @@ export function AppLayout() {
                 </button>
               )
             })}
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen((open) => !open)}
+              className={`qf-mobile-nav__item ${isMobileMoreActive || isMobileMenuOpen ? 'is-active' : ''}`}
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="qf-mobile-more-menu"
+            >
+              <i className="bi bi-grid-3x3-gap qf-mobile-nav__icon" aria-hidden="true" />
+              <span className="qf-mobile-nav__label">เมนู</span>
+            </button>
           </div>
         </nav>
+      ) : null}
+      {!hideMobileNav && isMobileMenuOpen ? (
+        <div className="qf-mobile-more d-sm-none" id="qf-mobile-more-menu">
+          <div className="qf-mobile-more__panel">
+            <div className="qf-mobile-more__head">
+              <div className="fw-semibold">เมนูทั้งหมด</div>
+              <button
+                type="button"
+                className="btn btn-sm btn-link text-decoration-none"
+                onClick={() => setIsMobileMenuOpen(false)}
+                aria-label="ปิดเมนู"
+              >
+                <i className="bi bi-x-lg" aria-hidden="true" />
+              </button>
+            </div>
+            <div className="qf-mobile-more__grid">
+              {mobileMoreNavItems.map((item) => {
+                const allowed = !item.scope || hasScope(item.scope)
+                const active = location.pathname.startsWith(item.path)
+                return (
+                  <button
+                    key={item.path}
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false)
+                      navigate(item.path)
+                    }}
+                    className={`qf-mobile-more__item ${active ? 'is-active' : ''} ${!allowed ? 'opacity-50' : ''}`}
+                    title={!allowed && item.scope ? restrictedScopeTitle(item.scope) : undefined}
+                  >
+                    <i className={`bi ${item.icon}`} aria-hidden="true" />
+                    <span>{item.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
       ) : null}
       {showAssistantWidget ? <AvatarAssistant /> : null}
     </div>

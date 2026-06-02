@@ -14,26 +14,34 @@ export function PageHeader({
   actions,
 }: PageHeaderProps) {
   return (
-    <header className="qf-page-header mb-4 d-flex flex-column gap-3 border-bottom pb-3 mb-md-5 flex-md-row align-items-md-center justify-content-md-between pb-md-4">
-      <div>
-        {breadcrumb && (
-          <div className="qf-breadcrumb small fw-medium text-muted mb-1">
-            {breadcrumb}
-          </div>
-        )}
+    <>
+      <header className="qf-page-header mb-4 d-flex flex-column gap-3 border-bottom pb-3 mb-md-5 flex-md-row align-items-md-center justify-content-md-between pb-md-4">
         <div>
-          <h1 className="qf-page-title mb-1">
-            {title}
-          </h1>
-          {subtitle && (
-            <p className="qf-subtitle text-muted mb-0">
-              {subtitle}
-            </p>
+          {breadcrumb && (
+            <div className="qf-breadcrumb small fw-medium text-muted mb-1">
+              {breadcrumb}
+            </div>
           )}
+          <div>
+            <h1 className="qf-page-title mb-1">
+              {title}
+            </h1>
+            {subtitle && (
+              <p className="qf-subtitle text-muted mb-0">
+                {subtitle}
+              </p>
+            )}
+          </div>
         </div>
-      </div>
-      {actions && <div className="qf-page-header__actions d-flex flex-wrap gap-2">{actions}</div>}
-    </header>
+        {actions && <div className="qf-page-header__actions d-flex flex-wrap gap-2">{actions}</div>}
+      </header>
+      {actions ? (
+        <div className="qf-page-actions-dock d-sm-none" aria-label="การทำงานหลักของหน้านี้">
+          <div className="qf-page-actions-dock__inner">
+            {actions}
+          </div>
+        </div>
+      ) : null}
+    </>
   )
 }
-

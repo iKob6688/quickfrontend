@@ -3,7 +3,6 @@
 
 /* Bootstrap 5 */
 @import 'bootstrap/dist/css/bootstrap.min.css';
-@import 'bootstrap-icons/font/bootstrap-icons.css';
 
 /* Custom Quickfront18 styles */
 @import './styles/tokens.css';
@@ -59,6 +58,12 @@ body,
   height: 100%;
 }
 
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text',
@@ -76,6 +81,8 @@ body {
     'Segoe UI', 'Inter', 'Noto Sans Thai', 'Noto Sans Thai UI', Tahoma, sans-serif;
   font-size: var(--qf-text-body);
   line-height: var(--qf-lh-body);
+  max-width: 100vw;
+  overflow-x: clip;
 }
 
 /* Bootstrap customizations for Quickfront18 theme */
@@ -303,6 +310,14 @@ body {
 
 .qf-app .qf-table-responsive-menu .dropdown-menu {
   z-index: 4000;
+}
+
+.qf-app .qf-data-table-mobile {
+  display: none;
+}
+
+.qf-app .qf-page-actions-dock {
+  display: none;
 }
 
 /* Sales/Purchase line editor column sizing (desktop/tablet) */
@@ -787,27 +802,29 @@ body {
 }
 
 .qf-app .qf-mobile-nav__inner {
-  display: flex;
-  gap: 6px;
-  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  padding: 7px 8px calc(7px + env(safe-area-inset-bottom));
 }
 
 .qf-app .qf-mobile-nav__item {
   flex: 1 1 0;
   min-width: 0;
+  min-height: 56px;
   border: 0;
   background: transparent;
   color: #64748b; /* slate-500 */
   border-radius: 14px;
-  padding: 10px 6px;
+  padding: 8px 4px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   line-height: 1.05;
   font-weight: 700;
-  font-size: 0.68rem;
-  letter-spacing: 0.01em;
+  font-size: 0.67rem;
+  letter-spacing: 0;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
 }
@@ -848,6 +865,206 @@ body {
 .qf-app .qf-mobile-nav__label {
   white-space: pre-line; /* allow "Reports\nStudio" */
   text-align: center;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.qf-app .qf-mobile-more {
+  position: fixed;
+  inset: 0;
+  z-index: 1019;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(15, 23, 42, 0.32);
+}
+
+.qf-app .qf-mobile-more__panel {
+  width: 100%;
+  max-height: min(68vh, 540px);
+  overflow: auto;
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-bottom: 0;
+  background: rgba(255, 255, 255, 0.98);
+  padding: 0.9rem 0.9rem calc(5.3rem + env(safe-area-inset-bottom));
+  box-shadow: 0 -18px 44px rgba(15, 23, 42, 0.22);
+}
+
+[data-qf-theme='dark'] .qf-app .qf-mobile-more__panel {
+  background: rgba(8, 18, 34, 0.98);
+  border-color: var(--qf-border);
+}
+
+.qf-app .qf-mobile-more__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.7rem;
+}
+
+.qf-app .qf-mobile-more__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.qf-app .qf-mobile-more__item {
+  min-width: 0;
+  min-height: 48px;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.92);
+  color: var(--qf-text);
+  padding: 0.65rem 0.7rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  text-align: left;
+  font-size: 0.84rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.qf-app .qf-mobile-more__item i {
+  flex: 0 0 auto;
+  color: #2563eb;
+  font-size: 1rem;
+}
+
+.qf-app .qf-mobile-more__item span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.qf-app .qf-mobile-more__item.is-active {
+  border-color: rgba(37, 99, 235, 0.38);
+  background: rgba(47, 128, 237, 0.14);
+  color: #1d4ed8;
+}
+
+[data-qf-theme='dark'] .qf-app .qf-mobile-more__item {
+  background: rgba(15, 23, 42, 0.68);
+}
+
+.qf-invoice-mobile-list {
+  width: 100%;
+}
+
+.qf-invoice-mobile-list__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.qf-invoice-mobile-list__head h2 {
+  margin: 0;
+  color: var(--qf-text-strong);
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.qf-invoice-mobile-list__items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.qf-invoice-mobile-card,
+.qf-invoice-mobile-empty {
+  border: 1px solid var(--qf-border);
+  border-radius: 14px;
+  background: var(--qf-card-bg);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.qf-invoice-mobile-card {
+  padding: 0.9rem;
+}
+
+.qf-invoice-mobile-empty {
+  padding: 1.25rem 1rem;
+}
+
+.qf-invoice-mobile-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.45rem;
+}
+
+.qf-invoice-mobile-card__number {
+  min-width: 0;
+  max-width: 62%;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+  text-align: left;
+}
+
+.qf-invoice-mobile-card__customer {
+  color: var(--qf-text-strong);
+  font-size: 0.98rem;
+  font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.qf-invoice-mobile-card__meta {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 0.7rem;
+  margin: 0.75rem 0;
+}
+
+.qf-invoice-mobile-card__meta div {
+  min-width: 0;
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.92);
+  padding: 0.65rem 0.7rem;
+}
+
+.qf-invoice-mobile-card__meta dt,
+.qf-invoice-mobile-card__payment span {
+  margin: 0 0 0.2rem;
+  color: var(--qf-text-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.qf-invoice-mobile-card__meta dd {
+  margin: 0;
+  color: var(--qf-text-strong);
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.qf-invoice-mobile-card__payment {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.8rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.24);
+  padding-top: 0.75rem;
+}
+
+.qf-invoice-mobile-card__actions .btn {
+  min-height: 42px;
+  width: 100%;
+}
+
+[data-qf-theme='dark'] .qf-invoice-mobile-card__meta div {
+  background: rgba(15, 23, 42, 0.44);
 }
 
 .qf-app .qf-print-option-row {
@@ -1183,22 +1400,255 @@ body {
 
 /* Ensure content isn't hidden behind fixed bottom nav on phones */
 @media (max-width: 575.98px) {
+  .qf-app .qf-header__inner {
+    padding: 0.85rem 0.9rem !important;
+  }
+
+  .qf-app .qf-header__actions .btn {
+    min-width: 42px;
+    min-height: 40px;
+    padding-inline: 0.65rem;
+  }
+
+  .qf-app .qf-mobile-company-switch {
+    top: 66px;
+  }
+
+  .qf-app .qf-mobile-company-switch__select {
+    min-height: 46px;
+    border-radius: 12px;
+    font-size: 1rem;
+  }
+
   .qf-app .qf-header--mobile-form {
     position: static !important;
   }
 
   .qf-app .qf-content {
-    padding-bottom: calc(6rem + env(safe-area-inset-bottom)); /* tailwind pb-24 + safe area */
+    padding-left: 0.9rem;
+    padding-right: 0.9rem;
+    padding-top: 1rem;
+    padding-bottom: calc(10.5rem + env(safe-area-inset-bottom));
   }
 
   .qf-app .qf-content.qf-content--mobile-form {
-    padding-bottom: calc(9rem + env(safe-area-inset-bottom));
+    padding-bottom: calc(8.5rem + env(safe-area-inset-bottom));
     min-height: auto;
   }
 
   .qf-app .qf-so-page .qf-page-title {
     font-size: 2rem;
     line-height: 1.15;
+  }
+
+  .qf-app .qf-page-header {
+    margin-bottom: 1rem !important;
+    padding-bottom: 1rem !important;
+    gap: 0.75rem !important;
+  }
+
+  .qf-app .qf-page-title {
+    font-size: 1.45rem;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .qf-app .qf-subtitle {
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .qf-app .qf-page-header__actions,
+  .qf-app .qf-page-header__actions > div {
+    display: none !important;
+  }
+
+  .qf-app .qf-page-actions-dock {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(4.55rem + env(safe-area-inset-bottom));
+    z-index: 1018;
+    display: block;
+    padding: 0.55rem 0.75rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.24);
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 -12px 28px rgba(15, 23, 42, 0.12);
+    backdrop-filter: blur(14px);
+  }
+
+  .qf-app .qf-layout--mobile-form .qf-page-actions-dock {
+    bottom: env(safe-area-inset-bottom);
+  }
+
+  [data-qf-theme='dark'] .qf-app .qf-page-actions-dock {
+    background: rgba(8, 18, 34, 0.92);
+    border-color: var(--qf-border);
+  }
+
+  .qf-app .qf-page-actions-dock__inner {
+    display: flex;
+    width: 100%;
+    gap: 0.5rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .qf-app .qf-page-actions-dock__inner::-webkit-scrollbar {
+    display: none;
+  }
+
+  .qf-app .qf-page-actions-dock__inner > *,
+  .qf-app .qf-page-actions-dock__inner > div > * {
+    flex: 1 0 auto;
+  }
+
+  .qf-app .qf-page-actions-dock__inner > div {
+    display: flex !important;
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .qf-app .qf-page-actions-dock .btn {
+    min-height: 44px;
+    min-width: max-content;
+    padding-inline: 0.85rem;
+    white-space: normal;
+  }
+
+  .qf-app .qf-data-table-desktop {
+    display: none;
+  }
+
+  .qf-app .qf-data-table-mobile {
+    display: block;
+    padding: 0.75rem;
+  }
+
+  .qf-app .qf-data-table-mobile__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .qf-app .qf-data-table-mobile__card,
+  .qf-app .qf-data-table-mobile__empty {
+    border: 1px solid var(--qf-border);
+    border-radius: 14px;
+    background: var(--qf-card-bg);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+  }
+
+  .qf-app .qf-data-table-mobile__card {
+    padding: 0.85rem;
+  }
+
+  .qf-app .qf-data-table-mobile__empty {
+    padding: 1.25rem 0.9rem;
+  }
+
+  .qf-app .qf-data-table-mobile__primary {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.7rem;
+  }
+
+  .qf-app .qf-data-table-mobile__primary-label,
+  .qf-app .qf-data-table-mobile__label {
+    color: var(--qf-text-muted);
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+
+  .qf-app .qf-data-table-mobile__primary-value {
+    min-width: 0;
+    max-width: 68%;
+    color: var(--qf-text-strong);
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1.35;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .qf-app .qf-data-table-mobile__fields {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+  }
+
+  .qf-app .qf-data-table-mobile__field {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.85rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.22);
+    padding-top: 0.55rem;
+  }
+
+  .qf-app .qf-data-table-mobile__field--actions {
+    display: block;
+  }
+
+  .qf-app .qf-data-table-mobile__field--actions .qf-data-table-mobile__label {
+    margin-bottom: 0.45rem;
+  }
+
+  .qf-app .qf-data-table-mobile__field--actions .qf-data-table-mobile__value > .d-flex {
+    flex-direction: column;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+  }
+
+  .qf-app .qf-data-table-mobile__field--actions .btn {
+    width: 100%;
+  }
+
+  .qf-app .qf-data-table-mobile__value {
+    min-width: 0;
+    color: var(--qf-text);
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.35;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .qf-app .qf-data-table-mobile__value .btn {
+    min-height: 40px;
+  }
+
+  .qf-app .qf-tabs {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    justify-content: flex-start;
+    border-radius: 14px !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .qf-app .qf-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .qf-app .qf-tabs .qf-tabs__btn {
+    flex: 0 0 auto;
+    min-height: 40px;
+    padding: 0.42rem 0.72rem;
+    white-space: nowrap;
+  }
+
+  .qf-app .form-control,
+  .qf-app .form-select,
+  .qf-app .input-group-text {
+    min-height: 44px;
   }
 
   .qf-app .qf-so-page .qf-page-header__actions,

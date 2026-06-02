@@ -115,6 +115,7 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
       hasFinalReceipt: inv.hasFinalReceipt,
     }))
   }, [invoices, isReceiptMode, tab, formatDate])
+  type InvoiceRow = (typeof rows)[number]
 
   const handleSubmitEtax = async (invoiceId: number, invoiceNo?: string) => {
     setSubmittingEtaxId(invoiceId)
@@ -137,22 +138,129 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
     }
   }
 
+  const getInvoiceOpenSuffix = (r: InvoiceRow) => {
+    const total = r.total ?? 0
+    const amountDue = r.amountDue ?? total
+    const isPaid = r.status === 'paid' || r.paymentState === 'paid' || (amountDue <= 0 && total > 0)
+    const hasPaymentReceipt = Boolean(r.hasPaymentReceipt)
+    const hasFinalReceipt = Boolean(r.hasFinalReceipt ?? r.hasReceipt)
+    return isReceiptMode
+      ? (hasPaymentReceipt || hasFinalReceipt ? '?action=receipt' : isPaid ? '' : '?action=payment')
+      : ''
+  }
+
+  const renderStatusBadge = (r: InvoiceRow) => {
+    const tone =
+      r.status === 'paid'
+        ? 'green'
+        : r.status === 'posted'
+          ? 'blue'
+          : r.status === 'draft'
+            ? 'gray'
+            : 'red'
+    const label =
+      r.status === 'paid'
+        ? 'รับชำระแล้ว'
+        : r.status === 'posted'
+          ? 'ยืนยันแล้ว'
+          : r.status === 'draft'
+            ? 'ร่าง'
+            : 'ยกเลิก'
+    return <Badge tone={tone}>{label}</Badge>
+  }
+
+  const renderPaymentBadge = (r: InvoiceRow) => {
+    if (r.status === 'draft' || r.status === 'cancelled') {
+      return <span className="text-muted small">—</span>
+    }
+
+    const paymentState = r.paymentState
+    const total = r.total ?? 0
+    const amountDue = r.amountDue ?? 0
+    const amountPaid = r.amountPaid ?? 0
+
+    if (paymentState === 'paid' || r.status === 'paid') {
+      return <Badge tone="green">ชำระครบแล้ว</Badge>
+    } else if (paymentState === 'partial' || paymentState === 'in_payment') {
+      return <Badge tone="amber">ชำระบางส่วน</Badge>
+    } else if (paymentState === 'not_paid') {
+      return <Badge tone="gray">รอการชำระ</Badge>
+    }
+
+    if (total === 0 || (amountDue === total && amountPaid === 0)) {
+      return <Badge tone="gray">รอการชำระ</Badge>
+    }
+
+    if (amountDue === 0 && amountPaid > 0 && total > 0) {
+      return <Badge tone="green">ชำระครบแล้ว</Badge>
+    } else if (amountPaid > 0 && amountDue > 0) {
+      return <Badge tone="amber">ชำระบางส่วน</Badge>
+    } else {
+      return <Badge tone="gray">รอการชำระ</Badge>
+    }
+  }
+
+  const renderInvoiceActions = (r: InvoiceRow, variant: 'table' | 'card' = 'table') => {
+    const total = r.total ?? 0
+    const paymentState = r.paymentState
+    const amountDue = r.amountDue ?? total
+    const isPaid = r.status === 'paid' || paymentState === 'paid' || (amountDue <= 0 && total > 0)
+    const hasPaymentReceipt = Boolean(r.hasPaymentReceipt)
+    const hasFinalReceipt = Boolean(r.hasFinalReceipt ?? r.hasReceipt)
+    const className =
+      variant === 'card'
+        ? 'd-grid gap-2 qf-invoice-mobile-card__actions'
+        : 'd-flex justify-content-end gap-2 flex-wrap'
+
+    if (r.status === 'draft' || r.status === 'cancelled') {
+      return <span className="text-muted small">—</span>
+    }
+
+    if (hasPaymentReceipt || hasFinalReceipt) {
+      return (
+        <div className={className}>
+          <Button size="sm" variant="ghost" onClick={() => navigate(`/sales/invoices/${r.id}?action=receipt`)}>
+            เปิดเอกสาร
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => void handleSubmitEtax(r.id, r.number)}
+            isLoading={submittingEtaxId === r.id}
+            disabled={submittingEtaxId === r.id}
+          >
+            ส่ง e-Tax
+          </Button>
+        </div>
+      )
+    }
+
+    return (
+      <div className={className}>
+        <Button size="sm" onClick={() => navigate(`/sales/invoices/${r.id}?action=payment`)}>
+          {isReceiptMode ? (isPaid ? 'เปิดเอกสาร' : 'รับชำระเงิน') : 'ชำระเงิน'}
+        </Button>
+        {!isReceiptMode && (r.status === 'posted' || r.status === 'paid') && (
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => void handleSubmitEtax(r.id, r.number)}
+            isLoading={submittingEtaxId === r.id}
+            disabled={submittingEtaxId === r.id}
+          >
+            ส่ง e-Tax
+          </Button>
+        )}
+      </div>
+    )
+  }
+
   const columns: Column<(typeof rows)[number]>[] = [
     {
       key: 'number',
       header: 'เลขที่เอกสาร',
       className: 'text-nowrap',
       cell: (r) => {
-        const total = r.total ?? 0
-        const paymentState = r.paymentState
-        const amountDue = r.amountDue ?? total
-        const isPaid =
-          r.status === 'paid' || paymentState === 'paid' || (amountDue <= 0 && total > 0)
-        const hasPaymentReceipt = Boolean(r.hasPaymentReceipt)
-        const hasFinalReceipt = Boolean(r.hasFinalReceipt ?? r.hasReceipt)
-        const actionSuffix = isReceiptMode
-          ? (hasPaymentReceipt || hasFinalReceipt ? '?action=receipt' : isPaid ? '' : '?action=payment')
-          : ''
+        const actionSuffix = getInvoiceOpenSuffix(r)
         return (
           <button
             type="button"
@@ -192,118 +300,19 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
       key: 'status',
       header: 'สถานะ',
       className: 'text-nowrap',
-      cell: (r) => {
-        const tone =
-          r.status === 'paid'
-            ? 'green'
-            : r.status === 'posted'
-              ? 'blue'
-              : r.status === 'draft'
-                ? 'gray'
-                : 'red'
-        const label =
-          r.status === 'paid'
-            ? 'รับชำระแล้ว'
-            : r.status === 'posted'
-              ? 'ยืนยันแล้ว'
-              : r.status === 'draft'
-                ? 'ร่าง'
-                : 'ยกเลิก'
-        return <Badge tone={tone}>{label}</Badge>
-      },
+      cell: renderStatusBadge,
     },
     {
       key: 'paymentStatus',
       header: 'สถานะการชำระ',
       className: 'text-nowrap',
-      cell: (r) => {
-        if (r.status === 'draft' || r.status === 'cancelled') {
-          return <span className="text-muted small">—</span>
-        }
-        
-        const paymentState = r.paymentState
-        const total = r.total ?? 0
-        const amountDue = r.amountDue ?? 0
-        const amountPaid = r.amountPaid ?? 0
-        
-        // Use paymentState as primary source (most reliable from Odoo)
-        if (paymentState === 'paid' || r.status === 'paid') {
-          // Fully paid according to Odoo payment_state
-          return <Badge tone="green">ชำระครบแล้ว</Badge>
-        } else if (paymentState === 'partial' || paymentState === 'in_payment') {
-          // Partially paid
-          return <Badge tone="amber">ชำระบางส่วน</Badge>
-        } else if (paymentState === 'not_paid') {
-          // Not paid
-          return <Badge tone="gray">รอการชำระ</Badge>
-        }
-        
-        // Fallback: use amounts if paymentState is missing
-        // If total is 0, no payment status (treat as unpaid for display)
-        if (total === 0 || (amountDue === total && amountPaid === 0)) {
-          return <Badge tone="gray">รอการชำระ</Badge>
-        }
-        
-        // Check amounts
-        if (amountDue === 0 && amountPaid > 0 && total > 0) {
-          return <Badge tone="green">ชำระครบแล้ว</Badge>
-        } else if (amountPaid > 0 && amountDue > 0) {
-          return <Badge tone="amber">ชำระบางส่วน</Badge>
-        } else {
-          return <Badge tone="gray">รอการชำระ</Badge>
-        }
-      },
+      cell: renderPaymentBadge,
     },
     {
       key: 'actions',
       header: 'ดำเนินการ',
       className: 'text-nowrap text-end',
-      cell: (r) => {
-        const total = r.total ?? 0
-        const paymentState = r.paymentState
-        const amountDue = r.amountDue ?? total
-        const isPaid = r.status === 'paid' || paymentState === 'paid' || (amountDue <= 0 && total > 0)
-        const hasPaymentReceipt = Boolean(r.hasPaymentReceipt)
-        const hasFinalReceipt = Boolean(r.hasFinalReceipt ?? r.hasReceipt)
-        if (r.status === 'draft' || r.status === 'cancelled') {
-          return <span className="text-muted small">—</span>
-        }
-        if (hasPaymentReceipt || hasFinalReceipt) {
-          return (
-            <div className="d-flex justify-content-end gap-2 flex-wrap">
-              <Button size="sm" variant="ghost" onClick={() => navigate(`/sales/invoices/${r.id}?action=receipt`)}>
-                เปิดเอกสาร
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => void handleSubmitEtax(r.id, r.number)}
-                isLoading={submittingEtaxId === r.id}
-                disabled={submittingEtaxId === r.id}
-              >
-                ส่ง e-Tax
-              </Button>
-            </div>
-          )
-        }
-        return (
-          <div className="d-flex justify-content-end gap-2 flex-wrap">
-            <Button size="sm" onClick={() => navigate(`/sales/invoices/${r.id}?action=payment`)}>
-              {isReceiptMode ? (isPaid ? 'เปิดเอกสาร' : 'รับชำระเงิน') : 'ชำระเงิน'}
-            </Button>
-            {!isReceiptMode && (r.status === 'posted' || r.status === 'paid') && (
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => void handleSubmitEtax(r.id, r.number)}
-                isLoading={submittingEtaxId === r.id}
-                disabled={submittingEtaxId === r.id}
-              >
-                ส่ง e-Tax
-              </Button>
-            )}
-          </div>
-        )
-      },
+      cell: (r) => renderInvoiceActions(r),
     },
   ]
 
@@ -424,32 +433,94 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
         </div>
       ) : (
         <div className="d-flex flex-column gap-3">
-          <DataTable
-            title="รายการเอกสาร"
-            right={
-              <div className="d-flex align-items-center gap-2">
-                <Button size="sm" variant="ghost" onClick={() => query.refetch()}>
-                  <i className="bi bi-arrow-clockwise me-1"></i>
-                  รีเฟรช
-                </Button>
-              </div>
-            }
-            columns={columns}
-            rows={rows}
-            rowKey={(row) => row.id}
-            empty={
-              <div>
+          <div className="d-none d-sm-block">
+            <DataTable
+              title="รายการเอกสาร"
+              right={
+                <div className="d-flex align-items-center gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => query.refetch()}>
+                    <i className="bi bi-arrow-clockwise me-1"></i>
+                    รีเฟรช
+                  </Button>
+                </div>
+              }
+              columns={columns}
+              rows={rows}
+              rowKey={(row) => row.id}
+              empty={
+                <div>
+                  <p className="h6 fw-semibold mb-2">ยังไม่มีข้อมูล</p>
+                  <p className="small text-muted mb-0">
+                    {qDebounced
+                      ? 'ไม่พบข้อมูลที่ค้นหา ลองค้นหาด้วยคำอื่น'
+                      : isReceiptMode
+                        ? 'ยังไม่มีใบเสร็จรับเงินในระบบ ให้เริ่มจากรับชำระเงินในหน้าใบแจ้งหนี้ก่อน แล้วค่อยส่ง e-Tax จากหน้าเอกสารต้นทาง'
+                        : 'ยังไม่มีใบแจ้งหนี้ในระบบ'}
+                  </p>
+                </div>
+              }
+            />
+          </div>
+
+          <section className="qf-invoice-mobile-list d-sm-none" aria-label="รายการเอกสาร">
+            <div className="qf-invoice-mobile-list__head">
+              <h2>รายการเอกสาร</h2>
+              <Button size="sm" variant="ghost" onClick={() => query.refetch()}>
+                <i className="bi bi-arrow-clockwise me-1"></i>
+                รีเฟรช
+              </Button>
+            </div>
+            {rows.length === 0 ? (
+              <div className="qf-invoice-mobile-empty text-center text-muted">
                 <p className="h6 fw-semibold mb-2">ยังไม่มีข้อมูล</p>
-                <p className="small text-muted mb-0">
+                <p className="small mb-0">
                   {qDebounced
                     ? 'ไม่พบข้อมูลที่ค้นหา ลองค้นหาด้วยคำอื่น'
                     : isReceiptMode
-                      ? 'ยังไม่มีใบเสร็จรับเงินในระบบ ให้เริ่มจากรับชำระเงินในหน้าใบแจ้งหนี้ก่อน แล้วค่อยส่ง e-Tax จากหน้าเอกสารต้นทาง'
+                      ? 'ยังไม่มีใบเสร็จรับเงินในระบบ ให้เริ่มจากรับชำระเงินในหน้าใบแจ้งหนี้ก่อน'
                       : 'ยังไม่มีใบแจ้งหนี้ในระบบ'}
                 </p>
               </div>
-            }
-          />
+            ) : (
+              <div className="qf-invoice-mobile-list__items">
+                {rows.map((row) => (
+                  <article key={row.id} className="qf-invoice-mobile-card">
+                    <div className="qf-invoice-mobile-card__top">
+                      <button
+                        type="button"
+                        className="btn btn-link p-0 fw-semibold text-primary text-decoration-none font-monospace qf-invoice-mobile-card__number"
+                        onClick={() => navigate(`/sales/invoices/${row.id}${getInvoiceOpenSuffix(row)}`)}
+                      >
+                        {row.number || `ร่าง #${row.id}`}
+                      </button>
+                      {renderStatusBadge(row)}
+                    </div>
+                    <div className="qf-invoice-mobile-card__customer">{row.customer || 'ไม่ระบุลูกค้า'}</div>
+                    <dl className="qf-invoice-mobile-card__meta">
+                      <div>
+                        <dt>วันที่</dt>
+                        <dd>{row.date}</dd>
+                      </div>
+                      <div>
+                        <dt>มูลค่ารวม</dt>
+                        <dd className="font-monospace">
+                          {(row.total ?? 0).toLocaleString('th-TH', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </dd>
+                      </div>
+                    </dl>
+                    <div className="qf-invoice-mobile-card__payment">
+                      <span>ชำระเงิน</span>
+                      {renderPaymentBadge(row)}
+                    </div>
+                    {renderInvoiceActions(row, 'card')}
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
 
           <div className="d-flex justify-content-between align-items-center">
             <div className="small text-muted">

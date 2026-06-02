@@ -35,7 +35,7 @@ export function DataTable<T>(props: {
         </div>
       )}
 
-      <div className={twMerge('table-responsive', allowMenuOverflow && 'qf-table-responsive-menu')}>
+      <div className={twMerge('table-responsive qf-data-table-desktop', allowMenuOverflow && 'qf-table-responsive-menu')}>
         <Table hover bordered className="qf-table mb-0">
           <thead>
             <tr>
@@ -66,6 +66,51 @@ export function DataTable<T>(props: {
             )}
           </tbody>
         </Table>
+      </div>
+
+      <div className="qf-data-table-mobile" aria-label={typeof title === 'string' ? title : 'รายการข้อมูล'}>
+        {rows.length === 0 ? (
+          <div className="qf-data-table-mobile__empty text-center text-muted">
+            {empty ?? 'ไม่มีข้อมูล'}
+          </div>
+        ) : (
+          <div className="qf-data-table-mobile__list">
+            {rows.map((row, idx) => {
+              const key = rowKey ? rowKey(row, idx) : idx
+              const [primaryColumn, ...secondaryColumns] = columns
+              return (
+                <article key={key} className={twMerge('qf-data-table-mobile__card', rowClassName?.(row, idx))}>
+                  {primaryColumn ? (
+                    <div className="qf-data-table-mobile__primary">
+                      <div className="qf-data-table-mobile__primary-label">{primaryColumn.header}</div>
+                      <div className={twMerge('qf-data-table-mobile__primary-value', primaryColumn.className)}>
+                        {primaryColumn.cell(row)}
+                      </div>
+                    </div>
+                  ) : null}
+                  {secondaryColumns.length > 0 ? (
+                    <div className="qf-data-table-mobile__fields">
+                      {secondaryColumns.map((column) => (
+                        <div
+                          key={column.key}
+                          className={twMerge(
+                            'qf-data-table-mobile__field',
+                            column.key === 'actions' && 'qf-data-table-mobile__field--actions',
+                          )}
+                        >
+                          <div className="qf-data-table-mobile__label">{column.header}</div>
+                          <div className={twMerge('qf-data-table-mobile__value', column.className)}>
+                            {column.cell(row)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </article>
+              )
+            })}
+          </div>
+        )}
       </div>
     </>
   )
