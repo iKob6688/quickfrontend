@@ -858,6 +858,16 @@ body {
   border: 1px solid rgba(148, 163, 184, 0.4);
   background: rgba(248, 250, 252, 0.84);
   padding: 3px;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-wrap: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.qf-app .qf-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .qf-app .qf-tabs .qf-tabs__btn {
@@ -866,6 +876,17 @@ body {
   min-height: 38px;
   padding: 0.45rem 0.95rem;
   box-shadow: none !important;
+  flex: 0 0 auto;
+  min-width: max-content;
+  white-space: nowrap;
+}
+
+.qf-app .qf-tabs .qf-tabs__btn span {
+  white-space: nowrap;
+}
+
+.qf-app .qf-tabs .qf-tabs__btn .badge {
+  flex: 0 0 auto;
 }
 
 .qf-app .qf-tabs .qf-tabs__btn--active {

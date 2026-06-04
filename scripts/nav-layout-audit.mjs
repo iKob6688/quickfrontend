@@ -39,6 +39,19 @@ const desktopMetrics = await desktopPage.evaluate(() => {
     hasHorizontalOverflow: document.documentElement.scrollWidth > window.innerWidth + 1,
   }
 })
+const desktopTabMetrics = await desktopPage.evaluate(() => {
+  const tabs = [...document.querySelectorAll('.qf-tabs__btn')]
+  return tabs.map((el) => {
+    const rect = el.getBoundingClientRect()
+    return {
+      label: el.textContent?.trim().replace(/\s+/g, ' '),
+      width: Math.round(rect.width),
+      height: Math.round(rect.height),
+      hasWrapped: rect.height > 48,
+      whiteSpace: getComputedStyle(el).whiteSpace,
+    }
+  })
+})
 await desktopPage.click('.qf-top-nav-btn--more')
 const desktopMoreMetrics = await desktopPage.evaluate(() => ({
   moreVisible: !!document.querySelector('.qf-desktop-more'),
@@ -68,12 +81,13 @@ const mobileMetrics = await mobilePage.evaluate(() => ({
 await mobile.close()
 await browser.close()
 
-const result = { desktopMetrics, desktopMoreMetrics, mobileMetrics }
+const result = { desktopMetrics, desktopTabMetrics, desktopMoreMetrics, mobileMetrics }
 const failures = []
 if (desktopMetrics.hasHorizontalOverflow) failures.push('desktop overflow')
 if (!desktopMetrics.hasMore) failures.push('desktop missing more')
 if (desktopMetrics.topNavCount > 7) failures.push('desktop too many visible nav items')
 if (desktopMetrics.wraps.some((item) => item.hasWrapped)) failures.push('desktop nav label wrapped')
+if (desktopTabMetrics.some((item) => item.hasWrapped || item.whiteSpace !== 'nowrap')) failures.push('desktop tab label wrapped')
 if (!desktopMoreMetrics.moreVisible || desktopMoreMetrics.moreItems.length < 8) failures.push('desktop more menu incomplete')
 if (mobileMetrics.hasHorizontalOverflow) failures.push('mobile overflow')
 if (mobileMetrics.labels.join('|') !== 'หน้าหลัก|ใบเสนอ|ใบแจ้งหนี้|ใบเสร็จ|เมนู') {
