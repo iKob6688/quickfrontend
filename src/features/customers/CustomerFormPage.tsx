@@ -283,6 +283,7 @@ export function CustomerFormPage() {
       if (!zip) lastResolvedZipRef.current = ''
       return
     }
+    if (typeof document !== 'undefined' && document.activeElement?.id === 'zip') return
     if (lastResolvedZipRef.current === zip) return
     lastResolvedZipRef.current = zip
     resolveThaiAddressFromText().catch(() => {

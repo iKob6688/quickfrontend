@@ -193,10 +193,15 @@ body {
   font-size: 1rem; /* 16px prevents iOS zoom */
   background: var(--qf-bg-1);
   color: var(--qf-text);
+  caret-color: var(--qf-text-strong);
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .qf-app .form-control:focus {
   border-color: var(--qf-primary);
+  background: var(--qf-bg-1);
+  color: var(--qf-text-strong);
   box-shadow: 0 0 0 0.2rem rgba(47, 128, 237, 0.25);
 }
 
@@ -205,6 +210,11 @@ body {
   border: 1px solid var(--qf-border);
   background-color: var(--qf-bg-1);
   color: var(--qf-text);
+}
+
+.qf-app .form-select:focus {
+  border-color: var(--qf-primary);
+  box-shadow: 0 0 0 0.2rem rgba(47, 128, 237, 0.25);
 }
 
 .qf-app .input-group .input-group-text {
