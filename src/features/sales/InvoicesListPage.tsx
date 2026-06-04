@@ -323,7 +323,7 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
         subtitle={
           isReceiptMode
             ? 'เปิดเอกสารต้นทางเพื่อรับชำระเงิน ออกใบเสร็จ และส่ง e-Tax ต่อจากหน้าเดียวกัน'
-            : 'ค้นหา ดู และจัดการเอกสารขาย (รูปแบบ UI ใกล้ PEAK)'
+            : 'ค้นหา ดู และจัดการเอกสารขาย'
         }
         breadcrumb={isReceiptMode ? 'รายรับ · ใบเสร็จรับเงิน' : 'รายรับ · ใบแจ้งหนี้'}
         actions={

@@ -164,7 +164,7 @@ export function SalesOrdersListPage() {
             ? 'โหมดใบเสนอราคา'
             : forcedOrderType === 'sale'
               ? 'โหมด Sale Order'
-              : 'จัดการใบเสนอราคาและคำสั่งขายให้สอดคล้องกับ Odoo18'
+              : 'จัดการใบเสนอราคาและคำสั่งขาย'
         }
         breadcrumb="รายรับ · ใบเสนอราคา · Sale Order"
         actions={

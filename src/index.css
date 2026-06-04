@@ -864,20 +864,52 @@ body {
 }
 
 /* Segmented tabs */
+.qf-app .qf-tabs-shell {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 100%;
+  min-width: 0;
+}
+
 .qf-app .qf-tabs {
   border: 1px solid rgba(148, 163, 184, 0.4);
   background: rgba(248, 250, 252, 0.84);
   padding: 3px;
+  flex: 1 1 auto;
+  min-width: 0;
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   flex-wrap: nowrap;
+  justify-content: flex-start;
+  scroll-behavior: smooth;
+  scroll-padding-inline: 0.5rem;
+  scroll-snap-type: x proximity;
+  overscroll-behavior-inline: contain;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.45) transparent;
+  cursor: grab;
+}
+
+.qf-app .qf-tabs.is-dragging {
+  cursor: grabbing;
+  scroll-snap-type: none;
+  user-select: none;
 }
 
 .qf-app .qf-tabs::-webkit-scrollbar {
-  display: none;
+  height: 6px;
+}
+
+.qf-app .qf-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.qf-app .qf-tabs::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.34);
+  border-radius: 999px;
 }
 
 .qf-app .qf-tabs .qf-tabs__btn {
@@ -887,12 +919,19 @@ body {
   padding: 0.45rem 0.95rem;
   box-shadow: none !important;
   flex: 0 0 auto;
-  min-width: max-content;
+  min-width: fit-content;
+  max-width: none;
   white-space: nowrap;
+  scroll-snap-align: start;
+  touch-action: manipulation;
 }
 
-.qf-app .qf-tabs .qf-tabs__btn span {
+.qf-app .qf-tabs .qf-tabs__label {
+  display: inline-block;
+  flex: 0 0 auto;
   white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: normal;
 }
 
 .qf-app .qf-tabs .qf-tabs__btn .badge {
@@ -901,6 +940,34 @@ body {
 
 .qf-app .qf-tabs .qf-tabs__btn--active {
   box-shadow: 0 7px 16px rgba(30, 64, 175, 0.22) !important;
+}
+
+.qf-app .qf-tabs__scroll-btn {
+  appearance: none;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--qf-text-strong);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+}
+
+.qf-app .qf-tabs__scroll-btn:disabled {
+  opacity: 0.38;
+  cursor: default;
+  box-shadow: none;
+}
+
+.qf-app .qf-tabs__scroll-btn:not(:disabled):hover,
+.qf-app .qf-tabs__scroll-btn:not(:disabled):focus-visible {
+  border-color: rgba(47, 128, 237, 0.48);
+  color: var(--qf-primary);
+  box-shadow: 0 0 0 0.18rem rgba(47, 128, 237, 0.16);
 }
 
 /* Selection bar (Customers) */
@@ -1757,6 +1824,15 @@ body {
 
   .qf-app .qf-tabs::-webkit-scrollbar {
     display: none;
+  }
+
+  .qf-app .qf-tabs-shell {
+    gap: 0.3rem;
+  }
+
+  .qf-app .qf-tabs__scroll-btn {
+    width: 32px;
+    height: 32px;
   }
 
   .qf-app .qf-tabs .qf-tabs__btn {
