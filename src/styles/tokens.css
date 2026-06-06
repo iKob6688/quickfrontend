@@ -59,46 +59,46 @@
      ============================================ */
 
   /* Surfaces (for gradient pages + cards) */
-  --qf-bg-0: #f6f8fc;        /* Lightest background */
+  --qf-bg-0: #f8fafc;        /* Lightest background */
   --qf-bg-1: #ffffff;        /* Card background */
-  --qf-bg-2: #f4f7fb;        /* Subtle surface (table headers, hover) */
-  --qf-bg-3: #edf4fb;        /* Elevated subtle surface */
+  --qf-bg-2: #f8fafc;        /* Subtle surface (table headers, hover) */
+  --qf-bg-3: #eef2ff;        /* Elevated subtle surface */
 
   /* App shell backgrounds */
   --qf-body-color: var(--qf-text-strong);
   --qf-body-bg:
-    radial-gradient(circle at 0% 0%, rgba(201, 60, 141, 0.16) 0, transparent 45%),
-    radial-gradient(circle at 100% 0%, rgba(251, 191, 36, 0.18) 0, transparent 55%),
-    linear-gradient(135deg, #f0f7ff 0%, #c7ecff 30%, #00a8c5 70%, #0b6ea6 100%);
+    radial-gradient(circle at 100% 0%, rgba(40, 190, 227, 0.09) 0%, transparent 45%),
+    radial-gradient(circle at 0% 100%, rgba(59, 130, 246, 0.09) 0%, transparent 45%),
+    #f8fafc;
 
   /* Text (contrast verified) */
-  --qf-text-strong: #0b1b3a;  /* Primary text (4.5:1 on --qf-bg-0) */
+  --qf-text-strong: #0f172a;  /* Primary text */
   --qf-text: #1e293b;         /* Default text */
   --qf-text-muted: #64748b;   /* Secondary/meta text */
 
   /* Borders */
-  --qf-border: #e6eef7;      /* Default border */
+  --qf-border: #eef2ff;      /* Default border */
   --qf-border-strong: #cbd5e1; /* Stronger border (focus states) */
 
   /* Primary Actions */
-  --qf-primary: #2f80ed;     /* Primary blue */
-  --qf-primary-dark: #1d4ed8;
-  --qf-primary-weak: rgba(47, 128, 237, 0.1); /* For backgrounds */
+  --qf-primary: #26d6f0;     /* Primary turquoise */
+  --qf-primary-dark: #17acce;
+  --qf-primary-weak: rgba(38, 214, 240, 0.08); /* For backgrounds */
 
   /* Status Colors (with weak variants for pill backgrounds) */
   --qf-success: #10b981;
-  --qf-success-weak: #d1fae5;
+  --qf-success-weak: rgba(16, 185, 129, 0.1);
   --qf-warning: #f59e0b;
-  --qf-warning-weak: #fef3c7;
+  --qf-warning-weak: rgba(245, 158, 11, 0.1);
   --qf-danger: #ef4444;
-  --qf-danger-weak: #fee2e2;
+  --qf-danger-weak: rgba(239, 68, 68, 0.1);
   --qf-info: #3b82f6;
-  --qf-info-weak: #dbeafe;
+  --qf-info-weak: rgba(59, 130, 246, 0.1);
 
   /* Legacy colors (mapped to new system for compatibility) */
-  --qf-secondary: #1cc8b7;
-  --qf-accent-gold: #fbbf24;
-  --qf-accent-pink: #c93c8d;
+  --qf-secondary: #3b82f6;
+  --qf-accent-gold: #f59e0b;
+  --qf-accent-pink: #26d6f0;
   --qf-surface-dark: var(--qf-text-strong);
   --qf-muted: var(--qf-text-muted);
   --qf-card-border: var(--qf-border);
@@ -108,27 +108,27 @@
      ============================================ */
 
   /* Border Radius */
-  --qf-radius-sm: 0.5rem;    /* 8px */
-  --qf-radius-md: 1rem;      /* 16px */
+  --qf-radius-sm: 0.375rem;  /* 6px */
+  --qf-radius-md: 0.75rem;   /* 12px */
   --qf-radius-lg: 1rem;      /* 16px */
   --qf-radius-xl: 1.5rem;    /* 24px */
   --qf-radius-full: 9999px;
 
   /* Card Styles */
-  --qf-card-padding: 1rem;           /* 16px */
-  --qf-card-padding-lg: 1.25rem;     /* 20px */
+  --qf-card-padding: 1.5rem;         /* 24px */
+  --qf-card-padding-lg: 2rem;        /* 32px */
   --qf-card-border-width: 1px;
-  --qf-card-shadow: 0 14px 28px rgba(15, 23, 42, 0.10);
-  --qf-card-shadow-hover: 0 18px 40px rgba(15, 23, 42, 0.14);
-  --qf-card-bg: rgba(255, 255, 255, 0.92);
-  --qf-card-hover-bg: rgba(255, 255, 255, 0.96);
+  --qf-card-shadow: 0 8px 30px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
+  --qf-card-shadow-hover: 0 20px 40px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.02);
+  --qf-card-bg: rgba(255, 255, 255, 0.98);
+  --qf-card-hover-bg: #ffffff;
 
   /* Form Styles */
-  --qf-input-height: 2.75rem;       /* 44px (touch-friendly) */
-  --qf-input-padding-x: 0.75rem;    /* 12px */
+  --qf-input-height: 3rem;          /* 48px */
+  --qf-input-padding-x: 1rem;       /* 16px */
   --qf-input-padding-y: 0.75rem;    /* 12px */
-  --qf-input-border-radius: var(--qf-radius-lg);
-  --qf-input-focus-ring: 2px solid rgba(47, 128, 237, 0.3);
+  --qf-input-border-radius: var(--qf-radius-md);
+  --qf-input-focus-ring: 2px solid rgba(38, 214, 240, 0.25);
 
   /* Table Styles */
   --qf-table-row-h: 2.875rem;      /* 46px */
@@ -169,7 +169,7 @@
 
   --qf-body-color: #e5eefc;
   --qf-body-bg:
-    radial-gradient(circle at 0% 0%, rgba(125, 66, 245, 0.16) 0, transparent 45%),
+    radial-gradient(circle at 0% 0%, rgba(38, 214, 240, 0.16) 0, transparent 45%),
     radial-gradient(circle at 100% 0%, rgba(34, 197, 94, 0.14) 0, transparent 50%),
     linear-gradient(145deg, #06101f 0%, #0b1830 32%, #103257 70%, #0d6f82 100%);
 
@@ -180,9 +180,9 @@
   --qf-border: rgba(148, 163, 184, 0.22);
   --qf-border-strong: rgba(191, 219, 254, 0.32);
 
-  --qf-primary: #60a5fa;
-  --qf-primary-dark: #3b82f6;
-  --qf-primary-weak: rgba(96, 165, 250, 0.18);
+  --qf-primary: #26d6f0;
+  --qf-primary-dark: #17acce;
+  --qf-primary-weak: rgba(38, 214, 240, 0.18);
 
   --qf-success: #34d399;
   --qf-success-weak: rgba(52, 211, 153, 0.18);
@@ -198,7 +198,7 @@
   --qf-card-bg: rgba(10, 21, 38, 0.88);
   --qf-card-hover-bg: rgba(13, 27, 45, 0.94);
 
-  --qf-input-focus-ring: 2px solid rgba(96, 165, 250, 0.35);
+  --qf-input-focus-ring: 2px solid rgba(38, 214, 240, 0.35);
   --qf-table-header-bg: rgba(15, 30, 52, 0.88);
   --qf-table-row-divider: rgba(148, 163, 184, 0.12);
   --qf-table-row-even-bg: rgba(255, 255, 255, 0.02);
@@ -208,4 +208,3 @@
   --qf-overlay-border: rgba(148, 163, 184, 0.22);
   --qf-shadow-color: rgba(2, 6, 23, 0.30);
 }
-

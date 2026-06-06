@@ -15,32 +15,30 @@ export function Tabs<T extends string>(props: {
 }) {
   const { items, value, onChange, className } = props
   return (
-    <div className={twMerge('qf-tabs-shell', className)}>
-      <ButtonGroup className="qf-tabs rounded-pill shadow-sm">
-        {items.map((item) => {
-          const active = item.key === value
-          return (
-            <Button
-              key={item.key}
-              variant={active ? 'primary' : 'outline-secondary'}
-              onClick={() => onChange(item.key)}
-              aria-pressed={active}
-              className={twMerge(
-                'qf-tabs__btn d-flex align-items-center gap-2',
-                active && 'qf-tabs__btn--active',
-                !active && 'bg-white',
-              )}
-            >
-              <span className="qf-tabs__label">{item.label}</span>
-              {typeof item.count === 'number' && (
-                <span className="badge bg-secondary rounded-pill ms-1">
-                  {item.count}
-                </span>
-              )}
-            </Button>
-          )
-        })}
-      </ButtonGroup>
-    </div>
+    <ButtonGroup className={twMerge('qf-tabs rounded-pill shadow-sm', className)}>
+      {items.map((item) => {
+        const active = item.key === value
+        return (
+          <Button
+            key={item.key}
+            variant={active ? 'primary' : 'link'}
+            onClick={() => onChange(item.key)}
+            aria-pressed={active}
+            className={twMerge(
+              'qf-tabs__btn d-flex align-items-center gap-2 text-decoration-none',
+              active && 'qf-tabs__btn--active',
+              !active && 'text-muted bg-transparent border-0',
+            )}
+          >
+            <span>{item.label}</span>
+            {typeof item.count === 'number' && (
+              <span className="badge bg-secondary rounded-pill ms-1">
+                {item.count}
+              </span>
+            )}
+          </Button>
+        )
+      })}
+    </ButtonGroup>
   )
 }

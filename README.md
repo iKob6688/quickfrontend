@@ -36,6 +36,43 @@ It talks to a middleware backend over JSON APIs, supports offline-first usage, a
    npm run dev
    ```
 
+### Local Odoo Login Notes
+
+For local ERPTH development, keep `VITE_API_BASE_URL=/api` and set `VITE_PROXY_TARGET` to the running Odoo instance. This makes the browser call Odoo through the same-origin Vite proxy:
+
+```text
+Browser -> http://127.0.0.1:5176/web/... -> Vite proxy -> http://localhost:8069/web/...
+```
+
+Odoo native web-session fallback auth intentionally uses the `/web` proxy before trying a direct Odoo URL. This avoids browser preflight/CORS issues on Odoo's native `/web/session/*` routes and keeps the production API client headers scoped to ERPTH API calls.
+
+If local login fails with an Odoo traceback such as `column res_users.adt_customer_bill_sequence_id does not exist`, the `.env` values may still be correct. Upgrade the Odoo module that owns the missing field against the selected database, for example:
+
+```bash
+cd /Users/ikob/Documents/iKobDoc/Active22/V18/odoo
+/Users/ikob/Documents/iKobDoc/Active22/V18/odoo-venv18/bin/python3 ./odoo-bin -c ./odoo.conf -d q01 -u adt_accounting --stop-after-init
+```
+
+Then restart Odoo and test the proxy login:
+
+```bash
+curl -i -X POST "http://127.0.0.1:5176/web/session/authenticate?db=q01" \
+  -H "Content-Type: application/json" \
+  --data '{"jsonrpc":"2.0","method":"call","params":{"db":"q01","login":"admin","password":"qadmin"},"id":1}'
+```
+
+## CLT/Quick UX/UI Migration
+
+ERPTH has been restyled to follow the CLT/Quick frontend visual system while preserving ERPTH's real auth, API client, scopes, route contracts, and production data behavior.
+
+- Global tokens now use clean white surfaces, light turquoise primary accents, softer borders, rounded cards, pill buttons, and matching dark-mode values.
+- Desktop layout uses a clean top bar with a collapsible grouped sidebar and `Ctrl+K` command palette navigation.
+- Mobile keeps the existing bottom navigation model while inheriting the updated visual style.
+- Login uses the compact centered CLT-style card but still runs the real ERPTH login flow.
+- Dashboard visuals follow the target layout while keeping real ERPTH KPI, approval, accounting, e-Tax, purchase, visibility, and navigation behavior.
+
+Do not copy demo-only UX source auth, API mock adapters, mock credentials, or synthetic dashboard fallbacks into this project.
+
 ## Production Mobile/Desktop Navigation
 
 ERPTH uses a compact navigation model so the app remains usable on narrow screens and avoids overloaded desktop menus.

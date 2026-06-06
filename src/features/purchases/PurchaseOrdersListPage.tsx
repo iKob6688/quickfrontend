@@ -85,7 +85,7 @@ export function PurchaseOrdersListPage() {
       status: order.status ?? 'draft',
       currency: order.currency ?? 'THB',
     }))
-  }, [orders])
+  }, [orders, formatDate])
 
   const columns: Column<(typeof rows)[number]>[] = [
     {

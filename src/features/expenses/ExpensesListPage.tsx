@@ -82,7 +82,7 @@ export function ExpensesListPage() {
       status: expense.status,
       currency: expense.currency,
     }))
-  }, [expenses])
+  }, [expenses, formatDate])
 
   const columns: Column<(typeof rows)[number]>[] = [
     {

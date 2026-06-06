@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { apiClient } from '@/api/client'
 import { unwrapResponse, ApiError } from '@/api/response'
 import { makeRpc } from '@/api/services/rpc'
@@ -83,18 +84,19 @@ function webSessionBaseUrlCandidates() {
     candidates.push(`${normalized}/odoo`)
   }
 
+  // Prefer the same-origin Vite/nginx proxy. Direct Odoo URLs can trigger
+  // browser preflight handling that Odoo's native web routes do not accept.
+  if (apiBase?.startsWith('/')) {
+    candidates.push('')
+    candidates.push('/odoo')
+  }
+
   if (apiBase?.startsWith('http://') || apiBase?.startsWith('https://')) {
     addRootAndOdooVariants(apiBase)
   }
 
   if (proxyTarget) {
     addRootAndOdooVariants(proxyTarget)
-  }
-
-  // Relative fallback for dev server/nginx proxy setups.
-  if (apiBase?.startsWith('/')) {
-    candidates.push('')
-    candidates.push('/odoo')
   }
 
   return uniqueStrings(candidates)
@@ -107,9 +109,20 @@ type OdooWebSessionAuthResult = {
   user_name?: string
   db?: string
   user_companies?: {
-    current_company?: [number, string]
+    current_company?: number | [number, string]
     allowed_companies?: Record<string, { id?: number; name?: string }>
   }
+}
+
+const webSessionClient = axios.create({
+  withCredentials: true,
+})
+
+function currentCompanyTuple(value: number | [number, string] | undefined, allowedCompanies: { id: number; name: string }[]) {
+  if (Array.isArray(value)) return { id: Number(value[0] || 0), name: String(value[1] || '') }
+  const id = Number(value || 0)
+  const match = allowedCompanies.find((company) => company.id === id)
+  return { id, name: match?.name || '' }
 }
 
 function is404Error(err: unknown) {
@@ -133,7 +146,7 @@ async function loginViaWebSession(payload: LoginPayload): Promise<LoginResponse>
   let rootPathErr: unknown = null
   for (const baseURL of webSessionBaseUrlCandidates()) {
     try {
-      response = await apiClient.post(
+      response = await webSessionClient.post(
         '/web/session/authenticate',
         {
           jsonrpc: '2.0',
@@ -147,6 +160,7 @@ async function loginViaWebSession(payload: LoginPayload): Promise<LoginResponse>
         },
         {
           baseURL,
+          params: db ? { db } : undefined,
           withCredentials: true,
           maxRedirects: 0,
           timeout: Number.isFinite(AUTH_TIMEOUT_MS) && AUTH_TIMEOUT_MS > 0 ? AUTH_TIMEOUT_MS : 15000,
@@ -171,14 +185,14 @@ async function loginViaWebSession(payload: LoginPayload): Promise<LoginResponse>
   const allowedCompanies = Object.values(result.user_companies?.allowed_companies ?? {})
     .map((c) => ({ id: Number(c.id || 0), name: c.name || '' }))
     .filter((c) => c.id > 0)
-  const currentCompany = result.user_companies?.current_company
+  const currentCompany = currentCompanyTuple(result.user_companies?.current_company, allowedCompanies)
   const user: AuthUser = {
     id: result.uid,
     name: result.user_name || payload.login,
     login: result.username || payload.login,
     locale: result.user_context?.lang,
-    companyId: currentCompany?.[0],
-    companyName: currentCompany?.[1],
+    companyId: currentCompany.id || undefined,
+    companyName: currentCompany.name || undefined,
     companies: allowedCompanies,
   }
   return {
@@ -198,11 +212,12 @@ async function getMeViaWebSession(): Promise<MeResponse> {
   let rootPathErr: unknown = null
   for (const baseURL of webSessionBaseUrlCandidates()) {
     try {
-      response = await apiClient.post(
+      response = await webSessionClient.post(
         '/web/session/get_session_info',
         { jsonrpc: '2.0', method: 'call', params: {}, id: Date.now() },
         {
           baseURL,
+          params: import.meta.env.VITE_ODOO_DB ? { db: import.meta.env.VITE_ODOO_DB } : undefined,
           withCredentials: true,
           maxRedirects: 0,
           timeout: Number.isFinite(AUTH_TIMEOUT_MS) && AUTH_TIMEOUT_MS > 0 ? AUTH_TIMEOUT_MS : 15000,
@@ -225,17 +240,17 @@ async function getMeViaWebSession(): Promise<MeResponse> {
   const allowedCompanies = Object.values(r.user_companies?.allowed_companies ?? {})
     .map((c: any) => ({ id: Number(c.id || 0), name: c.name || '' }))
     .filter((c) => c.id > 0)
-  const currentCompany = r.user_companies?.current_company
+  const currentCompany = currentCompanyTuple(r.user_companies?.current_company, allowedCompanies)
   return {
     id: r.uid,
     name: r.user_name || r.username || '',
     login: r.username || '',
     email: r.email || undefined,
     locale: r.user_context?.lang,
-    companyId: currentCompany?.[0],
-    companyName: currentCompany?.[1],
+    companyId: currentCompany.id,
+    companyName: currentCompany.name,
     companies: allowedCompanies,
-    instancePublicId: currentCompany?.[0] ? String(currentCompany[0]) : '',
+    instancePublicId: currentCompany.id ? String(currentCompany.id) : '',
   }
 }
 
@@ -244,11 +259,12 @@ async function logoutViaWebSession() {
   let rootPathErr: unknown = null
   for (const baseURL of webSessionBaseUrlCandidates()) {
     try {
-      await apiClient.post(
+      await webSessionClient.post(
         '/web/session/destroy',
         { jsonrpc: '2.0', method: 'call', params: {}, id: Date.now() },
         {
           baseURL,
+          params: import.meta.env.VITE_ODOO_DB ? { db: import.meta.env.VITE_ODOO_DB } : undefined,
           withCredentials: true,
           maxRedirects: 0,
           timeout: Number.isFinite(AUTH_TIMEOUT_MS) && AUTH_TIMEOUT_MS > 0 ? AUTH_TIMEOUT_MS : 15000,

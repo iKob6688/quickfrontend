@@ -70,7 +70,7 @@ export function PurchaseRequestsListPage() {
       status: request.state,
       purchaseOrderName: request.purchaseOrderName,
     }))
-  }, [requests])
+  }, [requests, formatDate])
 
   const columns: Column<(typeof rows)[number]>[] = [
     {

@@ -1,10 +1,8 @@
-import { PageHeader } from '@/components/ui/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/features/auth/store'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert } from 'react-bootstrap'
 import { ping } from '@/api/services/system.service'
 import { getDashboardKpis } from '@/api/services/dashboard.service'
 import { listInvoices } from '@/api/services/invoices.service'
@@ -54,7 +52,6 @@ function parseNumber(v: unknown): number {
   if (typeof v === 'string') {
     const raw = v.trim()
     if (!raw) return 0
-    // Accounting formats can include commas, currency symbols, spaces, and negatives in parentheses.
     const isParenNegative = /^\(.*\)$/.test(raw)
     const cleaned = raw
       .replace(/[,\s]/g, '')
@@ -75,6 +72,13 @@ function plExpenseTotal(rd: any): number {
   const expenseDirect = parseNumber(rd?.expenseDirectCost?.total)
   const expenseFromBuckets = expenseMain + expenseDep + expenseDirect
   return expenseFromBuckets || parseNumber(rd?.totalExpense)
+}
+
+function formatMoney(value: number | undefined | null) {
+  return (value ?? 0).toLocaleString('th-TH', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
 }
 
 type DashboardCardKey =
@@ -123,9 +127,50 @@ function loadDashboardCardPrefs(): Record<DashboardCardKey, boolean> {
   }
 }
 
+function KpiCard(props: {
+  label: string
+  value: string
+  helper: string
+  icon: string
+  tone?: string
+  onClick?: () => void
+}) {
+  const { label, value, helper, icon, tone = '#26d6f0', onClick } = props
+  return (
+    <div
+      className="qf-dashboard-kpi-card qf-hover-lift"
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (!onClick) return
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick()
+        }
+      }}
+      style={{ cursor: onClick ? 'pointer' : 'default' }}
+    >
+      <div className="d-flex align-items-start justify-content-between gap-3">
+        <div>
+          <div className="small text-muted fw-semibold mb-2">{label}</div>
+          <div className="h5 fw-bold mb-0 font-monospace" style={{ color: 'var(--qf-text-strong)' }}>
+            {value}
+          </div>
+        </div>
+        <span className="d-inline-flex align-items-center justify-content-center rounded-circle" style={{ width: 38, height: 38, color: tone, background: `${tone}18` }}>
+          <i className={`bi ${icon}`} />
+        </span>
+      </div>
+      <div className="small text-muted">{helper}</div>
+    </div>
+  )
+}
+
 export function DashboardPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const user = useAuthStore((s) => s.user)
   const instancePublicId = useAuthStore((s) => s.instancePublicId)
   const canSeeKpis = hasScope('dashboard')
   const canSeeReports = hasScope('reports')
@@ -133,20 +178,15 @@ export function DashboardPage() {
   const [showCardControl, setShowCardControl] = useState(false)
   const [cardVisibility, setCardVisibility] =
     useState<Record<DashboardCardKey, boolean>>(loadDashboardCardPrefs)
+  const [accDateFrom, setAccDateFrom] = useState<string>(() => formatLocalISODate(firstDayOfCurrentMonthLocal()))
+  const [accDateTo, setAccDateTo] = useState<string>(() => formatLocalISODate(new Date()))
+  const [accFilterFrom, setAccFilterFrom] = useState<string>(() => formatLocalISODate(firstDayOfCurrentMonthLocal()))
+  const [accFilterTo, setAccFilterTo] = useState<string>(() => formatLocalISODate(new Date()))
 
   useEffect(() => {
     if (typeof window === 'undefined') return
     window.localStorage.setItem(DASHBOARD_CARD_PREF_KEY, JSON.stringify(cardVisibility))
   }, [cardVisibility])
-
-  const [accDateFrom, setAccDateFrom] = useState<string>(() =>
-    formatLocalISODate(firstDayOfCurrentMonthLocal()),
-  )
-  const [accDateTo, setAccDateTo] = useState<string>(() => formatLocalISODate(new Date()))
-  const [accFilterFrom, setAccFilterFrom] = useState<string>(() =>
-    formatLocalISODate(firstDayOfCurrentMonthLocal()),
-  )
-  const [accFilterTo, setAccFilterTo] = useState<string>(() => formatLocalISODate(new Date()))
 
   const pingQuery = useQuery({
     queryKey: ['system', 'ping'],
@@ -161,27 +201,24 @@ export function DashboardPage() {
     staleTime: 60_000,
   })
 
-  // Fetch invoices to calculate payment status (fallback if backend doesn't return payments)
   const invoicesQuery = useQuery({
     queryKey: ['invoices', 'all', 'dashboard'],
     enabled: canSeeKpis,
-    queryFn: () => listInvoices({ limit: 1000 }), // Get all invoices for calculation
+    queryFn: () => listInvoices({ limit: 1000 }),
     staleTime: 60_000,
   })
 
-  // Fetch purchase orders for dashboard
   const purchaseOrdersQuery = useQuery({
     queryKey: ['purchaseOrders', 'dashboard'],
     enabled: canSeeKpis,
-    queryFn: () => listPurchaseOrders({ limit: 1000 }), // Get all purchase orders for calculation
+    queryFn: () => listPurchaseOrders({ limit: 1000 }),
     staleTime: 60_000,
   })
 
-  // Fetch purchase requests for dashboard
   const purchaseRequestsQuery = useQuery({
     queryKey: ['purchaseRequests', 'dashboard'],
     enabled: canSeeKpis,
-    queryFn: () => listPurchaseRequests({ limit: 1000 }), // Get all purchase requests for calculation
+    queryFn: () => listPurchaseRequests({ limit: 1000 }),
     staleTime: 60_000,
   })
 
@@ -201,8 +238,6 @@ export function DashboardPage() {
 
   const profitLossQuery = useQuery({
     queryKey: ['accounting', 'profitLoss', 'dashboard', accFilterFrom, accFilterTo],
-    // Even if scope isn't enabled, allow request; backend will enforce scopes.
-    // This keeps UX consistent with the rest of the app.
     enabled: true,
     queryFn: () =>
       getProfitLoss({
@@ -246,24 +281,22 @@ export function DashboardPage() {
     const incomeTotal = parseNumber(rd?.totalIncome)
     const incomeFromBucket = parseNumber((rd as any)?.income?.total)
     const income = incomeTotal || incomeFromBucket
-
     const expenseTotal = parseNumber(rd?.totalExpense)
     const expenseBucket = plExpenseTotal(rd as any)
     const expense = expenseBucket || expenseTotal
-
     const profit = income - expense
     return { income, expense, profit }
   }, [profitLossQuery.data])
 
-  const accountingChartData = useMemo(() => {
-    return [
-      { name: 'รายได้', value: accountingSnapshot.income, fill: '#2563eb' },
-      { name: 'รายจ่าย', value: accountingSnapshot.expense, fill: '#dc2626' },
-      { name: 'กำไร', value: accountingSnapshot.profit, fill: '#16a34a' },
-    ]
-  }, [accountingSnapshot.expense, accountingSnapshot.income, accountingSnapshot.profit])
+  const accountingChartData = useMemo(
+    () => [
+      { name: 'รายได้', value: accountingSnapshot.income, fill: '#26d6f0' },
+      { name: 'รายจ่าย', value: accountingSnapshot.expense, fill: '#3b82f6' },
+      { name: 'กำไร', value: accountingSnapshot.profit, fill: accountingSnapshot.profit >= 0 ? '#10b981' : '#ef4444' },
+    ],
+    [accountingSnapshot],
+  )
 
-  // Calculate purchase orders stats
   const purchaseStats = useMemo(() => {
     if (!purchaseOrdersQuery.data) return null
     const orders = purchaseOrdersQuery.data
@@ -275,7 +308,6 @@ export function DashboardPage() {
     return { draftCount, sentCount, purchaseCount, doneCount, totalValue }
   }, [purchaseOrdersQuery.data])
 
-  // Calculate payment stats from invoices
   const paymentStats = useMemo(() => {
     if (!invoicesQuery.data) return null
     const invoices = invoicesQuery.data
@@ -283,26 +315,21 @@ export function DashboardPage() {
     let paidTotal = 0
     let partialCount = 0
     let partialTotal = 0
-
     invoices.forEach((inv) => {
       const total = Number(inv.total || 0)
       const amountPaid = Number(inv.amountPaid || 0)
       const amountDue = Number(inv.amountDue || 0)
       const paymentState = inv.paymentState
-
-      // Keep the same logic as InvoicesListPage so dashboard and list stay in sync.
       const isPaid =
         inv.status === 'paid' ||
         paymentState === 'paid' ||
         (inv.status === 'posted' && total > 0 && amountDue === 0 && amountPaid > 0)
-
       const isPartial =
         !isPaid &&
         inv.status === 'posted' &&
         (paymentState === 'partial' ||
           paymentState === 'in_payment' ||
           (amountPaid > 0 && amountDue > 0))
-
       if (isPaid) {
         paidCount++
         paidTotal += total
@@ -311,11 +338,9 @@ export function DashboardPage() {
         partialTotal += amountPaid > 0 ? amountPaid : Math.max(0, total - amountDue)
       }
     })
-
     return { paidCount, paidTotal, partialCount, partialTotal }
   }, [invoicesQuery.data])
 
-  // Calculate purchase requests stats
   const purchaseRequestStats = useMemo(() => {
     if (!purchaseRequestsQuery.data) return null
     const requests = purchaseRequestsQuery.data
@@ -326,6 +351,39 @@ export function DashboardPage() {
     const totalValue = requests.reduce((sum, r) => sum + (r.totalEstimatedCost || 0), 0)
     return { draftCount, toApproveCount, approvedCount, doneCount, totalValue, totalCount: requests.length }
   }, [purchaseRequestsQuery.data])
+
+  const recentActivities = useMemo(() => {
+    const rows: Array<{ tone?: string; title: string; time: string }> = []
+    const firstInvoice = invoicesQuery.data?.[0]
+    const firstPo = purchaseOrdersQuery.data?.[0]
+    const firstApproval = approvalTasksQuery.data?.items?.[0]
+    if (firstInvoice) {
+      rows.push({
+        title: `ใบแจ้งหนี้ ${firstInvoice.number || firstInvoice.id} · ${firstInvoice.customerName || 'ลูกค้า'}`,
+        time: firstInvoice.invoiceDate || 'ล่าสุด',
+      })
+    }
+    if (firstPo) {
+      rows.push({
+        title: `ใบสั่งซื้อ ${firstPo.number || firstPo.id} · ${firstPo.vendorName || 'ผู้ขาย'}`,
+        time: firstPo.orderDate || 'ล่าสุด',
+        tone: '#3b82f6',
+      })
+    }
+    if (firstApproval) {
+      rows.push({
+        title: `งานรออนุมัติ ${firstApproval.name}`,
+        time: firstApproval.requestedDate || 'ล่าสุด',
+        tone: '#f59e0b',
+      })
+    }
+    rows.push({
+      title: pingQuery.data?.pong ? 'ระบบเชื่อมต่อ backend สำเร็จ' : 'ตรวจสอบสถานะระบบได้จากการ์ดการเชื่อมต่อ',
+      time: 'ระบบ',
+      tone: pingQuery.data?.pong ? '#10b981' : '#cbd5e1',
+    })
+    return rows.slice(0, 4)
+  }, [approvalTasksQuery.data, invoicesQuery.data, pingQuery.data, purchaseOrdersQuery.data])
 
   const statusMeta = (status: string) => {
     if (status === 'executed') return { label: 'สำเร็จ', cls: 'bg-success-subtle text-success-emphasis' }
@@ -371,441 +429,311 @@ export function DashboardPage() {
     }
   }
 
+  const productCount = productsQuery.data?.total ?? productsQuery.data?.items.length ?? 0
+  const paidTotal = kpiQuery.data?.payments?.paidTotal ?? paymentStats?.paidTotal ?? 0
+  const paidCount = kpiQuery.data?.payments?.paidCount ?? paymentStats?.paidCount ?? 0
+  const partialTotal = kpiQuery.data?.payments?.partialTotal ?? paymentStats?.partialTotal ?? 0
+  const partialCount = kpiQuery.data?.payments?.partialCount ?? paymentStats?.partialCount ?? 0
+
   return (
-    <div>
-      <PageHeader
-        title="แดชบอร์ดภาพรวมธุรกิจ"
-        subtitle="สรุปงานประจำ ยอดขาย รายจ่าย กำไร และสถานะเอกสารที่ต้องติดตาม"
-        breadcrumb="หน้าแรก · แดชบอร์ด"
-        actions={
-          <div className="d-flex gap-2">
-            <Button 
-              size="sm" 
-              onClick={() => navigate('/sales/invoices')}
-              style={{
-                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                border: 'none',
-                color: 'white',
-              }}
-            >
-              <i className="bi bi-receipt me-1"></i>
-              ไปหน้าใบแจ้งหนี้
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => void pingQuery.refetch()}
-              style={{
-                border: '1px solid #e5e7eb',
-              }}
-            >
-              <i className="bi bi-arrow-clockwise me-1"></i>
-              ตรวจสอบการเชื่อมต่อ
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setShowCardControl((s) => !s)}
-              style={{ border: '1px solid #e5e7eb' }}
-            >
-              <i className="bi bi-grid me-1"></i>
-              {showCardControl ? 'ปิดตั้งค่าการ์ด' : 'จัดการการ์ด'}
+    <div className="d-flex flex-column gap-4">
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+        <div>
+          <h1 className="qf-page-title mb-1" style={{ fontSize: '26px', fontWeight: 700 }}>
+            สวัสดี, {user?.name || 'ผู้ใช้งาน'}
+          </h1>
+          <p className="text-muted mb-0 small">
+            ภาพรวมธุรกิจ ยอดขาย รายจ่าย กำไร และงานที่ต้องติดตามจากข้อมูลจริงของระบบ
+          </p>
+        </div>
+        <div className="d-flex flex-wrap gap-2">
+          <Button className="text-white px-4 py-2 border-0 qf-hover-lift" onClick={() => navigate('/sales/invoices/new')}>
+            <i className="bi bi-plus-circle me-2" />
+            สร้างใบแจ้งหนี้
+          </Button>
+          <Button variant="secondary" className="px-4 py-2 qf-hover-lift" onClick={() => navigate('/expenses/new')}>
+            <i className="bi bi-cash me-2" />
+            บันทึกค่าใช้จ่าย
+          </Button>
+          <Button variant="secondary" className="px-4 py-2 qf-hover-lift" onClick={() => navigate('/sales/orders/new?type=quotation')}>
+            <i className="bi bi-file-earmark-text me-2" />
+            สร้างใบเสนอราคา
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setShowCardControl((s) => !s)}>
+            <i className="bi bi-grid me-1" />
+            {showCardControl ? 'ปิดตั้งค่าการ์ด' : 'จัดการการ์ด'}
+          </Button>
+        </div>
+      </div>
+
+      {showCardControl ? (
+        <Card className="p-3">
+          <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+            <div className="fw-semibold">เลือกการ์ดที่ต้องการแสดงบนแดชบอร์ด</div>
+            <Button size="sm" variant="secondary" onClick={() => setCardVisibility({ ...DASHBOARD_CARD_DEFAULTS })}>
+              รีเซ็ตค่าเริ่มต้น
             </Button>
           </div>
-        }
-      />
-
-      {showCardControl && (
-        <div className="mb-3">
-          <Card className="p-3">
-            <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-              <div className="fw-semibold">เลือกการ์ดที่ต้องการแสดงบนแดชบอร์ด</div>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => setCardVisibility({ ...DASHBOARD_CARD_DEFAULTS })}
-              >
-                รีเซ็ตค่าเริ่มต้น
-              </Button>
-            </div>
-            <div className="row g-2">
-              {(
-                [
-                  ['kpis', 'การ์ดสรุป'],
-                  ['invoices', 'ใบแจ้งหนี้'],
-                  ['products', 'สินค้า/บริการ'],
-                  ['quotations', 'ใบเสนอราคา'],
-                  ['salesOrders', 'ใบสั่งขาย'],
-                  ['accounting', 'รายงานบัญชี'],
-                  ['etax', 'e-Tax'],
-                  ['purchaseOrders', 'ใบสั่งซื้อ'],
-                  ['purchaseRequests', 'คำขอซื้อ'],
-                  ['approvals', 'งานรออนุมัติ'],
-                  ['ai', 'ERPTH AI'],
-                  ['excel', 'นำเข้า Excel'],
-                  ['backend', 'ระบบหลังบ้าน'],
-                  ['connection', 'สถานะการเชื่อมต่อ'],
-                ] as Array<[DashboardCardKey, string]>
-              ).map(([key, label]) => (
-                <div className="col-6 col-md-4 col-xl-3" key={key}>
-                  <label className="form-check form-switch mb-0 rounded border bg-light px-3 py-2 w-100">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      checked={Boolean(cardVisibility[key])}
-                      onChange={() =>
-                        setCardVisibility((prev) => ({
-                          ...prev,
-                          [key]: !prev[key],
-                        }))
-                      }
-                    />
-                    <span className="form-check-label ms-2">{label}</span>
-                  </label>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {cardVisibility.approvals && (approvalTasksQuery.data?.pendingCount || 0) > 0 ? (
-        <div className="mb-3">
-          <Alert variant="warning" className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-0">
-            <div>
-              <div className="fw-semibold">มีงานรออนุมัติ {approvalTasksQuery.data?.pendingCount} รายการ</div>
-              <div className="small">
-                คุณสามารถกดอนุมัติหรือปฏิเสธจากหน้านี้ได้ทันที หรือเปิดกล่องงานตรวจสอบเพื่อดูรายละเอียดทั้งหมด
+          <div className="row g-2">
+            {(
+              [
+                ['kpis', 'การ์ดสรุป'],
+                ['invoices', 'ใบแจ้งหนี้'],
+                ['products', 'สินค้า/บริการ'],
+                ['quotations', 'ใบเสนอราคา'],
+                ['salesOrders', 'ใบสั่งขาย'],
+                ['accounting', 'รายงานบัญชี'],
+                ['etax', 'e-Tax'],
+                ['purchaseOrders', 'ใบสั่งซื้อ'],
+                ['purchaseRequests', 'คำขอซื้อ'],
+                ['approvals', 'งานรออนุมัติ'],
+                ['ai', 'ERPTH AI'],
+                ['excel', 'นำเข้า Excel'],
+                ['backend', 'ระบบหลังบ้าน'],
+                ['connection', 'สถานะการเชื่อมต่อ'],
+              ] as Array<[DashboardCardKey, string]>
+            ).map(([key, label]) => (
+              <div className="col-6 col-md-4 col-xl-3" key={key}>
+                <label className="form-check form-switch mb-0 rounded border bg-light px-3 py-2 w-100">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    checked={Boolean(cardVisibility[key])}
+                    onChange={() => setCardVisibility((prev) => ({ ...prev, [key]: !prev[key] }))}
+                  />
+                  <span className="form-check-label ms-2">{label}</span>
+                </label>
               </div>
-            </div>
-            <div className="d-flex gap-2">
-              <Button size="sm" variant="secondary" onClick={() => navigate('/purchases/requests?state=to_approve')}>
-                เปิดคำขอซื้อรออนุมัติ
-              </Button>
-              <Button size="sm" onClick={() => navigate('/accounting/document-review')}>
-                ไปที่กล่องงานตรวจสอบ
-              </Button>
-            </div>
-          </Alert>
+            ))}
+          </div>
+        </Card>
+      ) : null}
+
+      {canSeeKpis && cardVisibility.kpis ? (
+        <div className="qf-kpi-grid">
+          <KpiCard
+            label="ยอดขายยืนยันแล้ว"
+            value={kpiQuery.isLoading ? '...' : kpiQuery.isError ? '—' : formatMoney(kpiQuery.data?.salesInvoices.postedTotal)}
+            helper={kpiQuery.data ? `${kpiQuery.data.salesInvoices.postedCount} ใบ` : 'ยอดขายที่โพสต์แล้ว'}
+            icon="bi-receipt"
+            onClick={() => navigate('/sales/invoices')}
+          />
+          <KpiCard
+            label="ลูกหนี้คงค้าง"
+            value={kpiQuery.isLoading ? '...' : kpiQuery.isError ? '—' : formatMoney(kpiQuery.data?.receivables.openTotal)}
+            helper={kpiQuery.data ? `${kpiQuery.data.receivables.openCount} ใบ` : 'ยอดค้างชำระ'}
+            icon="bi-wallet2"
+            tone="#3b82f6"
+            onClick={() => navigate('/sales/invoices?tab=due')}
+          />
+          <KpiCard
+            label="เกินกำหนด"
+            value={kpiQuery.isLoading ? '...' : kpiQuery.isError ? '—' : formatMoney(kpiQuery.data?.receivables.overdueTotal)}
+            helper={kpiQuery.data ? `${kpiQuery.data.receivables.overdueCount} ใบ` : 'เกินกำหนดชำระ'}
+            icon="bi-exclamation-circle"
+            tone="#ef4444"
+            onClick={() => navigate('/sales/invoices')}
+          />
+          <KpiCard
+            label="ชำระครบแล้ว"
+            value={invoicesQuery.isLoading ? '...' : formatMoney(paidTotal)}
+            helper={`${paidCount} ใบ`}
+            icon="bi-check-circle"
+            tone="#10b981"
+            onClick={() => navigate('/sales/receipts')}
+          />
+          <KpiCard
+            label="คำขอซื้อ"
+            value={purchaseRequestsQuery.isLoading ? '...' : `${purchaseRequestStats?.totalCount ?? 0}`}
+            helper={`รออนุมัติ ${purchaseRequestStats?.toApproveCount ?? 0} รายการ`}
+            icon="bi-clipboard-check"
+            tone="#f59e0b"
+            onClick={() => navigate('/purchases/requests')}
+          />
+          <KpiCard
+            label="กำไรสุทธิ"
+            value={profitLossQuery.isLoading ? '...' : formatMoney(accountingSnapshot.profit)}
+            helper={`ช่วง ${accFilterFrom} ถึง ${accFilterTo}`}
+            icon="bi-graph-up-arrow"
+            tone={accountingSnapshot.profit >= 0 ? '#10b981' : '#ef4444'}
+            onClick={() => navigate('/accounting/reports/profit-loss')}
+          />
         </div>
       ) : null}
 
       <div className="row g-4">
-        {canSeeKpis && cardVisibility.kpis && (
-          <>
-            <div className="col-md-6 col-xl-3">
-              <Card>
-                <p className="small fw-medium text-muted mb-2">ยอดขายที่ยืนยันแล้ว</p>
-                <p className="h6 fw-semibold mb-2">
-                  {kpiQuery.isLoading
-                    ? 'กำลังโหลด...'
-                    : kpiQuery.isError
-                      ? '—'
-                      : kpiQuery.data?.salesInvoices.postedTotal.toLocaleString('th-TH', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
+        <div className="col-12 col-xl-8">
+          <Card className="p-4 h-100">
+            <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4">
+              <div>
+                <h2 className="h5 fw-bold mb-1">สรุปบัญชี</h2>
+                <p className="text-muted small mb-0">
+                  ช่วงวันที่ {accFilterFrom} ถึง {accFilterTo}
+                  {!canSeeReports ? <span className="ms-2">(ถ้าเรียกไม่ได้ ให้เปิด scope: <code>reports</code>)</span> : null}
                 </p>
-                <p className="small text-muted mb-0">
-                  {kpiQuery.data
-                    ? `${kpiQuery.data.salesInvoices.postedCount} ใบ`
-                    : 'ยอดขายที่โพสต์แล้ว'}
-                </p>
-              </Card>
+              </div>
+              <div className="d-flex gap-2 flex-wrap">
+                <input className="form-control form-control-sm" type="date" style={{ width: 150 }} value={accDateFrom} onChange={(e) => setAccDateFrom(e.target.value)} />
+                <input className="form-control form-control-sm" type="date" style={{ width: 150 }} value={accDateTo} onChange={(e) => setAccDateTo(e.target.value)} />
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={applyAccountingRange}
+                  disabled={!accDateFrom || !accDateTo || new Date(accDateFrom).getTime() > new Date(accDateTo).getTime()}
+                >
+                  ใช้ช่วงวันที่
+                </Button>
+                <Button size="sm" variant="ghost" onClick={resetAccountingRange}>เดือนนี้</Button>
+              </div>
             </div>
-            <div className="col-md-6 col-xl-3">
-              <Card>
-                <p className="small fw-medium text-muted mb-2">ยอดลูกหนี้คงค้าง</p>
-                <p className="h6 fw-semibold mb-2">
-                  {kpiQuery.isLoading
-                    ? 'กำลังโหลด...'
-                    : kpiQuery.isError
-                      ? '—'
-                      : kpiQuery.data?.receivables.openTotal.toLocaleString('th-TH', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                </p>
-                <p className="small text-muted mb-0">
-                  {kpiQuery.data
-                    ? `${kpiQuery.data.receivables.openCount} ใบ`
-                    : 'ยอดค้างชำระ'}
-                </p>
-              </Card>
-            </div>
-            <div className="col-md-6 col-xl-3">
-              <Card>
-                <p className="small fw-medium text-muted mb-2">ยอดเกินกำหนดชำระ</p>
-                <p className="h6 fw-semibold mb-2">
-                  {kpiQuery.isLoading
-                    ? 'กำลังโหลด...'
-                    : kpiQuery.isError
-                      ? '—'
-                      : kpiQuery.data?.receivables.overdueTotal.toLocaleString('th-TH', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                </p>
-                <p className="small text-muted mb-0">
-                  {kpiQuery.data
-                    ? `${kpiQuery.data.receivables.overdueCount} ใบ`
-                    : 'เกินกำหนด'}
-                </p>
-              </Card>
-            </div>
-            {/* Payment status cards - use API data if available, otherwise calculate from invoices */}
-            {(kpiQuery.data?.payments || paymentStats) && (
+
+            {profitLossQuery.isError ? (
+              <div className="alert alert-danger mb-0">
+                <div className="fw-semibold">โหลดสรุปบัญชีไม่สำเร็จ</div>
+                <div className="small">{profitLossQuery.error instanceof Error ? profitLossQuery.error.message : 'ไม่ทราบสาเหตุ'}</div>
+              </div>
+            ) : (
               <>
-                <div className="col-md-6 col-xl-3">
-                  <Card>
-                    <p className="small fw-medium text-muted mb-2">ชำระครบแล้ว</p>
-                    <p className="h6 fw-semibold mb-2 text-success">
-                      {kpiQuery.isLoading || invoicesQuery.isLoading
-                        ? 'กำลังโหลด...'
-                        : kpiQuery.isError && invoicesQuery.isError
-                          ? '—'
-                          : (kpiQuery.data?.payments?.paidTotal ?? paymentStats?.paidTotal ?? 0).toLocaleString('th-TH', {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                    </p>
-                    <p className="small text-muted mb-0">
-                      {kpiQuery.data?.payments?.paidCount ?? paymentStats?.paidCount ?? 0} ใบ
-                    </p>
-                  </Card>
-                </div>
-                {((kpiQuery.data?.payments?.partialCount ?? paymentStats?.partialCount ?? 0) > 0) && (
-                  <div className="col-md-6 col-xl-3">
-                    <Card>
-                      <p className="small fw-medium text-muted mb-2">ชำระบางส่วน</p>
-                      <p className="h6 fw-semibold mb-2 text-warning">
-                        {(kpiQuery.data?.payments?.partialTotal ?? paymentStats?.partialTotal ?? 0).toLocaleString('th-TH', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </p>
-                      <p className="small text-muted mb-0">
-                        {kpiQuery.data?.payments?.partialCount ?? paymentStats?.partialCount ?? 0} ใบ
-                      </p>
-                    </Card>
+                <div className="row g-3 mb-4">
+                  <div className="col-12 col-md-4">
+                    <div className="rounded-4 bg-light p-3 h-100 qf-clickable-metric qf-clickable-metric--income" role="button" tabIndex={0} onClick={() => goToProfitLossDetail('income')} onKeyDown={(e) => onMetricCardKeyDown(e, 'income')}>
+                      <div className="small text-muted">รายได้รวม</div>
+                      <div className="h4 fw-bold mb-0 font-monospace">{formatMoney(accountingSnapshot.income)}</div>
+                    </div>
                   </div>
-                )}
+                  <div className="col-12 col-md-4">
+                    <div className="rounded-4 bg-light p-3 h-100 qf-clickable-metric qf-clickable-metric--expense" role="button" tabIndex={0} onClick={() => goToProfitLossDetail('expense')} onKeyDown={(e) => onMetricCardKeyDown(e, 'expense')}>
+                      <div className="small text-muted">รายจ่ายรวม</div>
+                      <div className="h4 fw-bold mb-0 font-monospace">{formatMoney(accountingSnapshot.expense)}</div>
+                    </div>
+                  </div>
+                  <div className="col-12 col-md-4">
+                    <div className={`rounded-4 p-3 h-100 qf-profit-metric ${accountingSnapshot.profit >= 0 ? 'qf-profit-metric--gain' : 'qf-profit-metric--loss'}`}>
+                      <div className="small text-muted">กำไรสุทธิ</div>
+                      <div className="h4 fw-bold mb-0 font-monospace">{formatMoney(accountingSnapshot.profit)}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="qf-chart-box">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={280} minHeight={280}>
+                    <BarChart data={accountingChartData} margin={{ top: 12, right: 20, left: 8, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 13 }} />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip formatter={(value) => formatMoney(Number(value))} />
+                      <Bar dataKey="value" radius={[10, 10, 0, 0]} isAnimationActive={false} barSize={72}>
+                        {accountingChartData.map((d) => (
+                          <Cell key={d.name} fill={d.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </>
             )}
-          </>
-        )}
+          </Card>
+        </div>
 
-        {cardVisibility.invoices && <div className="col-md-6 col-xl-3">
-          <Card
-            onClick={() => navigate('/sales/invoices')}
-            role="button"
-            tabIndex={0}
-            className="qf-dashboard-card qf-dashboard-card-invoices h-100"
-          >
-            <div className="d-flex align-items-center justify-content-between mb-2">
-              <p className="small fw-medium text-muted mb-0">ใบแจ้งหนี้</p>
-              <i className="bi bi-receipt text-primary" style={{ fontSize: '1.5rem' }}></i>
-            </div>
-            <p className="h6 fw-semibold mb-2">
-              ไปจัดการใบแจ้งหนี้
-            </p>
-            <p className="small text-muted mb-0">
-              สร้าง/แก้ไข/โพสต์ใบแจ้งหนี้
-            </p>
-          </Card>
-        </div>}
-        {cardVisibility.products && <div className="col-md-6 col-xl-3">
-          <Card
-            onClick={() => navigate('/products')}
-            role="button"
-            tabIndex={0}
-            className="qf-dashboard-card h-100"
-          >
-            <div className="d-flex align-items-center justify-content-between mb-2">
-              <p className="small fw-medium text-muted mb-0">สินค้า/บริการ</p>
-              <i className="bi bi-box-seam" style={{ fontSize: '1.5rem', color: '#0ea5e9' }}></i>
-            </div>
-            <p className="h6 fw-semibold mb-2">
-              {productsQuery.isLoading
-                ? 'กำลังโหลด...'
-                : productsQuery.isError
-                  ? '—'
-                  : `${productsQuery.data?.total ?? productsQuery.data?.items.length ?? 0} รายการ`}
-            </p>
-            <p className="small text-muted mb-0">
-              จัดการสินค้าและบริการ
-            </p>
-          </Card>
-        </div>}
-        {cardVisibility.quotations && <div className="col-md-6 col-xl-3">
-          <Card
-            onClick={() => navigate('/sales/orders?type=quotation')}
-            role="button"
-            tabIndex={0}
-            className="qf-dashboard-card h-100"
-          >
-            <div className="d-flex align-items-center justify-content-between mb-2">
-              <p className="small fw-medium text-muted mb-0">ใบเสนอราคา</p>
-              <i className="bi bi-file-earmark-text" style={{ fontSize: '1.5rem', color: '#0ea5e9' }}></i>
-            </div>
-            <p className="h6 fw-semibold mb-2">
-              จัดการใบเสนอราคา
-            </p>
-            <p className="small text-muted mb-0">
-              สร้าง/ติดตามใบเสนอราคา
-            </p>
-          </Card>
-        </div>}
-        {cardVisibility.salesOrders && <div className="col-md-6 col-xl-3">
-          <Card
-            onClick={() => navigate('/sales/orders?type=sale')}
-            role="button"
-            tabIndex={0}
-            className="qf-dashboard-card h-100"
-          >
-            <div className="d-flex align-items-center justify-content-between mb-2">
-              <p className="small fw-medium text-muted mb-0">ใบสั่งขาย</p>
-              <i className="bi bi-cart-check" style={{ fontSize: '1.5rem', color: '#16a34a' }}></i>
-            </div>
-            <p className="h6 fw-semibold mb-2">
-              จัดการ Sale Order
-            </p>
-            <p className="small text-muted mb-0">
-              ยืนยันและติดตามคำสั่งขาย
-            </p>
-          </Card>
-        </div>}
-        {cardVisibility.accounting && <div className="col-md-6 col-xl-3">
-          <Card
-            onClick={() => navigate('/accounting/reports')}
-            role="button"
-            tabIndex={0}
-            className="qf-dashboard-card qf-dashboard-card-accounting h-100"
-          >
-            <div className="d-flex align-items-center justify-content-between mb-2">
-              <p className="small fw-medium text-muted mb-0">รายงานบัญชี</p>
-              <i className="bi bi-graph-up-arrow" style={{ fontSize: '1.5rem', color: '#06b6d4' }}></i>
-            </div>
-            <p className="h6 fw-semibold mb-2">
-              ศูนย์รวมรายงาน
-            </p>
-            <p className="small text-muted mb-0">
-              งบการเงิน · เล่มบัญชี · ภาษี (คลิกเพื่อดูรายงาน)
-            </p>
-          </Card>
-        </div>}
-        {cardVisibility.etax && <div className="col-md-6 col-xl-3">
-          <Card
-            onClick={() => navigate('/accounting/etax')}
-            role="button"
-            tabIndex={0}
-            className="qf-dashboard-card qf-dashboard-card-etax h-100"
-          >
-            <div className="d-flex align-items-center justify-content-between mb-2">
-              <p className="small fw-medium text-muted mb-0">e-Tax</p>
-              <i className="bi bi-receipt-cutoff" style={{ fontSize: '1.5rem', color: '#0f766e' }}></i>
-            </div>
-              <p className="h6 fw-semibold mb-2">
-                {etaxQuery.isLoading
-                  ? 'กำลังโหลด...'
-                  : etaxQuery.isError
-                    ? '—'
-                  : `${etaxQuery.data?.config?.usage?.queueDepth ?? 0} รายการในคิว`}
-              </p>
-              <p className="small text-muted mb-2">
-              สำเร็จ {etaxQuery.data?.config?.usage ? `${etaxQuery.data.config.usage.successRate.toFixed(1)}%` : '—'} · บันทึก {etaxQuery.data?.config?.usage?.apiLogCount ?? '—'}
-              </p>
-              <div className="d-flex align-items-center justify-content-between">
-                <span className="small text-muted">
-                {etaxQuery.data?.config?.name || 'workflow ที่ดูแลจาก backend'}
+        <div className="col-12 col-xl-4">
+          <Card className="p-4 h-100">
+            <h2 className="h5 fw-bold mb-1">งานค้างที่ต้องติดตาม</h2>
+            <p className="text-muted mb-4 small">งานอนุมัติ เอกสาร e-Tax และรายการที่ควรตรวจสอบ</p>
+            <div className="d-flex flex-column gap-3">
+              <button className="d-flex align-items-center justify-content-between p-3 rounded-4 bg-light border qf-hover-lift text-start" type="button" onClick={() => navigate('/accounting/document-review')}>
+                <span>
+                  <span className="d-block fw-semibold small">คำขอซื้อรอการอนุมัติ</span>
+                  <span className="d-block text-muted" style={{ fontSize: '11px' }}>งานอนุมัติในคิวความรับผิดชอบของคุณ</span>
                 </span>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  navigate('/accounting/etax-settings')
-                }}
-              >
-                ตั้งค่า
-              </Button>
+                <span className="badge bg-light text-dark border fw-bold">{approvalTasksQuery.data?.pendingCount || 0} รายการ</span>
+              </button>
+              <button className="d-flex align-items-center justify-content-between p-3 rounded-4 bg-light border qf-hover-lift text-start" type="button" onClick={() => navigate('/accounting/etax')}>
+                <span>
+                  <span className="d-block fw-semibold small">เอกสาร e-Tax รอส่ง</span>
+                  <span className="d-block text-muted" style={{ fontSize: '11px' }}>นำส่งข้อมูลใบกำกับภาษีอิเล็กทรอนิกส์</span>
+                </span>
+                <span className="badge bg-light text-dark border fw-bold">{etaxQuery.data?.config?.usage?.queueDepth || 0} รายการ</span>
+              </button>
+              <button className="d-flex align-items-center justify-content-between p-3 rounded-4 bg-light border qf-hover-lift text-start" type="button" onClick={() => navigate('/sales/invoices')}>
+                <span>
+                  <span className="d-block fw-semibold small">ใบแจ้งหนี้เกินกำหนด</span>
+                  <span className="d-block text-muted" style={{ fontSize: '11px' }}>ยอดขายที่พ้นกำหนดการชำระเงิน</span>
+                </span>
+                <span className="badge bg-light text-dark border fw-bold">{kpiQuery.data?.receivables.overdueCount || 0} ใบ</span>
+              </button>
+              <button className="d-flex align-items-center justify-content-between p-3 rounded-4 bg-light border qf-hover-lift text-start" type="button" onClick={() => navigate('/purchases/orders')}>
+                <span>
+                  <span className="d-block fw-semibold small">ใบสั่งซื้อรอตรวจสอบ</span>
+                  <span className="d-block text-muted" style={{ fontSize: '11px' }}>ตรวจสอบและยืนยัน Purchase Orders</span>
+                </span>
+                <span className="badge bg-light text-dark border fw-bold">{purchaseStats?.draftCount || 0} ใบ</span>
+              </button>
             </div>
           </Card>
-        </div>}
-        {cardVisibility.purchaseOrders && <div className="col-md-6 col-xl-3">
-          <Card
-            onClick={() => navigate('/purchases/orders')}
-            role="button"
-            tabIndex={0}
-            className="qf-dashboard-card qf-dashboard-card-purchases h-100"
-          >
-            <div className="d-flex align-items-center justify-content-between mb-2">
-              <p className="small fw-medium text-muted mb-0">ใบสั่งซื้อ</p>
-              <i className="bi bi-cart text-success" style={{ fontSize: '1.5rem' }}></i>
-            </div>
-            <p className="h6 fw-semibold mb-2">
-              {purchaseOrdersQuery.isLoading
-                ? 'กำลังโหลด...'
-                : purchaseOrdersQuery.isError
-                  ? '—'
-                  : purchaseStats
-                    ? `${purchaseStats.doneCount + purchaseStats.purchaseCount} ใบ`
-                    : '0 ใบ'}
-            </p>
-            <p className="small text-muted mb-0">
-              {purchaseStats
-                ? `มูลค่า ${purchaseStats.totalValue.toLocaleString('th-TH', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}`
-                : 'จัดการใบสั่งซื้อ'}
-            </p>
-          </Card>
-        </div>}
-        {cardVisibility.purchaseRequests && <div className="col-md-6 col-xl-3">
-          <Card
-            onClick={() => navigate('/purchases/requests')}
-            role="button"
-            tabIndex={0}
-            className="qf-dashboard-card qf-dashboard-card-requests h-100"
-          >
-            <div className="d-flex align-items-center justify-content-between mb-2">
-              <p className="small fw-medium text-muted mb-0">คำขอซื้อ</p>
-              <i className="bi bi-clipboard-check" style={{ fontSize: '1.5rem', color: '#ec4899' }}></i>
-            </div>
-            <p className="h6 fw-semibold mb-2">
-              {purchaseRequestsQuery.isLoading
-                ? 'กำลังโหลด...'
-                : purchaseRequestsQuery.isError
-                  ? '—'
-                  : purchaseRequestStats
-                    ? `${purchaseRequestStats.totalCount} รายการ`
-                    : '0 รายการ'}
-            </p>
-            <p className="small text-muted mb-0">
-              {purchaseRequestStats
-                ? `มูลค่า ${purchaseRequestStats.totalValue.toLocaleString('th-TH', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}`
-                : 'จัดการคำขอซื้อ'}
-            </p>
-          </Card>
-        </div>}
-        {cardVisibility.approvals && (
+        </div>
+      </div>
+
+      <div className="row g-4">
+        {cardVisibility.invoices ? (
+          <div className="col-md-6 col-xl-3">
+            <Card onClick={() => navigate('/sales/invoices')} role="button" tabIndex={0} className="qf-dashboard-card qf-hover-lift h-100">
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <p className="small fw-medium text-muted mb-0">ใบแจ้งหนี้</p>
+                <i className="bi bi-receipt text-primary" style={{ fontSize: '1.5rem' }} />
+              </div>
+              <p className="h6 fw-semibold mb-2">ไปจัดการใบแจ้งหนี้</p>
+              <p className="small text-muted mb-0">สร้าง/แก้ไข/โพสต์ใบแจ้งหนี้</p>
+            </Card>
+          </div>
+        ) : null}
+        {cardVisibility.products ? (
+          <div className="col-md-6 col-xl-3">
+            <Card onClick={() => navigate('/products')} role="button" tabIndex={0} className="qf-dashboard-card qf-hover-lift h-100">
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <p className="small fw-medium text-muted mb-0">สินค้า/บริการ</p>
+                <i className="bi bi-box-seam" style={{ fontSize: '1.5rem', color: '#0ea5e9' }} />
+              </div>
+              <p className="h6 fw-semibold mb-2">{productsQuery.isLoading ? 'กำลังโหลด...' : productsQuery.isError ? '—' : `${productCount} รายการ`}</p>
+              <p className="small text-muted mb-0">จัดการสินค้าและบริการ</p>
+            </Card>
+          </div>
+        ) : null}
+        {cardVisibility.purchaseOrders ? (
+          <div className="col-md-6 col-xl-3">
+            <Card onClick={() => navigate('/purchases/orders')} role="button" tabIndex={0} className="qf-dashboard-card qf-hover-lift h-100">
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <p className="small fw-medium text-muted mb-0">ใบสั่งซื้อ</p>
+                <i className="bi bi-cart text-success" style={{ fontSize: '1.5rem' }} />
+              </div>
+              <p className="h6 fw-semibold mb-2">{purchaseOrdersQuery.isLoading ? 'กำลังโหลด...' : purchaseOrdersQuery.isError ? '—' : `${(purchaseStats?.doneCount || 0) + (purchaseStats?.purchaseCount || 0)} ใบ`}</p>
+              <p className="small text-muted mb-0">มูลค่า {formatMoney(purchaseStats?.totalValue)}</p>
+            </Card>
+          </div>
+        ) : null}
+        {cardVisibility.etax ? (
+          <div className="col-md-6 col-xl-3">
+            <Card onClick={() => navigate('/accounting/etax')} role="button" tabIndex={0} className="qf-dashboard-card qf-hover-lift h-100">
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <p className="small fw-medium text-muted mb-0">e-Tax</p>
+                <i className="bi bi-receipt-cutoff" style={{ fontSize: '1.5rem', color: '#0f766e' }} />
+              </div>
+              <p className="h6 fw-semibold mb-2">{etaxQuery.isLoading ? 'กำลังโหลด...' : etaxQuery.isError ? '—' : `${etaxQuery.data?.config?.usage?.queueDepth ?? 0} รายการในคิว`}</p>
+              <p className="small text-muted mb-0">สำเร็จ {etaxQuery.data?.config?.usage ? `${etaxQuery.data.config.usage.successRate.toFixed(1)}%` : '—'}</p>
+            </Card>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="row g-4">
+        {cardVisibility.approvals ? (
           <div className="col-12 col-xl-6">
-            <Card className="h-100">
+            <Card className="p-4 h-100">
               <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
                 <div>
-                  <p className="small fw-medium text-muted mb-1">งานรออนุมัติ</p>
-                  <p className="h6 fw-semibold mb-1">งานรออนุมัติของฉัน</p>
+                  <h2 className="h5 fw-bold mb-1">งานรออนุมัติของฉัน</h2>
                   <p className="small text-muted mb-0">ผูกกับ backend approval queue และ process ได้จากหน้าหลัก</p>
                 </div>
-                <Button size="sm" variant="ghost" onClick={() => navigate('/accounting/document-review')}>
-                  เปิดกล่องงานตรวจสอบ
-                </Button>
+                <Button size="sm" variant="ghost" onClick={() => navigate('/accounting/document-review')}>เปิดกล่องงาน</Button>
               </div>
-
               {approvalTasksQuery.isLoading ? (
                 <div className="small text-muted">กำลังโหลดงานอนุมัติ...</div>
               ) : approvalTasksQuery.isError ? (
@@ -814,8 +742,8 @@ export function DashboardPage() {
                 <div className="small text-muted">ไม่มีงานรออนุมัติในขณะนี้</div>
               ) : (
                 <div className="d-flex flex-column gap-3">
-                  {approvalTasksQuery.data?.items.map((task) => (
-                    <div key={`${task.model}:${task.id}`} className="border rounded-3 p-3 bg-light-subtle">
+                  {approvalTasksQuery.data?.items.slice(0, 3).map((task) => (
+                    <div key={`${task.model}:${task.id}`} className="border rounded-4 p-3 bg-light">
                       <div className="d-flex flex-column flex-lg-row align-items-lg-start justify-content-between gap-3">
                         <div className="flex-grow-1">
                           <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
@@ -826,21 +754,12 @@ export function DashboardPage() {
                           <div className="fw-semibold">{task.name}</div>
                           <div className="small text-muted mt-1">
                             {task.requestedByName ? `ผู้ขอ: ${task.requestedByName}` : 'ผู้ขอ: -'}
-                            {task.company ? ` • บริษัท: ${task.company}` : ''}
-                            {task.requestedDate ? ` • วันที่: ${task.requestedDate}` : ''}
+                            {task.company ? ` · บริษัท: ${task.company}` : ''}
+                            {task.requestedDate ? ` · วันที่: ${task.requestedDate}` : ''}
                           </div>
-                          {task.description ? (
-                            <div className="small mt-2 text-body-secondary">{task.description}</div>
-                          ) : null}
                         </div>
                         <div className="text-lg-end">
-                          <div className="fw-semibold">
-                            {(task.amountTotal || 0).toLocaleString('th-TH', {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}{' '}
-                            {task.currency || 'THB'}
-                          </div>
+                          <div className="fw-semibold">{formatMoney(task.amountTotal)} {task.currency || 'THB'}</div>
                           <div className="small text-muted">มูลค่ารวมโดยประมาณ</div>
                         </div>
                       </div>
@@ -848,12 +767,7 @@ export function DashboardPage() {
                         <Button
                           size="sm"
                           onClick={() => approvalMutation.mutate({ model: task.model, id: task.id, action: 'approve' })}
-                          isLoading={
-                            approvalMutation.isPending &&
-                            approvalMutation.variables?.model === task.model &&
-                            approvalMutation.variables?.id === task.id &&
-                            approvalMutation.variables?.action === 'approve'
-                          }
+                          isLoading={approvalMutation.isPending && approvalMutation.variables?.model === task.model && approvalMutation.variables?.id === task.id && approvalMutation.variables?.action === 'approve'}
                         >
                           อนุมัติ
                         </Button>
@@ -861,20 +775,11 @@ export function DashboardPage() {
                           size="sm"
                           variant="secondary"
                           onClick={() => approvalMutation.mutate({ model: task.model, id: task.id, action: 'reject' })}
-                          isLoading={
-                            approvalMutation.isPending &&
-                            approvalMutation.variables?.model === task.model &&
-                            approvalMutation.variables?.id === task.id &&
-                            approvalMutation.variables?.action === 'reject'
-                          }
+                          isLoading={approvalMutation.isPending && approvalMutation.variables?.model === task.model && approvalMutation.variables?.id === task.id && approvalMutation.variables?.action === 'reject'}
                         >
                           ปฏิเสธ
                         </Button>
-                        {task.route ? (
-                          <Button size="sm" variant="ghost" onClick={() => navigate(task.route || '/accounting/document-review')}>
-                            เปิดเอกสาร
-                          </Button>
-                        ) : null}
+                        {task.route ? <Button size="sm" variant="ghost" onClick={() => navigate(task.route || '/accounting/document-review')}>เปิดเอกสาร</Button> : null}
                       </div>
                     </div>
                   ))}
@@ -882,24 +787,31 @@ export function DashboardPage() {
               )}
             </Card>
           </div>
-        )}
-        {cardVisibility.ai && <div className="col-md-6 col-xl-3">
-          <Card
-            onClick={() => navigate('/agent')}
-            role="button"
-            tabIndex={0}
-            className="qf-dashboard-card qf-dashboard-card-ai h-100"
-            style={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
-              cursor: 'pointer',
-            }}
-          >
-            <div className="d-flex align-items-center justify-content-between mb-2">
-              <p className="small fw-medium mb-0" style={{ opacity: 0.9 }}>
-                ผู้ช่วย AI
-              </p>
-              <div className="d-flex align-items-center gap-2">
+        ) : null}
+
+        <div className="col-12 col-xl-6">
+          <Card className="p-4 h-100">
+            <h2 className="h5 fw-bold mb-1">ประวัติกิจกรรมล่าสุด</h2>
+            <p className="text-muted mb-4 small">กิจกรรมและเอกสารที่ดึงได้จากรายการล่าสุดในระบบ</p>
+            <div className="qf-timeline">
+              {recentActivities.map((activity) => (
+                <div className="qf-timeline-item" key={`${activity.time}:${activity.title}`}>
+                  <span className="qf-timeline-indicator" style={{ background: activity.tone }} />
+                  <div className="qf-timeline-time">{activity.time}</div>
+                  <div className="qf-timeline-content">{activity.title}</div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      <div className="row g-4">
+        {cardVisibility.ai ? (
+          <div className="col-md-6 col-xl-3">
+            <Card onClick={() => navigate('/agent')} role="button" tabIndex={0} className="qf-dashboard-card h-100 qf-hover-lift" style={{ background: 'linear-gradient(135deg, #26d6f0 0%, #3b82f6 100%)', color: 'white', cursor: 'pointer' }}>
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <p className="small fw-medium mb-0" style={{ opacity: 0.9 }}>ผู้ช่วย AI</p>
                 <select
                   className="form-select form-select-sm"
                   value={assistantLang}
@@ -914,267 +826,59 @@ export function DashboardPage() {
                   <option value="th_TH">TH</option>
                   <option value="en_US">EN</option>
                 </select>
-                <i
-                  className="bi bi-magic"
-                  style={{ fontSize: '1.5rem', color: 'white' }}
-                ></i>
               </div>
-            </div>
-            <p className="h6 fw-semibold mb-2" style={{ color: 'white' }}>
-              สร้างด้วย AI
-            </p>
-            <p className="small mb-2" style={{ opacity: 0.95 }}>
-              ภาษา Assistant: {assistantLang === 'th_TH' ? 'ไทย (ค่าเริ่มต้น)' : 'English'}
-            </p>
-                <div className="small" style={{ opacity: 0.95 }}>
-              {aiTasksQuery.isLoading ? (
-                <div>กำลังโหลด task...</div>
-              ) : aiTasksQuery.isError ? (
-                <div>โหลด task ไม่สำเร็จ</div>
-              ) : (aiTasksQuery.data || []).length === 0 ? (
-                <div>ยังไม่มี task</div>
-              ) : (
-                <div className="d-flex flex-column gap-1">
-                  {(aiTasksQuery.data || []).slice(0, 3).map((task) => {
-                    const meta = statusMeta(task.status)
-                    return (
-                      <div
-                        key={task.session_id}
-                        className="rounded p-2"
-                        style={{ background: 'rgba(255,255,255,0.16)' }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className="fw-semibold text-truncate" title={task.title}>
-                          {task.title}
-                        </div>
-                        <div className="d-flex align-items-center justify-content-between mt-1">
-                          <span className={`badge ${meta.cls}`}>{meta.label}</span>
-                          <button
-                            type="button"
-                            className="btn btn-link btn-sm p-0 text-white text-decoration-underline"
-                            onClick={() => navigate(task.source?.route || '/agent')}
-                          >
-                            {task.source?.label || 'แหล่งที่มา'}
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          </Card>
-        </div>}
-        {cardVisibility.excel && <div className="col-md-6 col-xl-3">
-          <Card
-            onClick={() => navigate('/excel-import')}
-            role="button"
-            tabIndex={0}
-            className="qf-dashboard-card qf-dashboard-card-excel h-100"
-          >
-            <div className="d-flex align-items-center justify-content-between mb-2">
-              <p className="small fw-medium text-muted mb-0">นำเข้า Excel</p>
-              <i className="bi bi-file-earmark-spreadsheet text-warning" style={{ fontSize: '1.5rem' }}></i>
-            </div>
-            <p className="h6 fw-semibold mb-2">
-              นำเข้าข้อมูลจาก Excel
-            </p>
-            <p className="small text-muted mb-0">
-              อัปโหลด .xlsx เพื่อสร้างข้อมูล
-            </p>
-          </Card>
-        </div>}
-        {cardVisibility.backend && <div className="col-md-6 col-xl-3">
-          <Card
-            onClick={() => navigate('/backend-connection')}
-            role="button"
-            tabIndex={0}
-            className="qf-dashboard-card qf-dashboard-card-backend h-100"
-          >
-            <div className="d-flex align-items-center justify-content-between mb-2">
-              <p className="small fw-medium text-muted mb-0">ระบบหลังบ้าน</p>
-              <i className="bi bi-plug text-purple" style={{ fontSize: '1.5rem', color: '#8b5cf6' }}></i>
-            </div>
-            <p className="h6 fw-semibold mb-2">
-              ตั้งค่า/Provisioning
-            </p>
-            <p className="small text-muted mb-0">
-              สร้างบริษัทและ admin ใหม่
-            </p>
-          </Card>
-        </div>}
-        {cardVisibility.connection && <div className="col-md-6 col-xl-3">
-          <Card className="h-100">
-            <p className="small fw-medium text-muted mb-2">สถานะการเชื่อมต่อ</p>
-            <p className="h6 fw-semibold mb-2">
-              {pingQuery.isLoading
-                ? 'กำลังตรวจสอบ...'
-                : pingQuery.isError
-                  ? 'เชื่อมต่อไม่ได้'
-                  : pingQuery.data?.pong
-                    ? 'เชื่อมต่อได้ (pong)'
-                    : 'ไม่ทราบสถานะ'}
-            </p>
-            <p className="small text-muted mb-0">
-              รหัส Instance: {instancePublicId ?? '—'}
-            </p>
-          </Card>
-        </div>}
+              <p className="h6 fw-semibold mb-2" style={{ color: 'white' }}>สร้างด้วย AI</p>
+              <div className="small" style={{ opacity: 0.95 }}>
+                {aiTasksQuery.isLoading ? 'กำลังโหลด task...' : aiTasksQuery.isError ? 'โหลด task ไม่สำเร็จ' : (aiTasksQuery.data || []).length === 0 ? 'ยังไม่มี task' : `${aiTasksQuery.data?.length ?? 0} task ล่าสุด`}
+              </div>
+              {(aiTasksQuery.data || []).slice(0, 2).map((task) => {
+                const meta = statusMeta(task.status)
+                return (
+                  <div key={task.session_id} className="rounded p-2 mt-2" style={{ background: 'rgba(255,255,255,0.16)' }} onClick={(e) => e.stopPropagation()}>
+                    <div className="fw-semibold text-truncate small" title={task.title}>{task.title}</div>
+                    <span className={`badge mt-1 ${meta.cls}`}>{meta.label}</span>
+                  </div>
+                )
+              })}
+            </Card>
+          </div>
+        ) : null}
+        {cardVisibility.excel ? (
+          <div className="col-md-6 col-xl-3">
+            <Card onClick={() => navigate('/excel-import')} role="button" tabIndex={0} className="qf-dashboard-card qf-hover-lift h-100">
+              <p className="small fw-medium text-muted mb-2">นำเข้า Excel</p>
+              <p className="h6 fw-semibold mb-2">นำเข้าข้อมูลจาก Excel</p>
+              <p className="small text-muted mb-0">อัปโหลด .xlsx เพื่อสร้างข้อมูล</p>
+            </Card>
+          </div>
+        ) : null}
+        {cardVisibility.backend ? (
+          <div className="col-md-6 col-xl-3">
+            <Card onClick={() => navigate('/backend-connection')} role="button" tabIndex={0} className="qf-dashboard-card qf-hover-lift h-100">
+              <p className="small fw-medium text-muted mb-2">ระบบหลังบ้าน</p>
+              <p className="h6 fw-semibold mb-2">ตั้งค่า/Provisioning</p>
+              <p className="small text-muted mb-0">สร้างบริษัทและ admin ใหม่</p>
+            </Card>
+          </div>
+        ) : null}
+        {cardVisibility.connection ? (
+          <div className="col-md-6 col-xl-3">
+            <Card className="h-100">
+              <p className="small fw-medium text-muted mb-2">สถานะการเชื่อมต่อ</p>
+              <p className="h6 fw-semibold mb-2">
+                {pingQuery.isLoading ? 'กำลังตรวจสอบ...' : pingQuery.isError ? 'เชื่อมต่อไม่ได้' : pingQuery.data?.pong ? 'เชื่อมต่อได้ (pong)' : 'ไม่ทราบสถานะ'}
+              </p>
+              <p className="small text-muted mb-0">รหัส Instance: {instancePublicId ?? '—'}</p>
+            </Card>
+          </div>
+        ) : null}
       </div>
 
-      <div className="row g-4 mt-4">
-        <div className="col-12">
-          <Card className="p-3">
-            <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2 mb-3">
-              <div>
-                <div className="h6 fw-semibold mb-1">สรุปบัญชี (เดือนนี้)</div>
-                <div className="small text-muted">
-                  ช่วงวันที่ {accFilterFrom} ถึง {accFilterTo}
-                  {!canSeeReports && (
-                    <span className="ms-2">
-                      (ถ้าเรียกไม่ได้ ให้เปิด scope: <code>reports</code>)
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="d-flex gap-2 flex-wrap">
-                <div className="d-flex gap-2 align-items-center flex-wrap">
-                  <input
-                    type="date"
-                    className="form-control form-control-sm"
-                    style={{ width: 150 }}
-                    value={accDateFrom}
-                    onChange={(e) => setAccDateFrom(e.target.value)}
-                  />
-                  <span className="small text-muted">ถึง</span>
-                  <input
-                    type="date"
-                    className="form-control form-control-sm"
-                    style={{ width: 150 }}
-                    value={accDateTo}
-                    onChange={(e) => setAccDateTo(e.target.value)}
-                  />
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={applyAccountingRange}
-                    disabled={
-                      !accDateFrom ||
-                      !accDateTo ||
-                      new Date(accDateFrom).getTime() > new Date(accDateTo).getTime()
-                    }
-                  >
-                    ใช้ช่วงวันที่
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={resetAccountingRange}>
-                    เดือนนี้
-                  </Button>
-                </div>
-                <Button size="sm" variant="secondary" onClick={() => navigate('/accounting/reports')}>
-                  ไปหน้ารายงานบัญชี
-                </Button>
-              </div>
-            </div>
-
-            {profitLossQuery.isError ? (
-              <div className="alert alert-danger mb-0">
-                <div className="fw-semibold">โหลดสรุปบัญชีไม่สำเร็จ</div>
-                <div className="small">
-                  {profitLossQuery.error instanceof Error ? profitLossQuery.error.message : 'ไม่ทราบสาเหตุ'}
-                </div>
-              </div>
-            ) : (
-              <div className="row g-3">
-                <div className="col-12">
-                  <div className="row g-2">
-                    <div className="col-12 col-md-4">
-                      <div
-                        className="rounded bg-light p-3 h-100 qf-clickable-metric qf-clickable-metric--income"
-                        role="button"
-                        tabIndex={0}
-                        aria-label="เปิดรายละเอียดรายได้"
-                        onClick={() => goToProfitLossDetail('income')}
-                        onKeyDown={(e) => onMetricCardKeyDown(e, 'income')}
-                      >
-                        <div className="small text-muted">รายได้รวม</div>
-                        <div className="h4 fw-semibold mb-0 font-monospace">
-                          {accountingSnapshot.income.toLocaleString('th-TH')}
-                        </div>
-                        <div className="qf-clickable-metric__hint">
-                          คลิกเพื่อดูรายละเอียด
-                          <i className="bi bi-arrow-right-short ms-1" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="col-12 col-md-4">
-                      <div
-                        className="rounded bg-light p-3 h-100 qf-clickable-metric qf-clickable-metric--expense"
-                        role="button"
-                        tabIndex={0}
-                        aria-label="เปิดรายละเอียดรายจ่าย"
-                        onClick={() => goToProfitLossDetail('expense')}
-                        onKeyDown={(e) => onMetricCardKeyDown(e, 'expense')}
-                      >
-                        <div className="small text-muted">รายจ่ายรวม</div>
-                        <div className="h4 fw-semibold mb-0 font-monospace">
-                          {accountingSnapshot.expense.toLocaleString('th-TH')}
-                        </div>
-                        <div className="qf-clickable-metric__hint">
-                          คลิกเพื่อดูรายละเอียด
-                          <i className="bi bi-arrow-right-short ms-1" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="col-12 col-md-4">
-                      <div
-                        className={`rounded p-3 h-100 qf-profit-metric ${
-                          accountingSnapshot.profit >= 0 ? 'qf-profit-metric--gain' : 'qf-profit-metric--loss'
-                        }`}
-                      >
-                        <div className="small text-muted">กำไรสุทธิ</div>
-                        <div className="h4 fw-semibold mb-0 font-monospace">
-                          {accountingSnapshot.profit.toLocaleString('th-TH')}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-12">
-                  <div className="rounded bg-light p-3">
-                    <div className="small text-muted mb-2">กราฟสรุป</div>
-                    <div style={{ height: 280 }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={accountingChartData} margin={{ top: 12, right: 20, left: 8, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                          <XAxis dataKey="name" tick={{ fontSize: 13 }} />
-                          <YAxis tick={{ fontSize: 12 }} />
-                          <Tooltip />
-                          <Bar dataKey="value" radius={[8, 8, 0, 0]} isAnimationActive={false} barSize={72}>
-                            {accountingChartData.map((d, idx) => (
-                              <Cell key={idx} fill={d.fill} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </Card>
+      {partialCount > 0 ? (
+        <div className="small text-muted">
+          ชำระบางส่วน {partialCount} ใบ · ยอดรับแล้วบางส่วน {formatMoney(partialTotal)}
         </div>
-        <div className="col-12">
-          <Card>
-            <p className="h6 fw-semibold mb-2">
-              Next: KPI จริงจาก Odoo
-            </p>
-            <p className="small text-muted mb-0">
-              ตอนนี้ยังไม่มี endpoint KPI/แดชบอร์ดใน addon แต่ระบบ auth + instance
-              ทำงานแล้ว (เริ่มดึง sales/invoices ต่อได้เลย)
-            </p>
-          </Card>
-        </div>
-      </div>
+      ) : null}
     </div>
   )
 }
