@@ -6,7 +6,6 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
-import { BrandIcon } from '@/components/icons/BrandIcon'
 
 function toUserLoginError(raw?: string) {
   const text = String(raw || '').trim()
@@ -58,15 +57,16 @@ export function LoginPage() {
         <Card className="border-0 shadow-lg p-3 p-sm-4 bg-white" style={{ borderRadius: '24px' }}>
           <div className="p-3">
             <div className="text-center mb-4">
-              <div
-                className="d-inline-flex align-items-center justify-content-center p-3 mb-3 bg-light rounded-circle"
-                style={{ width: 64, height: 64 }}
-              >
-                <BrandIcon variant="gold" size={32} />
-              </div>
-              <div className="small fw-bold text-uppercase text-primary mb-1" style={{ letterSpacing: '0.2em', fontSize: '0.75rem' }}>
-                CLT ONLINE
-              </div>
+              <img
+                src="/chonlatee-logo.png"
+                alt="Chonlatee Innovation"
+                className="mb-4"
+                style={{
+                  width: 'clamp(184px, 58%, 236px)',
+                  height: 'auto',
+                  display: 'inline-block',
+                }}
+              />
               <h1 className="h4 fw-bold text-dark mb-2">ยินดีต้อนรับกลับมา</h1>
               <p className="text-muted small mb-0">
                 ระบบงานบัญชีออนไลน์และเอกสารสำหรับธุรกิจ SME ไทย

@@ -3,35 +3,31 @@ interface AppLogoProps {
   tone?: 'dark' | 'light'
 }
 
-const sizeMap: Record<NonNullable<AppLogoProps['size']>, number> = {
-  sm: 28,
-  md: 36,
-  lg: 44,
+const sizeMap: Record<NonNullable<AppLogoProps['size']>, { width: number; height: number }> = {
+  sm: { width: 150, height: 42 },
+  md: { width: 190, height: 52 },
+  lg: { width: 230, height: 62 },
 }
 
 export function AppLogo({ size = 'md', tone = 'dark' }: AppLogoProps) {
-  const px = sizeMap[size]
+  const dimensions = sizeMap[size]
 
   return (
-    <div className="inline-flex items-center gap-2">
-      <span
-        className="inline-flex items-center justify-center rounded-3xl bg-gradient-to-br from-primary via-secondary to-surfaceDark shadow-card"
-        style={{ width: px, height: px }}
-      >
-        <span className="h-[55%] w-[55%] rounded-[40%] bg-bgLight/95 shadow-soft" />
-      </span>
-      <span
-        className={
-          tone === 'light'
-            ? 'text-sm font-semibold tracking-wide text-white'
-            : 'text-sm font-semibold tracking-wide text-surfaceDark'
-        }
-      >
-        CLT
-        <span className="text-xs align-top text-accentGold">Online</span>
-      </span>
-    </div>
+    <span
+      className="inline-flex items-center justify-center"
+      style={{
+        width: dimensions.width,
+        height: dimensions.height,
+        padding: tone === 'light' ? '4px 8px' : 0,
+        borderRadius: tone === 'light' ? 8 : 0,
+        background: tone === 'light' ? 'rgba(255, 255, 255, 0.92)' : 'transparent',
+      }}
+    >
+      <img
+        src="/chonlatee-logo.png"
+        alt="Chonlatee Innovation"
+        style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain' }}
+      />
+    </span>
   )
 }
-
-

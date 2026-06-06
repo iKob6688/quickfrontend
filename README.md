@@ -70,6 +70,7 @@ ERPTH has been restyled to follow the CLT/Quick frontend visual system while pre
 - Mobile keeps the existing bottom navigation model while inheriting the updated visual style.
 - Login uses the compact centered CLT-style card but still runs the real ERPTH login flow.
 - Dashboard visuals follow the target layout while keeping real ERPTH KPI, approval, accounting, e-Tax, purchase, visibility, and navigation behavior.
+- System/login branding uses the original Chonlatee Innovation PNG at `public/chonlatee-logo.png`, copied from `Active22/CholateeInnovation/Quick Acc Online/quickfront18/logo_bg_white.png`. Do not redraw this logo by hand.
 
 Do not copy demo-only UX source auth, API mock adapters, mock credentials, or synthetic dashboard fallbacks into this project.
 
