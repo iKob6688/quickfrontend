@@ -1088,6 +1088,35 @@ body {
   color: var(--qf-text-muted) !important;
 }
 
+[data-qf-theme='dark'] .qf-app label,
+[data-qf-theme='dark'] .qf-app .form-label,
+[data-qf-theme='dark'] .qf-app .table thead th {
+  color: var(--qf-text-strong) !important;
+}
+
+[data-qf-theme='dark'] .qf-app .form-control,
+[data-qf-theme='dark'] .qf-app .form-select,
+[data-qf-theme='dark'] .qf-app textarea,
+[data-qf-theme='dark'] .qf-app input {
+  background-color: var(--qf-bg-2) !important;
+  color: var(--qf-text-strong) !important;
+  border-color: var(--qf-border-strong) !important;
+}
+
+[data-qf-theme='dark'] .qf-app .form-control::placeholder,
+[data-qf-theme='dark'] .qf-app textarea::placeholder,
+[data-qf-theme='dark'] .qf-app input::placeholder {
+  color: #c8d6e8 !important;
+  opacity: 0.72;
+}
+
+[data-qf-theme='dark'] .qf-app .table,
+[data-qf-theme='dark'] .qf-app .table tbody,
+[data-qf-theme='dark'] .qf-app .table tbody tr,
+[data-qf-theme='dark'] .qf-app .table td {
+  color: var(--qf-text) !important;
+}
+
 [data-qf-theme='dark'] .qf-app .btn.btn-light,
 [data-qf-theme='dark'] .qf-app .btn-outline-secondary,
 [data-qf-theme='dark'] .qf-app .btn-outline-danger,

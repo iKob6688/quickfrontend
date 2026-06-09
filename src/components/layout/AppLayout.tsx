@@ -79,12 +79,12 @@ export function AppLayout() {
     { path: '/accounting/document-review', label: 'กล่องงานตรวจสอบ', scope: 'accounting_reports', icon: 'bi-inboxes' },
     { path: '/accounting/reports', label: 'รายงานบัญชี', scope: 'accounting_reports', icon: 'bi-graph-up-arrow' },
     { path: '/accounting/etax', label: 'เอกสาร e-Tax', scope: 'etax', icon: 'bi-receipt-cutoff' },
-    { path: '/accounting/tax-settings', label: 'ตั้งค่า VAT/ภาษี', scope: 'accounting_reports', icon: 'bi-percent' },
     { path: '/customers', label: 'รายชื่อติดต่อ', scope: 'contacts', icon: 'bi-people' },
     { path: '/products', label: 'สินค้า/บริการ', scope: 'products', icon: 'bi-box-seam' },
     { path: '/excel-import', label: 'นำเข้า Excel', scope: 'excel', icon: 'bi-file-earmark-spreadsheet' },
     { path: '/reports-studio', label: 'สตูดิโอรายงาน', mobileLabel: 'สตูดิโอ\nรายงาน', icon: 'bi-layout-text-window-reverse' },
     { path: '/backend-connection', label: 'ตั้งค่าการเชื่อมต่อ', scope: 'auth', icon: 'bi-plug' },
+    { path: '/accounting/tax-settings', label: 'ตั้งค่า VAT/ภาษี', scope: 'accounting_reports', icon: 'bi-percent' },
   ]
   const mobileNavItems = navItems.filter((item) => item.showOnMobile)
   const mobileMoreNavItems = navItems.filter((item) => !item.showOnMobile)
@@ -124,12 +124,11 @@ export function AppLayout() {
       path: '/accounting/document-review',
       label: 'การบัญชี',
       icon: 'bi-journal-check',
-      active: isPathActive('/accounting') && !isPathActive('/accounting/reports'),
+      active: isPathActive('/accounting') && !isPathActive('/accounting/reports') && !isPathActive('/accounting/tax-settings'),
       scope: 'accounting_reports',
       children: [
         { path: '/accounting/document-review', label: 'กล่องงานตรวจสอบ', scope: 'accounting_reports' },
         { path: '/accounting/etax', label: 'เอกสาร e-Tax', scope: 'etax' },
-        { path: '/accounting/tax-settings', label: 'ตั้งค่า VAT/ภาษี', scope: 'accounting_reports' },
       ],
     },
     { path: '/accounting/reports', label: 'รายงาน', icon: 'bi-bar-chart-line', active: isPathActive('/accounting/reports'), scope: 'accounting_reports' },
@@ -139,10 +138,11 @@ export function AppLayout() {
       path: '/backend-connection',
       label: 'ตั้งค่า',
       icon: 'bi-sliders',
-      active: isPathActive('/backend-connection') || isPathActive('/excel-import') || isPathActive('/reports-studio'),
+      active: isPathActive('/backend-connection') || isPathActive('/accounting/tax-settings') || isPathActive('/excel-import') || isPathActive('/reports-studio'),
       scope: 'auth',
       children: [
         { path: '/backend-connection', label: 'ตั้งค่าการเชื่อมต่อ', scope: 'auth' },
+        { path: '/accounting/tax-settings', label: 'ตั้งค่า VAT/ภาษี', scope: 'accounting_reports' },
         { path: '/excel-import', label: 'นำเข้า Excel', scope: 'excel' },
         { path: '/reports-studio', label: 'สตูดิโอรายงาน' },
       ],
