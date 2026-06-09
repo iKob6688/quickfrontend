@@ -68,6 +68,69 @@
   color: #26d6f0 !important;
 }
 
+/* Dark mode readability locks for pages with legacy light utility classes. */
+[data-qf-theme='dark'] .qf-app .bg-white,
+[data-qf-theme='dark'] .qf-app .bg-light,
+[data-qf-theme='dark'] .qf-app .bg-light-subtle,
+[data-qf-theme='dark'] .qf-app .card-header,
+[data-qf-theme='dark'] .qf-app .qf-so-page .qf-so-list-header,
+[data-qf-theme='dark'] .qf-app .qf-so-page .qf-so-line,
+[data-qf-theme='dark'] .qf-app .qf-pr-line-card,
+[data-qf-theme='dark'] .qf-app .qf-pr-summary-card,
+[data-qf-theme='dark'] .qf-app .qf-admin-setup-page .qf-pro-card {
+  background: var(--qf-bg-1) !important;
+  color: var(--qf-text) !important;
+  border-color: var(--qf-border-strong) !important;
+}
+
+[data-qf-theme='dark'] .qf-app .qf-admin-setup-page .qf-pro-card {
+  box-shadow: var(--qf-card-shadow) !important;
+}
+
+[data-qf-theme='dark'] .qf-app .qf-so-page .qf-so-line__head,
+[data-qf-theme='dark'] .qf-app .qf-so-page .qf-so-line__index,
+[data-qf-theme='dark'] .qf-app .qf-pr-line-title,
+[data-qf-theme='dark'] .qf-app .qf-pr-summary-row,
+[data-qf-theme='dark'] .qf-app .qf-pr-line-inline-summary,
+[data-qf-theme='dark'] .qf-app [class*='text-surfaceDark'],
+[data-qf-theme='dark'] .qf-app [class*='text-primaryDark'] {
+  color: var(--qf-text-strong) !important;
+}
+
+[data-qf-theme='dark'] .qf-app .qf-pr-line-currency,
+[data-qf-theme='dark'] .qf-app .qf-so-page .qf-so-line__field .form-text,
+[data-qf-theme='dark'] .qf-app .qf-so-page .qf-so-line__field .text-muted {
+  color: var(--qf-text-muted) !important;
+}
+
+[data-qf-theme='dark'] .qf-app .qf-so-page .qf-so-line__total-box,
+[data-qf-theme='dark'] .qf-app .qf-key-input {
+  background: var(--qf-bg-2) !important;
+  color: var(--qf-text-strong) !important;
+  border-color: var(--qf-border-strong) !important;
+  caret-color: var(--qf-text-strong) !important;
+}
+
+[data-qf-theme='dark'] .qf-app .qf-key-input::placeholder {
+  color: #c8d6e8 !important;
+  opacity: 0.72;
+}
+
+[data-qf-theme='dark'] .qf-app .qf-tabs {
+  background: var(--qf-bg-2) !important;
+  border-color: var(--qf-border-strong) !important;
+}
+
+[data-qf-theme='dark'] .qf-app .qf-tabs .qf-tabs__btn {
+  color: var(--qf-text-muted) !important;
+}
+
+[data-qf-theme='dark'] .qf-app .qf-tabs .qf-tabs__btn:hover,
+[data-qf-theme='dark'] .qf-app .qf-tabs .qf-tabs__btn--active {
+  background: var(--qf-bg-3) !important;
+  color: var(--qf-primary) !important;
+}
+
 /* CLT/Quick UX clone overrides */
 .qf-app .card {
   border-radius: var(--qf-radius-xl);
