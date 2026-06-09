@@ -2692,3 +2692,45 @@ body {
   background: #fff !important;
   color: #26d6f0 !important;
 }
+
+/* Sidebar readability locks for both light and dark mode. */
+.qf-app .qf-sidebar {
+  background: var(--qf-bg-1) !important;
+  border-right-color: var(--qf-border) !important;
+}
+
+.qf-app .qf-sidebar-item,
+.qf-app .qf-sidebar-item__icon,
+.qf-app .qf-sidebar-item__icon i,
+.qf-app .qf-sidebar-item__label,
+.qf-app .qf-sidebar-subitem,
+.qf-app .qf-sidebar-subitem__label {
+  color: var(--qf-text-muted) !important;
+}
+
+.qf-app .qf-sidebar-item:hover,
+.qf-app .qf-sidebar-subitem:hover {
+  background: var(--qf-primary-weak) !important;
+  color: var(--qf-primary-dark) !important;
+}
+
+.qf-app .qf-sidebar-item.is-active,
+.qf-app .qf-sidebar-subitem.is-active {
+  background: var(--qf-primary-weak) !important;
+  color: var(--qf-primary-dark) !important;
+  font-weight: 700;
+}
+
+.qf-app .qf-sidebar-item:hover *,
+.qf-app .qf-sidebar-item.is-active *,
+.qf-app .qf-sidebar-subitem:hover *,
+.qf-app .qf-sidebar-subitem.is-active * {
+  color: inherit !important;
+}
+
+[data-qf-theme='dark'] .qf-app .qf-sidebar-item:hover,
+[data-qf-theme='dark'] .qf-app .qf-sidebar-subitem:hover,
+[data-qf-theme='dark'] .qf-app .qf-sidebar-item.is-active,
+[data-qf-theme='dark'] .qf-app .qf-sidebar-subitem.is-active {
+  color: var(--qf-primary) !important;
+}
