@@ -534,7 +534,7 @@ export function SalesOrderFormPage() {
     <form onSubmit={handleSubmit} className="qf-so-page">
       <PageHeader
         title={isEdit ? 'แก้ไขใบเสนอราคา / Sale Order' : 'สร้างใบเสนอราคา / Sale Order'}
-        subtitle={isEdit && existingOrder ? existingOrder.number || `#${existingOrder.id}` : 'รองรับการทำงานร่วมกับ Odoo18 (adt_th_api)'}
+        subtitle={isEdit && existingOrder ? existingOrder.number || `#${existingOrder.id}` : 'รองรับการทำงานระบบงานขาย'}
         breadcrumb="รายรับ · ใบเสนอราคา · Sale Order"
         actions={
           <div className="d-flex align-items-center gap-2 qf-so-actions">

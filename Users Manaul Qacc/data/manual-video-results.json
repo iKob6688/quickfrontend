@@ -1,0 +1,54 @@
+{
+  "generatedAt": "2026-06-11T03:38:37.678Z",
+  "baseUrl": "http://127.0.0.1:5173",
+  "results": [
+    {
+      "id": "01-login-dashboard-navigation",
+      "title": "Login, Dashboard และ Navigation",
+      "path": "videos/01-login-dashboard-navigation.mp4",
+      "raw": "videos/_raw-webm/page@701777c0cad6c6b3fa57f388a05b5c9b.webm",
+      "error": null,
+      "type": "real-browser-recording"
+    },
+    {
+      "id": "02-master-data-customers-products",
+      "title": "ข้อมูลหลัก ลูกค้า และสินค้า",
+      "path": "videos/02-master-data-customers-products.mp4",
+      "raw": "videos/_raw-webm/page@2a6fe3c782607bac04eaec5f788b70a8.webm",
+      "error": null,
+      "type": "real-browser-recording"
+    },
+    {
+      "id": "03-sales-quotation-to-invoice",
+      "title": "การขาย ใบเสนอราคา ถึงใบแจ้งหนี้",
+      "path": "videos/03-sales-quotation-to-invoice.mp4",
+      "raw": "videos/_raw-webm/page@5e001b872e044ffe60683b9f004dc4da.webm",
+      "error": null,
+      "type": "real-browser-recording"
+    },
+    {
+      "id": "04-invoice-receipt-payment",
+      "title": "ใบแจ้งหนี้ ใบเสร็จ และรับชำระ",
+      "path": "videos/04-invoice-receipt-payment.mp4",
+      "raw": "videos/_raw-webm/page@747ab0fe80c020c14f28b332460f55f4.webm",
+      "error": null,
+      "type": "real-browser-recording"
+    },
+    {
+      "id": "05-purchase-expense-flow",
+      "title": "การซื้อและรายจ่าย",
+      "path": "videos/05-purchase-expense-flow.mp4",
+      "raw": "videos/_raw-webm/page@ef4627a8e44c145983b42d96a71f6c6a.webm",
+      "error": null,
+      "type": "real-browser-recording"
+    },
+    {
+      "id": "06-accounting-etax-reports",
+      "title": "รายงานบัญชี ภาษี e-Tax และตรวจเอกสาร",
+      "path": "videos/06-accounting-etax-reports.mp4",
+      "raw": "videos/_raw-webm/page@8dedd199d26de742e2b99cb557a41a72.webm",
+      "error": null,
+      "type": "real-browser-recording"
+    }
+  ]
+}
