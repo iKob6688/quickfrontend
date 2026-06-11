@@ -1064,6 +1064,68 @@ body {
   display: none;
 }
 
+.qf-app .qf-page-actions-dock--desktop {
+  display: none;
+  position: sticky;
+  top: calc(72px + 0.75rem);
+  z-index: 1017;
+  justify-content: flex-end;
+  pointer-events: none;
+  margin-top: -1.25rem;
+  margin-bottom: 1rem;
+}
+
+.qf-app .qf-page-actions-dock--mobile {
+  display: none;
+}
+
+@media (min-width: 576px) {
+  .qf-app .qf-page-actions-dock--desktop {
+    display: flex;
+  }
+}
+
+.qf-app .qf-page-actions-dock--desktop .qf-page-actions-dock__inner {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  max-width: min(100%, 960px);
+  gap: 0.5rem;
+  padding: 0.45rem;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(14px);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.qf-app .qf-page-actions-dock--desktop .qf-page-actions-dock__inner::-webkit-scrollbar {
+  display: none;
+}
+
+.qf-app .qf-page-actions-dock--desktop .qf-page-actions-dock__inner > div {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex-wrap: nowrap !important;
+  gap: 0.5rem !important;
+}
+
+.qf-app .qf-page-actions-dock--desktop .btn {
+  min-height: 40px;
+  white-space: nowrap;
+}
+
+[data-qf-theme='dark'] .qf-app .qf-page-actions-dock--desktop .qf-page-actions-dock__inner {
+  background: rgba(8, 18, 34, 0.88);
+  border-color: var(--qf-border);
+  box-shadow: 0 16px 36px rgba(2, 6, 23, 0.34);
+}
+
 /* Sales/Purchase line editor column sizing (desktop/tablet) */
 @media (min-width: 576px) {
   .qf-app .qf-so-col-product {
@@ -2360,7 +2422,7 @@ body {
     display: none !important;
   }
 
-  .qf-app .qf-page-actions-dock {
+  .qf-app .qf-page-actions-dock--mobile {
     position: fixed;
     left: 0;
     right: 0;
@@ -2374,16 +2436,16 @@ body {
     backdrop-filter: blur(14px);
   }
 
-  .qf-app .qf-layout--mobile-form .qf-page-actions-dock {
+  .qf-app .qf-layout--mobile-form .qf-page-actions-dock--mobile {
     bottom: env(safe-area-inset-bottom);
   }
 
-  [data-qf-theme='dark'] .qf-app .qf-page-actions-dock {
+  [data-qf-theme='dark'] .qf-app .qf-page-actions-dock--mobile {
     background: rgba(8, 18, 34, 0.92);
     border-color: var(--qf-border);
   }
 
-  .qf-app .qf-page-actions-dock__inner {
+  .qf-app .qf-page-actions-dock--mobile .qf-page-actions-dock__inner {
     display: flex;
     width: 100%;
     gap: 0.5rem;
@@ -2393,22 +2455,22 @@ body {
     scrollbar-width: none;
   }
 
-  .qf-app .qf-page-actions-dock__inner::-webkit-scrollbar {
+  .qf-app .qf-page-actions-dock--mobile .qf-page-actions-dock__inner::-webkit-scrollbar {
     display: none;
   }
 
-  .qf-app .qf-page-actions-dock__inner > *,
-  .qf-app .qf-page-actions-dock__inner > div > * {
+  .qf-app .qf-page-actions-dock--mobile .qf-page-actions-dock__inner > *,
+  .qf-app .qf-page-actions-dock--mobile .qf-page-actions-dock__inner > div > * {
     flex: 1 0 auto;
   }
 
-  .qf-app .qf-page-actions-dock__inner > div {
+  .qf-app .qf-page-actions-dock--mobile .qf-page-actions-dock__inner > div {
     display: flex !important;
     width: 100%;
     gap: 0.5rem;
   }
 
-  .qf-app .qf-page-actions-dock .btn {
+  .qf-app .qf-page-actions-dock--mobile .btn {
     min-height: 44px;
     min-width: max-content;
     padding-inline: 0.85rem;

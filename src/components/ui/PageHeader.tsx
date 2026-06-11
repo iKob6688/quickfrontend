@@ -33,10 +33,16 @@ export function PageHeader({
             )}
           </div>
         </div>
-        {actions && <div className="qf-page-header__actions d-flex flex-wrap gap-2">{actions}</div>}
       </header>
       {actions ? (
-        <div className="qf-page-actions-dock d-sm-none" aria-label="การทำงานหลักของหน้านี้">
+        <div className="qf-page-actions-dock qf-page-actions-dock--desktop d-none d-sm-flex" aria-label="การทำงานหลักของหน้านี้">
+          <div className="qf-page-actions-dock__inner">
+            {actions}
+          </div>
+        </div>
+      ) : null}
+      {actions ? (
+        <div className="qf-page-actions-dock qf-page-actions-dock--mobile d-sm-none" aria-label="การทำงานหลักของหน้านี้">
           <div className="qf-page-actions-dock__inner">
             {actions}
           </div>
