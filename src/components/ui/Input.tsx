@@ -16,15 +16,18 @@ export interface InputProps extends Omit<FormControlProps, 'size'> {
  * - Clear focus ring for accessibility
  * - Distinct disabled state
  */
-export function Input({
-  className,
-  leftAdornment,
-  rightAdornment,
-  error,
-  disabled,
-  ...rest
-}: InputProps) {
-  if (leftAdornment || rightAdornment) {
+export function Input(props: InputProps) {
+  const {
+    className,
+    leftAdornment,
+    rightAdornment,
+    error,
+    disabled,
+    ...rest
+  } = props
+  const hasAdornmentSlot = 'leftAdornment' in props || 'rightAdornment' in props
+
+  if (hasAdornmentSlot) {
     return (
       <div className="input-group">
         {leftAdornment && (
@@ -64,5 +67,4 @@ export function Input({
     />
   )
 }
-
 
