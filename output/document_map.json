@@ -1,0 +1,1848 @@
+{
+  "generated_at": "2026-06-17T12:51:10",
+  "source": {
+    "source_docx": "Users Manaul Qacc/ERPTH-Qacc-User-Manual-TH.docx",
+    "source_pages": null,
+    "paragraph_count": 438,
+    "table_count": 3,
+    "image_count": 73
+  },
+  "outputs": {
+    "docx": "output/ERPTH_Qacc_User_Manual_Production_TH.docx",
+    "pdf": "output/ERPTH_Qacc_User_Manual_Production_TH.pdf",
+    "qa_report": "output/ERPTH_Qacc_User_Manual_QA_Report.md"
+  },
+  "qa_summary": {
+    "source_paragraphs": 438,
+    "source_tables": 3,
+    "images_extracted": 73,
+    "mapped_images": 73,
+    "unmapped_images": 0,
+    "figures_used": 20,
+    "route_coverage_rows": 73,
+    "known_issues": 31,
+    "videos_referenced": 6
+  },
+  "sections": [
+    {
+      "chapter": "บทที่ 1 เริ่มต้นใช้งาน",
+      "module": "เริ่มต้นใช้งาน",
+      "objective": "ใช้สำหรับเข้าสู่ระบบ ตรวจภาพรวมธุรกิจ และเข้าถึงเมนูหลักของ ERPTH Qacc",
+      "steps": [
+        "เปิดหน้า ERPTH Qacc",
+        "กรอกชื่อผู้ใช้และรหัสผ่าน",
+        "ตรวจสอบแดชบอร์ดและสถานะการเชื่อมต่อ",
+        "ใช้เมนูหลักหรือช่องค้นหาเพื่อไปยังงานที่ต้องการ"
+      ],
+      "result": "ระบบจะแสดงแดชบอร์ด เมนูหลัก และข้อมูลบริษัทที่เชื่อมต่ออยู่",
+      "caution": "หากเข้าสู่ระบบไม่ได้ ให้ตรวจสอบฐานข้อมูล q01, ชื่อผู้ใช้, รหัสผ่าน และสถานะ Odoo server"
+    },
+    {
+      "chapter": "บทที่ 2 ข้อมูลพื้นฐาน",
+      "module": "ข้อมูลพื้นฐาน",
+      "objective": "ใช้จัดการข้อมูลลูกค้า ผู้ขาย คู่ค้า และสินค้า/บริการ ก่อนเริ่มสร้างเอกสารธุรกิจ",
+      "steps": [
+        "เปิดเมนูรายชื่อติดต่อหรือสินค้า/บริการ",
+        "ค้นหาข้อมูลเดิมก่อนสร้างใหม่",
+        "กรอกข้อมูลสำคัญ เช่น ชื่อ ที่อยู่ เลขภาษี และข้อมูลภาษีขาย/ซื้อ",
+        "บันทึกและตรวจสอบสถานะ Active"
+      ],
+      "result": "ระบบจะมีข้อมูลพื้นฐานพร้อมนำไปใช้ในเอกสารขาย ซื้อ และบัญชี",
+      "caution": "ข้อมูลภาษีและชื่อคู่ค้าควรถูกต้องก่อนออกเอกสารจริง เพราะจะถูกนำไปใช้ต่อในใบแจ้งหนี้และรายงาน"
+    },
+    {
+      "chapter": "บทที่ 3 กระบวนการขาย",
+      "module": "กระบวนการขาย",
+      "objective": "ใช้จัดการงานขายตั้งแต่ใบเสนอราคา คำสั่งขาย การส่งสินค้า ใบแจ้งหนี้ การรับชำระ และใบเสร็จ",
+      "steps": [
+        "เลือกลูกค้าที่ต้องการขาย",
+        "สร้างใบเสนอราคาและระบุสินค้า/บริการ",
+        "ตรวจสอบคำสั่งขายและสถานะเอกสาร",
+        "สร้างใบแจ้งหนี้และตรวจยอดรวม",
+        "บันทึกรับชำระเงินและออกใบเสร็จ",
+        "ตรวจสอบเอกสาร e-Tax หากเปิดใช้งาน"
+      ],
+      "result": "ผู้ใช้สามารถติดตามเอกสารขายและสถานะการรับชำระเงินได้ครบกระบวนการ",
+      "caution": "หน้าที่เป็น error หรือไม่พบข้อมูลถูกย้ายไป Known Issues ไม่ควรใช้เป็นขั้นตอนหลักของคู่มือ"
+    },
+    {
+      "chapter": "บทที่ 4 กระบวนการซื้อ",
+      "module": "กระบวนการซื้อ",
+      "objective": "ใช้จัดการงานจัดซื้อ ตั้งแต่ผู้ขาย ใบสั่งซื้อ การรับสินค้า บิลผู้ขาย และการปิดเจ้าหนี้",
+      "steps": [
+        "ตรวจสอบข้อมูลผู้ขาย",
+        "สร้างคำขอซื้อหรือใบสั่งซื้อ",
+        "ตรวจรับสินค้าเมื่อได้รับของ",
+        "ตรวจบิลผู้ขายและยอดภาษี",
+        "ส่งต่อการชำระเงินและปิดเจ้าหนี้"
+      ],
+      "result": "เอกสารซื้อถูกติดตามตามลำดับงานและนำไปใช้ในบัญชีเจ้าหนี้ได้",
+      "caution": "หากข้อมูลตัวอย่างไม่ครบ ให้เปิดรายละเอียดจากรายการจริงแทนการเปิด URL โดยตรง"
+    },
+    {
+      "chapter": "บทที่ 5 การเงินและบัญชี",
+      "module": "การเงินและบัญชี",
+      "objective": "ใช้ตรวจภาษี ผังบัญชี สมุดรายวัน การรับ/จ่ายเงิน และข้อมูลทางบัญชีที่เกี่ยวข้อง",
+      "steps": [
+        "เปิดหน้าการบัญชีหรือการตั้งค่าภาษี",
+        "เลือกหมวดข้อมูลที่ต้องตรวจสอบ",
+        "กรองช่วงวันที่หรือสถานะเมื่อจำเป็น",
+        "ตรวจยอดและสถานะก่อนนำไปใช้ในรายงานหรือปิดงวด"
+      ],
+      "result": "ผู้ใช้บัญชีสามารถตรวจสอบข้อมูลสำคัญก่อนสรุปรายงานได้",
+      "caution": "หน้าผู้ดูแลระบบควรให้เฉพาะผู้มีสิทธิ์ด้านบัญชีหรือ IT ใช้งาน"
+    },
+    {
+      "chapter": "บทที่ 6 รายงาน",
+      "module": "รายงาน",
+      "objective": "ใช้ดูรายงานขาย ซื้อ ลูกหนี้ เจ้าหนี้ ภาษี และงบการเงินจากข้อมูลในระบบ",
+      "steps": [
+        "เปิดเมนูรายงานบัญชี",
+        "เลือกประเภทรายงาน เช่น กำไรขาดทุน งบดุล งบทดลอง หรือภาษี",
+        "กำหนดช่วงวันที่และตัวกรอง",
+        "ตรวจผลรวมและเปิดดูรายละเอียดเจาะลึกเมื่อจำเป็น"
+      ],
+      "result": "ระบบจะแสดงรายงานเพื่อใช้ตรวจสอบผลประกอบการและสถานะทางบัญชี",
+      "caution": "หากรายงานแสดง error ให้ตรวจสอบ endpoint รายงานและข้อมูลบัญชีใน q01"
+    },
+    {
+      "chapter": "บทที่ 7 การตั้งค่า",
+      "module": "การตั้งค่า",
+      "objective": "ใช้ตั้งค่าการเชื่อมต่อ บริษัท เครื่องมือเสริม Agent, Excel import และสตูดิโอรายงาน",
+      "steps": [
+        "เปิดเมนูตั้งค่าหรือเครื่องมือที่ต้องการ",
+        "ตรวจสอบสิทธิ์และ token ที่จำเป็น",
+        "แก้ไขค่าตามนโยบายบริษัท",
+        "ทดสอบผลลัพธ์หลังตั้งค่า"
+      ],
+      "result": "ระบบพร้อมทำงานตามสิทธิ์ บริษัท และรูปแบบเอกสารที่กำหนด",
+      "caution": "การตั้งค่าบางส่วนมีผลต่อเอกสารจริง ควรให้ผู้ดูแลระบบเป็นผู้ดำเนินการ"
+    }
+  ],
+  "chapters": [
+    {
+      "chapter": "บทที่ 1 เริ่มต้นใช้งาน",
+      "module": "เริ่มต้นใช้งาน",
+      "objective": "ใช้สำหรับเข้าสู่ระบบ ตรวจภาพรวมธุรกิจ และเข้าถึงเมนูหลักของ ERPTH Qacc",
+      "steps": [
+        "เปิดหน้า ERPTH Qacc",
+        "กรอกชื่อผู้ใช้และรหัสผ่าน",
+        "ตรวจสอบแดชบอร์ดและสถานะการเชื่อมต่อ",
+        "ใช้เมนูหลักหรือช่องค้นหาเพื่อไปยังงานที่ต้องการ"
+      ],
+      "result": "ระบบจะแสดงแดชบอร์ด เมนูหลัก และข้อมูลบริษัทที่เชื่อมต่ออยู่",
+      "caution": "หากเข้าสู่ระบบไม่ได้ ให้ตรวจสอบฐานข้อมูล q01, ชื่อผู้ใช้, รหัสผ่าน และสถานะ Odoo server"
+    },
+    {
+      "chapter": "บทที่ 2 ข้อมูลพื้นฐาน",
+      "module": "ข้อมูลพื้นฐาน",
+      "objective": "ใช้จัดการข้อมูลลูกค้า ผู้ขาย คู่ค้า และสินค้า/บริการ ก่อนเริ่มสร้างเอกสารธุรกิจ",
+      "steps": [
+        "เปิดเมนูรายชื่อติดต่อหรือสินค้า/บริการ",
+        "ค้นหาข้อมูลเดิมก่อนสร้างใหม่",
+        "กรอกข้อมูลสำคัญ เช่น ชื่อ ที่อยู่ เลขภาษี และข้อมูลภาษีขาย/ซื้อ",
+        "บันทึกและตรวจสอบสถานะ Active"
+      ],
+      "result": "ระบบจะมีข้อมูลพื้นฐานพร้อมนำไปใช้ในเอกสารขาย ซื้อ และบัญชี",
+      "caution": "ข้อมูลภาษีและชื่อคู่ค้าควรถูกต้องก่อนออกเอกสารจริง เพราะจะถูกนำไปใช้ต่อในใบแจ้งหนี้และรายงาน"
+    },
+    {
+      "chapter": "บทที่ 3 กระบวนการขาย",
+      "module": "กระบวนการขาย",
+      "objective": "ใช้จัดการงานขายตั้งแต่ใบเสนอราคา คำสั่งขาย การส่งสินค้า ใบแจ้งหนี้ การรับชำระ และใบเสร็จ",
+      "steps": [
+        "เลือกลูกค้าที่ต้องการขาย",
+        "สร้างใบเสนอราคาและระบุสินค้า/บริการ",
+        "ตรวจสอบคำสั่งขายและสถานะเอกสาร",
+        "สร้างใบแจ้งหนี้และตรวจยอดรวม",
+        "บันทึกรับชำระเงินและออกใบเสร็จ",
+        "ตรวจสอบเอกสาร e-Tax หากเปิดใช้งาน"
+      ],
+      "result": "ผู้ใช้สามารถติดตามเอกสารขายและสถานะการรับชำระเงินได้ครบกระบวนการ",
+      "caution": "หน้าที่เป็น error หรือไม่พบข้อมูลถูกย้ายไป Known Issues ไม่ควรใช้เป็นขั้นตอนหลักของคู่มือ"
+    },
+    {
+      "chapter": "บทที่ 4 กระบวนการซื้อ",
+      "module": "กระบวนการซื้อ",
+      "objective": "ใช้จัดการงานจัดซื้อ ตั้งแต่ผู้ขาย ใบสั่งซื้อ การรับสินค้า บิลผู้ขาย และการปิดเจ้าหนี้",
+      "steps": [
+        "ตรวจสอบข้อมูลผู้ขาย",
+        "สร้างคำขอซื้อหรือใบสั่งซื้อ",
+        "ตรวจรับสินค้าเมื่อได้รับของ",
+        "ตรวจบิลผู้ขายและยอดภาษี",
+        "ส่งต่อการชำระเงินและปิดเจ้าหนี้"
+      ],
+      "result": "เอกสารซื้อถูกติดตามตามลำดับงานและนำไปใช้ในบัญชีเจ้าหนี้ได้",
+      "caution": "หากข้อมูลตัวอย่างไม่ครบ ให้เปิดรายละเอียดจากรายการจริงแทนการเปิด URL โดยตรง"
+    },
+    {
+      "chapter": "บทที่ 5 การเงินและบัญชี",
+      "module": "การเงินและบัญชี",
+      "objective": "ใช้ตรวจภาษี ผังบัญชี สมุดรายวัน การรับ/จ่ายเงิน และข้อมูลทางบัญชีที่เกี่ยวข้อง",
+      "steps": [
+        "เปิดหน้าการบัญชีหรือการตั้งค่าภาษี",
+        "เลือกหมวดข้อมูลที่ต้องตรวจสอบ",
+        "กรองช่วงวันที่หรือสถานะเมื่อจำเป็น",
+        "ตรวจยอดและสถานะก่อนนำไปใช้ในรายงานหรือปิดงวด"
+      ],
+      "result": "ผู้ใช้บัญชีสามารถตรวจสอบข้อมูลสำคัญก่อนสรุปรายงานได้",
+      "caution": "หน้าผู้ดูแลระบบควรให้เฉพาะผู้มีสิทธิ์ด้านบัญชีหรือ IT ใช้งาน"
+    },
+    {
+      "chapter": "บทที่ 6 รายงาน",
+      "module": "รายงาน",
+      "objective": "ใช้ดูรายงานขาย ซื้อ ลูกหนี้ เจ้าหนี้ ภาษี และงบการเงินจากข้อมูลในระบบ",
+      "steps": [
+        "เปิดเมนูรายงานบัญชี",
+        "เลือกประเภทรายงาน เช่น กำไรขาดทุน งบดุล งบทดลอง หรือภาษี",
+        "กำหนดช่วงวันที่และตัวกรอง",
+        "ตรวจผลรวมและเปิดดูรายละเอียดเจาะลึกเมื่อจำเป็น"
+      ],
+      "result": "ระบบจะแสดงรายงานเพื่อใช้ตรวจสอบผลประกอบการและสถานะทางบัญชี",
+      "caution": "หากรายงานแสดง error ให้ตรวจสอบ endpoint รายงานและข้อมูลบัญชีใน q01"
+    },
+    {
+      "chapter": "บทที่ 7 การตั้งค่า",
+      "module": "การตั้งค่า",
+      "objective": "ใช้ตั้งค่าการเชื่อมต่อ บริษัท เครื่องมือเสริม Agent, Excel import และสตูดิโอรายงาน",
+      "steps": [
+        "เปิดเมนูตั้งค่าหรือเครื่องมือที่ต้องการ",
+        "ตรวจสอบสิทธิ์และ token ที่จำเป็น",
+        "แก้ไขค่าตามนโยบายบริษัท",
+        "ทดสอบผลลัพธ์หลังตั้งค่า"
+      ],
+      "result": "ระบบพร้อมทำงานตามสิทธิ์ บริษัท และรูปแบบเอกสารที่กำหนด",
+      "caution": "การตั้งค่าบางส่วนมีผลต่อเอกสารจริง ควรให้ผู้ดูแลระบบเป็นผู้ดำเนินการ"
+    }
+  ],
+  "images": [
+    {
+      "image_id": "image_001",
+      "file": "output/extracted_images/image_001.png",
+      "module": "เริ่มต้นใช้งาน",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/login",
+      "mapped_section": "เริ่มต้นใช้งาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_002",
+      "file": "output/extracted_images/image_002.png",
+      "module": "เริ่มต้นใช้งาน",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/dashboard",
+      "mapped_section": "เริ่มต้นใช้งาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_003",
+      "file": "output/extracted_images/image_003.png",
+      "module": "ข้อมูลพื้นฐาน",
+      "source_heading": "- มีตารางหรือรายการข้อมูลสำหรับตรวจสอบและเปิดรายละเอียด",
+      "route": "/customers",
+      "mapped_section": "ข้อมูลพื้นฐาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_004",
+      "file": "output/extracted_images/image_004.png",
+      "module": "ข้อมูลพื้นฐาน",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/customers/new",
+      "mapped_section": "ข้อมูลพื้นฐาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_005",
+      "file": "output/extracted_images/image_005.png",
+      "module": "ข้อมูลพื้นฐาน",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/customers/1",
+      "mapped_section": "ข้อมูลพื้นฐาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_006",
+      "file": "output/extracted_images/image_006.png",
+      "module": "ข้อมูลพื้นฐาน",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/customers/1/edit",
+      "mapped_section": "ข้อมูลพื้นฐาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_007",
+      "file": "output/extracted_images/image_007.png",
+      "module": "ข้อมูลพื้นฐาน",
+      "source_heading": "- มีตารางหรือรายการข้อมูลสำหรับตรวจสอบและเปิดรายละเอียด",
+      "route": "/products",
+      "mapped_section": "ข้อมูลพื้นฐาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_008",
+      "file": "output/extracted_images/image_008.png",
+      "module": "ข้อมูลพื้นฐาน",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/products/new",
+      "mapped_section": "ข้อมูลพื้นฐาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_009",
+      "file": "output/extracted_images/image_009.png",
+      "module": "ข้อมูลพื้นฐาน",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/products/1/edit",
+      "mapped_section": "ข้อมูลพื้นฐาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_010",
+      "file": "output/extracted_images/image_010.png",
+      "module": "กระบวนการขาย",
+      "source_heading": "- มีตารางหรือรายการข้อมูลสำหรับตรวจสอบและเปิดรายละเอียด",
+      "route": "/sales/orders",
+      "mapped_section": "กระบวนการขาย",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_011",
+      "file": "output/extracted_images/image_011.png",
+      "module": "กระบวนการขาย",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/sales/orders/new",
+      "mapped_section": "กระบวนการขาย",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_012",
+      "file": "output/extracted_images/image_012.png",
+      "module": "กระบวนการขาย",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/sales/orders/1",
+      "mapped_section": "กระบวนการขาย",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_013",
+      "file": "output/extracted_images/image_013.png",
+      "module": "กระบวนการขาย",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/sales/orders/1/edit",
+      "mapped_section": "กระบวนการขาย",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_014",
+      "file": "output/extracted_images/image_014.png",
+      "module": "กระบวนการขาย",
+      "source_heading": "ข้อความที่พบในหน้า: Sales order not found กลับหน้ารายละเอียด",
+      "route": "/sales/orders/1/print-preview",
+      "mapped_section": "กระบวนการขาย",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_015",
+      "file": "output/extracted_images/image_015.png",
+      "module": "กระบวนการขาย",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/sales/deliveries/1",
+      "mapped_section": "กระบวนการขาย",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_016",
+      "file": "output/extracted_images/image_016.png",
+      "module": "กระบวนการขาย",
+      "source_heading": "- มีตารางหรือรายการข้อมูลสำหรับตรวจสอบและเปิดรายละเอียด",
+      "route": "/sales/invoices",
+      "mapped_section": "กระบวนการขาย",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_017",
+      "file": "output/extracted_images/image_017.png",
+      "module": "กระบวนการขาย",
+      "source_heading": "- มีตารางหรือรายการข้อมูลสำหรับตรวจสอบและเปิดรายละเอียด",
+      "route": "/sales/receipts",
+      "mapped_section": "กระบวนการขาย",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_018",
+      "file": "output/extracted_images/image_018.png",
+      "module": "ภาคผนวก",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/06/2569",
+      "mapped_section": "ภาคผนวก",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_019",
+      "file": "output/extracted_images/image_019.png",
+      "module": "กระบวนการขาย",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/sales/invoices/1",
+      "mapped_section": "กระบวนการขาย",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_020",
+      "file": "output/extracted_images/image_020.png",
+      "module": "กระบวนการขาย",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/sales/invoices/1/edit",
+      "mapped_section": "กระบวนการขาย",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_021",
+      "file": "output/extracted_images/image_021.png",
+      "module": "กระบวนการขาย",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/notes",
+      "mapped_section": "กระบวนการขาย",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_022",
+      "file": "output/extracted_images/image_022.png",
+      "module": "กระบวนการขาย",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/sales/notes",
+      "mapped_section": "กระบวนการขาย",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_023",
+      "file": "output/extracted_images/image_023.png",
+      "module": "กระบวนการขาย",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/sales/notes/1",
+      "mapped_section": "กระบวนการขาย",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_024",
+      "file": "output/extracted_images/image_024.png",
+      "module": "กระบวนการซื้อ",
+      "source_heading": "- มีตารางหรือรายการข้อมูลสำหรับตรวจสอบและเปิดรายละเอียด",
+      "route": "/purchases/orders",
+      "mapped_section": "กระบวนการซื้อ",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_025",
+      "file": "output/extracted_images/image_025.png",
+      "module": "ภาคผนวก",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/06/2569",
+      "mapped_section": "ภาคผนวก",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_026",
+      "file": "output/extracted_images/image_026.png",
+      "module": "กระบวนการซื้อ",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/purchases/orders/1",
+      "mapped_section": "กระบวนการซื้อ",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_027",
+      "file": "output/extracted_images/image_027.png",
+      "module": "กระบวนการซื้อ",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/purchases/orders/1/edit",
+      "mapped_section": "กระบวนการซื้อ",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_028",
+      "file": "output/extracted_images/image_028.png",
+      "module": "ภาคผนวก",
+      "source_heading": "- มีตารางหรือรายการข้อมูลสำหรับตรวจสอบและเปิดรายละเอียด",
+      "route": "/IN/00001",
+      "mapped_section": "ภาคผนวก",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_029",
+      "file": "output/extracted_images/image_029.png",
+      "module": "กระบวนการซื้อ",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/purchases/bills/1",
+      "mapped_section": "กระบวนการซื้อ",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_030",
+      "file": "output/extracted_images/image_030.png",
+      "module": "กระบวนการขาย",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/purchases/notes",
+      "mapped_section": "กระบวนการขาย",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_031",
+      "file": "output/extracted_images/image_031.png",
+      "module": "กระบวนการขาย",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/purchases/notes/1",
+      "mapped_section": "กระบวนการขาย",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_032",
+      "file": "output/extracted_images/image_032.png",
+      "module": "กระบวนการซื้อ",
+      "source_heading": "- มีตารางหรือรายการข้อมูลสำหรับตรวจสอบและเปิดรายละเอียด",
+      "route": "/purchases/requests",
+      "mapped_section": "กระบวนการซื้อ",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_033",
+      "file": "output/extracted_images/image_033.png",
+      "module": "ภาคผนวก",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/06/2569",
+      "mapped_section": "ภาคผนวก",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_034",
+      "file": "output/extracted_images/image_034.png",
+      "module": "กระบวนการซื้อ",
+      "source_heading": "- มีตารางหรือรายการข้อมูลสำหรับตรวจสอบและเปิดรายละเอียด",
+      "route": "/purchases/requests/1",
+      "mapped_section": "กระบวนการซื้อ",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_035",
+      "file": "output/extracted_images/image_035.png",
+      "module": "กระบวนการซื้อ",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/purchases/requests/1/edit",
+      "mapped_section": "กระบวนการซื้อ",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_036",
+      "file": "output/extracted_images/image_036.png",
+      "module": "การเงินและบัญชี",
+      "source_heading": "- มีตารางหรือรายการข้อมูลสำหรับตรวจสอบและเปิดรายละเอียด",
+      "route": "/expenses",
+      "mapped_section": "การเงินและบัญชี",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_037",
+      "file": "output/extracted_images/image_037.png",
+      "module": "การเงินและบัญชี",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/expenses/new",
+      "mapped_section": "การเงินและบัญชี",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_038",
+      "file": "output/extracted_images/image_038.png",
+      "module": "การเงินและบัญชี",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/expenses/1",
+      "mapped_section": "การเงินและบัญชี",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_039",
+      "file": "output/extracted_images/image_039.png",
+      "module": "ภาคผนวก",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/accounting/document-review",
+      "mapped_section": "ภาคผนวก",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_040",
+      "file": "output/extracted_images/image_040.png",
+      "module": "รายงาน",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/accounting/reports",
+      "mapped_section": "รายงาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_041",
+      "file": "output/extracted_images/image_041.png",
+      "module": "รายงาน",
+      "source_heading": "- มีตารางหรือรายการข้อมูลสำหรับตรวจสอบและเปิดรายละเอียด",
+      "route": "/accounting/reports/profit-loss",
+      "mapped_section": "รายงาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_042",
+      "file": "output/extracted_images/image_042.png",
+      "module": "รายงาน",
+      "source_heading": "- มีตารางหรือรายการข้อมูลสำหรับตรวจสอบและเปิดรายละเอียด",
+      "route": "/accounting/reports/balance-sheet",
+      "mapped_section": "รายงาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_043",
+      "file": "output/extracted_images/image_043.png",
+      "module": "รายงาน",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/accounting/reports/general-ledger",
+      "mapped_section": "รายงาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_044",
+      "file": "output/extracted_images/image_044.png",
+      "module": "รายงาน",
+      "source_heading": "- มีตารางหรือรายการข้อมูลสำหรับตรวจสอบและเปิดรายละเอียด",
+      "route": "/accounting/reports/trial-balance",
+      "mapped_section": "รายงาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_045",
+      "file": "output/extracted_images/image_045.png",
+      "module": "รายงาน",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/accounting/reports/partner-ledger",
+      "mapped_section": "รายงาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_046",
+      "file": "output/extracted_images/image_046.png",
+      "module": "ภาคผนวก",
+      "source_heading": "- มีตารางหรือรายการข้อมูลสำหรับตรวจสอบและเปิดรายละเอียด",
+      "route": "/P",
+      "mapped_section": "ภาคผนวก",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_047",
+      "file": "output/extracted_images/image_047.png",
+      "module": "รายงาน",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/accounting/reports/aged-receivables",
+      "mapped_section": "รายงาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_048",
+      "file": "output/extracted_images/image_048.png",
+      "module": "รายงาน",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/accounting/reports/aged-payables",
+      "mapped_section": "รายงาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_049",
+      "file": "output/extracted_images/image_049.png",
+      "module": "รายงาน",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/accounting/reports/cash-book",
+      "mapped_section": "รายงาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_050",
+      "file": "output/extracted_images/image_050.png",
+      "module": "รายงาน",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/accounting/reports/bank-book",
+      "mapped_section": "รายงาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_051",
+      "file": "output/extracted_images/image_051.png",
+      "module": "รายงาน",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/accounting/reports/vat",
+      "mapped_section": "รายงาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_052",
+      "file": "output/extracted_images/image_052.png",
+      "module": "รายงาน",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/accounting/reports/wht",
+      "mapped_section": "รายงาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_053",
+      "file": "output/extracted_images/image_053.png",
+      "module": "การเงินและบัญชี",
+      "source_heading": "- มีตารางหรือรายการข้อมูลสำหรับตรวจสอบและเปิดรายละเอียด",
+      "route": "/accounting/tax-settings",
+      "mapped_section": "การเงินและบัญชี",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_054",
+      "file": "output/extracted_images/image_054.png",
+      "module": "การเงินและบัญชี",
+      "source_heading": "- มีตารางหรือรายการข้อมูลสำหรับตรวจสอบและเปิดรายละเอียด",
+      "route": "/accounting/etax",
+      "mapped_section": "การเงินและบัญชี",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_055",
+      "file": "output/extracted_images/image_055.png",
+      "module": "การเงินและบัญชี",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/accounting/etax-settings",
+      "mapped_section": "การเงินและบัญชี",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_056",
+      "file": "output/extracted_images/image_056.png",
+      "module": "รายงาน",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/accounting/reports/general-ledger/account/1",
+      "mapped_section": "รายงาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_057",
+      "file": "output/extracted_images/image_057.png",
+      "module": "รายงาน",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/accounting/reports/move-lines/1",
+      "mapped_section": "รายงาน",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_058",
+      "file": "output/extracted_images/image_058.png",
+      "module": "การเงินและบัญชี",
+      "source_heading": "- มีตารางหรือรายการข้อมูลสำหรับตรวจสอบและเปิดรายละเอียด",
+      "route": "/accounting/admin",
+      "mapped_section": "การเงินและบัญชี",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_059",
+      "file": "output/extracted_images/image_059.png",
+      "module": "การตั้งค่า",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/excel-import",
+      "mapped_section": "การตั้งค่า",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_060",
+      "file": "output/extracted_images/image_060.png",
+      "module": "การตั้งค่า",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/backend-connection",
+      "mapped_section": "การตั้งค่า",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_061",
+      "file": "output/extracted_images/image_061.png",
+      "module": "การตั้งค่า",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/agent",
+      "mapped_section": "การตั้งค่า",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_062",
+      "file": "output/extracted_images/image_062.png",
+      "module": "การตั้งค่า",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/agent/ocr",
+      "mapped_section": "การตั้งค่า",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_063",
+      "file": "output/extracted_images/image_063.png",
+      "module": "การตั้งค่า",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/agent/expense",
+      "mapped_section": "การตั้งค่า",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_064",
+      "file": "output/extracted_images/image_064.png",
+      "module": "การตั้งค่า",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/agent/quotation",
+      "mapped_section": "การตั้งค่า",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_065",
+      "file": "output/extracted_images/image_065.png",
+      "module": "การตั้งค่า",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/agent/contact",
+      "mapped_section": "การตั้งค่า",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_066",
+      "file": "output/extracted_images/image_066.png",
+      "module": "กระบวนการขาย",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/agent/invoice",
+      "mapped_section": "กระบวนการขาย",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_067",
+      "file": "output/extracted_images/image_067.png",
+      "module": "ภาคผนวก",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/PDF.",
+      "mapped_section": "ภาคผนวก",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_068",
+      "file": "output/extracted_images/image_068.png",
+      "module": "การตั้งค่า",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/reports-studio/branding",
+      "mapped_section": "การตั้งค่า",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_069",
+      "file": "output/extracted_images/image_069.png",
+      "module": "การตั้งค่า",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/reports-studio/templates",
+      "mapped_section": "การตั้งค่า",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_070",
+      "file": "output/extracted_images/image_070.png",
+      "module": "การตั้งค่า",
+      "source_heading": "- มีตารางหรือรายการข้อมูลสำหรับตรวจสอบและเปิดรายละเอียด",
+      "route": "/reports-studio/editor/quotation_default_v1",
+      "mapped_section": "การตั้งค่า",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_071",
+      "file": "output/extracted_images/image_071.png",
+      "module": "การตั้งค่า",
+      "source_heading": "- มีตารางหรือรายการข้อมูลสำหรับตรวจสอบและเปิดรายละเอียด",
+      "route": "/reports-studio/preview/quotation_default_v1",
+      "mapped_section": "การตั้งค่า",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_072",
+      "file": "output/extracted_images/image_072.png",
+      "module": "การตั้งค่า",
+      "source_heading": "- มีช่องกรอกหรือฟอร์มสำหรับค้นหา/สร้าง/แก้ไขข้อมูล",
+      "route": "/reports-studio/settings",
+      "mapped_section": "การตั้งค่า",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    },
+    {
+      "image_id": "image_073",
+      "file": "output/extracted_images/image_073.png",
+      "module": "ภาคผนวก",
+      "source_heading": "- มีตารางหรือรายการข้อมูลสำหรับตรวจสอบและเปิดรายละเอียด",
+      "route": "/14",
+      "mapped_section": "ภาคผนวก",
+      "confidence": "high",
+      "reason": "mapped by nearest route/heading"
+    }
+  ],
+  "route_coverage": [
+    {
+      "module": "เริ่มต้นใช้งาน",
+      "page": "เข้าสู่ระบบ",
+      "route": "/login",
+      "status": "หน้า Login",
+      "remark": "หน้าเข้าสู่ระบบ ERPTH",
+      "error": null
+    },
+    {
+      "module": "เริ่มต้นใช้งาน",
+      "page": "สวัสดี, Administrator",
+      "route": "/dashboard",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "ข้อมูลพื้นฐาน",
+      "page": "รายชื่อติดต่อ / Contacts",
+      "route": "/customers",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "ข้อมูลพื้นฐาน",
+      "page": "เพิ่มรายชื่อติดต่อ",
+      "route": "/customers/new",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "ข้อมูลพื้นฐาน",
+      "page": "รายละเอียดรายชื่อติดต่อ",
+      "route": "/customers/1",
+      "status": "ไม่พบหน้า",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "ข้อมูลพื้นฐาน",
+      "page": "แก้ไขรายชื่อติดต่อ",
+      "route": "/customers/1/edit",
+      "status": "ไม่พบหน้า",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "ข้อมูลพื้นฐาน",
+      "page": "สินค้า / Products",
+      "route": "/products",
+      "status": "เปิดได้ แต่ยังไม่มีข้อมูล",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "ข้อมูลพื้นฐาน",
+      "page": "เพิ่มสินค้า",
+      "route": "/products/new",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "ข้อมูลพื้นฐาน",
+      "page": "แก้ไขสินค้า",
+      "route": "/products/1/edit",
+      "status": "ไม่พบหน้า",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการขาย",
+      "page": "ใบเสนอราคา / คำสั่งขาย",
+      "route": "/sales/orders",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการขาย",
+      "page": "สร้างใบเสนอราคา / คำสั่งขาย",
+      "route": "/sales/orders/new",
+      "status": "แสดงข้อผิดพลาดจริง",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการขาย",
+      "page": "รายละเอียดใบเสนอราคา / คำสั่งขาย",
+      "route": "/sales/orders/1",
+      "status": "ไม่พบหน้า",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการขาย",
+      "page": "/sales/orders/1/edit",
+      "route": "/sales/orders/1/edit",
+      "status": "ไม่พบหน้า",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการขาย",
+      "page": "/sales/orders/1/print-preview",
+      "route": "/sales/orders/1/print-preview",
+      "status": "ไม่พบหน้า",
+      "remark": "Sales order not found กลับหน้ารายละเอียด",
+      "error": null
+    },
+    {
+      "module": "กระบวนการขาย",
+      "page": "ไม่พบ การส่งสินค้า",
+      "route": "/sales/deliveries/1",
+      "status": "แสดงข้อผิดพลาดจริง",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการขาย",
+      "page": "ใบแจ้งหนี้",
+      "route": "/sales/invoices",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการขาย",
+      "page": "ใบเสร็จรับเงิน",
+      "route": "/sales/receipts",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการขาย",
+      "page": "สร้างใบแจ้งหนี้ใหม่",
+      "route": "/sales/invoices/new",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการขาย",
+      "page": "ไม่พบข้อมูล",
+      "route": "/sales/invoices/1",
+      "status": "แสดงข้อผิดพลาดจริง",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการขาย",
+      "page": "แก้ไขใบแจ้งหนี้",
+      "route": "/sales/invoices/1/edit",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการขาย",
+      "page": "ใบเพิ่ม/ลดหนี้",
+      "route": "/notes",
+      "status": "แสดงข้อผิดพลาดจริง",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการขาย",
+      "page": "ใบเพิ่ม/ลดหนี้",
+      "route": "/sales/notes",
+      "status": "แสดงข้อผิดพลาดจริง",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการขาย",
+      "page": "ไม่พบข้อมูล",
+      "route": "/sales/notes/1",
+      "status": "ไม่พบหน้า",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการซื้อ",
+      "page": "ใบสั่งซื้อ",
+      "route": "/purchases/orders",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการซื้อ",
+      "page": "สร้างใบสั่งซื้อ",
+      "route": "/purchases/orders/new",
+      "status": "เปิดได้ แต่ยังไม่มีข้อมูล",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการซื้อ",
+      "page": "รายละเอียดใบสั่งซื้อ",
+      "route": "/purchases/orders/1",
+      "status": "แสดงข้อผิดพลาดจริง",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการซื้อ",
+      "page": "แก้ไขใบสั่งซื้อ",
+      "route": "/purchases/orders/1/edit",
+      "status": "เปิดได้ แต่ยังไม่มีข้อมูล",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการขาย",
+      "page": "Receipt WH/IN/00001",
+      "route": "/purchases/receipts/1",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการซื้อ",
+      "page": "ไม่พบ บิลผู้ขาย",
+      "route": "/purchases/bills/1",
+      "status": "แสดงข้อผิดพลาดจริง",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการขาย",
+      "page": "ใบเพิ่ม/ลดหนี้",
+      "route": "/purchases/notes",
+      "status": "แสดงข้อผิดพลาดจริง",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการขาย",
+      "page": "ไม่พบข้อมูล",
+      "route": "/purchases/notes/1",
+      "status": "ไม่พบหน้า",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการซื้อ",
+      "page": "คำขอซื้อ",
+      "route": "/purchases/requests",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการซื้อ",
+      "page": "สร้างคำขอซื้อ",
+      "route": "/purchases/requests/new",
+      "status": "ไม่พบหน้า",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการซื้อ",
+      "page": "PR00002",
+      "route": "/purchases/requests/1",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการซื้อ",
+      "page": "แก้ไขคำขอซื้อ",
+      "route": "/purchases/requests/1/edit",
+      "status": "ไม่พบหน้า",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "การเงินและบัญชี",
+      "page": "รายจ่าย",
+      "route": "/expenses",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "การเงินและบัญชี",
+      "page": "สร้างรายจ่ายใหม่",
+      "route": "/expenses/new",
+      "status": "เปิดได้ แต่ยังไม่มีข้อมูล",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "การเงินและบัญชี",
+      "page": "รายละเอียดรายจ่าย",
+      "route": "/expenses/1",
+      "status": "แสดงข้อผิดพลาดจริง",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "ภาคผนวก",
+      "page": "กล่องงานตรวจสอบ",
+      "route": "/accounting/document-review",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "รายงาน",
+      "page": "รายงานบัญชี",
+      "route": "/accounting/reports",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "รายงาน",
+      "page": "งบกำไรขาดทุน (Profit & Loss)",
+      "route": "/accounting/reports/profit-loss",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "รายงาน",
+      "page": "งบดุล",
+      "route": "/accounting/reports/balance-sheet",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "รายงาน",
+      "page": "สมุดบัญชีแยกประเภท",
+      "route": "/accounting/reports/general-ledger",
+      "status": "แสดงข้อผิดพลาดจริง",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "รายงาน",
+      "page": "งบทดลอง",
+      "route": "/accounting/reports/trial-balance",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "รายงาน",
+      "page": "ลูกหนี้/เจ้าหนี้ (รายงานลูกหนี้/เจ้าหนี้รายคู่ค้า)",
+      "route": "/accounting/reports/partner-ledger",
+      "status": "แสดงข้อผิดพลาดจริง",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "รายงาน",
+      "page": "รายงานลูกหนี้/เจ้าหนี้รายคู่ค้า: Chonlatee Innovation",
+      "route": "/accounting/reports/partner-ledger/partner/1",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "รายงาน",
+      "page": "อายุลูกหนี้",
+      "route": "/accounting/reports/aged-receivables",
+      "status": "แสดงข้อผิดพลาดจริง",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "รายงาน",
+      "page": "อายุเจ้าหนี้",
+      "route": "/accounting/reports/aged-payables",
+      "status": "แสดงข้อผิดพลาดจริง",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "รายงาน",
+      "page": "สมุดเงินสด",
+      "route": "/accounting/reports/cash-book",
+      "status": "แสดงข้อผิดพลาดจริง",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "รายงาน",
+      "page": "สมุดเงินฝากธนาคาร",
+      "route": "/accounting/reports/bank-book",
+      "status": "แสดงข้อผิดพลาดจริง",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "รายงาน",
+      "page": "รายงาน VAT",
+      "route": "/accounting/reports/vat",
+      "status": "แสดงข้อผิดพลาดจริง",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "รายงาน",
+      "page": "รายงานภาษีหัก ณ ที่จ่าย (WHT)",
+      "route": "/accounting/reports/wht",
+      "status": "ไม่พบหน้า",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "การเงินและบัญชี",
+      "page": "VAT and Taxes Settings",
+      "route": "/accounting/tax-settings",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "การเงินและบัญชี",
+      "page": "เอกสาร e-Tax",
+      "route": "/accounting/etax",
+      "status": "ไม่พบหน้า",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "การเงินและบัญชี",
+      "page": "e-Tax Settings",
+      "route": "/accounting/etax-settings",
+      "status": "แสดงข้อผิดพลาดจริง",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "รายงาน",
+      "page": "บัญชีแยกประเภท",
+      "route": "/accounting/reports/general-ledger/account/1",
+      "status": "แสดงข้อผิดพลาดจริง",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "รายงาน",
+      "page": "รายละเอียดรายการบัญชี #1",
+      "route": "/accounting/reports/move-lines/1",
+      "status": "แสดงข้อผิดพลาดจริง",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "การเงินและบัญชี",
+      "page": "Accounting Admin (COA / Journals)",
+      "route": "/accounting/admin",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "การตั้งค่า",
+      "page": "นำเข้าข้อมูลจาก Excel",
+      "route": "/excel-import",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "การตั้งค่า",
+      "page": "ตั้งค่าการเชื่อมต่อระบบ",
+      "route": "/backend-connection",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "การตั้งค่า",
+      "page": "Agent แดชบอร์ด",
+      "route": "/agent",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "การตั้งค่า",
+      "page": "OCR - สแกนเอกสาร",
+      "route": "/agent/ocr",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "การตั้งค่า",
+      "page": "Auto-post Expense - รายจ่ายจากใบเสร็จ",
+      "route": "/agent/expense",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "การตั้งค่า",
+      "page": "Create Quotation - สร้างใบเสนอราคา",
+      "route": "/agent/quotation",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "การตั้งค่า",
+      "page": "Create Contact - เพิ่มผู้ติดต่อจากนามบัตร",
+      "route": "/agent/contact",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "กระบวนการขาย",
+      "page": "Create Invoice - สร้างใบแจ้งหนี้",
+      "route": "/agent/invoice",
+      "status": "เปิดได้ แต่ยังไม่มีข้อมูล",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "การตั้งค่า",
+      "page": "/reports-studio",
+      "route": "/reports-studio",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "การตั้งค่า",
+      "page": "/reports-studio/branding",
+      "route": "/reports-studio/branding",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "การตั้งค่า",
+      "page": "/reports-studio/templates",
+      "route": "/reports-studio/templates",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "การตั้งค่า",
+      "page": "/reports-studio/editor/quotation_default_v1",
+      "route": "/reports-studio/editor/quotation_default_v1",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "การตั้งค่า",
+      "page": "/reports-studio/preview/quotation_default_v1",
+      "route": "/reports-studio/preview/quotation_default_v1",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "การตั้งค่า",
+      "page": "/reports-studio/settings",
+      "route": "/reports-studio/settings",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Inno",
+      "error": null
+    },
+    {
+      "module": "การตั้งค่า",
+      "page": "/reports-studio/print/quotation_default_v1",
+      "route": "/reports-studio/print/quotation_default_v1",
+      "status": "เปิดได้",
+      "remark": "Chonlatee Innovation 44/14 ซอยนิมิตใหม่ 12 แขวงทรายกองดิน เขตคลองสามวา False 10510 False 10510 10510 Tel: False • Email:",
+      "error": null
+    }
+  ],
+  "known_issues": [
+    {
+      "area": "ข้อมูลพื้นฐาน",
+      "page": "รายละเอียดรายชื่อติดต่อ",
+      "issue": "ไม่พบหน้า",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/customers/1"
+    },
+    {
+      "area": "ข้อมูลพื้นฐาน",
+      "page": "แก้ไขรายชื่อติดต่อ",
+      "issue": "ไม่พบหน้า",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/customers/1/edit"
+    },
+    {
+      "area": "ข้อมูลพื้นฐาน",
+      "page": "แก้ไขสินค้า",
+      "issue": "ไม่พบหน้า",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/products/1/edit"
+    },
+    {
+      "area": "กระบวนการขาย",
+      "page": "สร้างใบเสนอราคา / คำสั่งขาย",
+      "issue": "แสดงข้อผิดพลาดจริง",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/sales/orders/new"
+    },
+    {
+      "area": "กระบวนการขาย",
+      "page": "รายละเอียดใบเสนอราคา / คำสั่งขาย",
+      "issue": "ไม่พบหน้า",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/sales/orders/1"
+    },
+    {
+      "area": "กระบวนการขาย",
+      "page": "/sales/orders/1/edit",
+      "issue": "ไม่พบหน้า",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/sales/orders/1/edit"
+    },
+    {
+      "area": "กระบวนการขาย",
+      "page": "/sales/orders/1/print-preview",
+      "issue": "ไม่พบหน้า",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/sales/orders/1/print-preview"
+    },
+    {
+      "area": "กระบวนการขาย",
+      "page": "ไม่พบ การส่งสินค้า",
+      "issue": "แสดงข้อผิดพลาดจริง",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/sales/deliveries/1"
+    },
+    {
+      "area": "กระบวนการขาย",
+      "page": "ไม่พบข้อมูล",
+      "issue": "แสดงข้อผิดพลาดจริง",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/sales/invoices/1"
+    },
+    {
+      "area": "กระบวนการขาย",
+      "page": "ใบเพิ่ม/ลดหนี้",
+      "issue": "แสดงข้อผิดพลาดจริง",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/notes"
+    },
+    {
+      "area": "กระบวนการขาย",
+      "page": "ใบเพิ่ม/ลดหนี้",
+      "issue": "แสดงข้อผิดพลาดจริง",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/sales/notes"
+    },
+    {
+      "area": "กระบวนการขาย",
+      "page": "ไม่พบข้อมูล",
+      "issue": "ไม่พบหน้า",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/sales/notes/1"
+    },
+    {
+      "area": "กระบวนการซื้อ",
+      "page": "รายละเอียดใบสั่งซื้อ",
+      "issue": "แสดงข้อผิดพลาดจริง",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/purchases/orders/1"
+    },
+    {
+      "area": "กระบวนการซื้อ",
+      "page": "ไม่พบ บิลผู้ขาย",
+      "issue": "แสดงข้อผิดพลาดจริง",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/purchases/bills/1"
+    },
+    {
+      "area": "กระบวนการขาย",
+      "page": "ใบเพิ่ม/ลดหนี้",
+      "issue": "แสดงข้อผิดพลาดจริง",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/purchases/notes"
+    },
+    {
+      "area": "กระบวนการขาย",
+      "page": "ไม่พบข้อมูล",
+      "issue": "ไม่พบหน้า",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/purchases/notes/1"
+    },
+    {
+      "area": "กระบวนการซื้อ",
+      "page": "สร้างคำขอซื้อ",
+      "issue": "ไม่พบหน้า",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/purchases/requests/new"
+    },
+    {
+      "area": "กระบวนการซื้อ",
+      "page": "แก้ไขคำขอซื้อ",
+      "issue": "ไม่พบหน้า",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/purchases/requests/1/edit"
+    },
+    {
+      "area": "การเงินและบัญชี",
+      "page": "รายละเอียดรายจ่าย",
+      "issue": "แสดงข้อผิดพลาดจริง",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/expenses/1"
+    },
+    {
+      "area": "รายงาน",
+      "page": "สมุดบัญชีแยกประเภท",
+      "issue": "แสดงข้อผิดพลาดจริง",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/accounting/reports/general-ledger"
+    },
+    {
+      "area": "รายงาน",
+      "page": "ลูกหนี้/เจ้าหนี้ (รายงานลูกหนี้/เจ้าหนี้รายคู่ค้า)",
+      "issue": "แสดงข้อผิดพลาดจริง",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/accounting/reports/partner-ledger"
+    },
+    {
+      "area": "รายงาน",
+      "page": "อายุลูกหนี้",
+      "issue": "แสดงข้อผิดพลาดจริง",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/accounting/reports/aged-receivables"
+    },
+    {
+      "area": "รายงาน",
+      "page": "อายุเจ้าหนี้",
+      "issue": "แสดงข้อผิดพลาดจริง",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/accounting/reports/aged-payables"
+    },
+    {
+      "area": "รายงาน",
+      "page": "สมุดเงินสด",
+      "issue": "แสดงข้อผิดพลาดจริง",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/accounting/reports/cash-book"
+    },
+    {
+      "area": "รายงาน",
+      "page": "สมุดเงินฝากธนาคาร",
+      "issue": "แสดงข้อผิดพลาดจริง",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/accounting/reports/bank-book"
+    },
+    {
+      "area": "รายงาน",
+      "page": "รายงาน VAT",
+      "issue": "แสดงข้อผิดพลาดจริง",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/accounting/reports/vat"
+    },
+    {
+      "area": "รายงาน",
+      "page": "รายงานภาษีหัก ณ ที่จ่าย (WHT)",
+      "issue": "ไม่พบหน้า",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/accounting/reports/wht"
+    },
+    {
+      "area": "การเงินและบัญชี",
+      "page": "เอกสาร e-Tax",
+      "issue": "ไม่พบหน้า",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/accounting/etax"
+    },
+    {
+      "area": "การเงินและบัญชี",
+      "page": "e-Tax Settings",
+      "issue": "แสดงข้อผิดพลาดจริง",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/accounting/etax-settings"
+    },
+    {
+      "area": "รายงาน",
+      "page": "บัญชีแยกประเภท",
+      "issue": "แสดงข้อผิดพลาดจริง",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/accounting/reports/general-ledger/account/1"
+    },
+    {
+      "area": "รายงาน",
+      "page": "รายละเอียดรายการบัญชี #1",
+      "issue": "แสดงข้อผิดพลาดจริง",
+      "impact": "ผู้ใช้ไม่ควรใช้หน้านี้เป็นขั้นตอนหลักจนกว่าข้อมูลหรือการเชื่อมต่อจะพร้อม",
+      "action": "เปิดจากรายการเอกสารจริง ตรวจสิทธิ์ผู้ใช้ และตรวจ endpoint/ข้อมูลใน q01",
+      "route": "/accounting/reports/move-lines/1"
+    }
+  ],
+  "videos": [
+    {
+      "id": "01-login-dashboard-navigation",
+      "title": "Login, Dashboard และ Navigation",
+      "path": "Users Manaul Qacc/videos/01-login-dashboard-navigation.mp4",
+      "raw": "Users Manaul Qacc/videos/_raw-webm/page@701777c0cad6c6b3fa57f388a05b5c9b.webm",
+      "error": null,
+      "type": "real-browser-recording",
+      "source_path": "videos/01-login-dashboard-navigation.mp4",
+      "source_raw": "videos/_raw-webm/page@701777c0cad6c6b3fa57f388a05b5c9b.webm"
+    },
+    {
+      "id": "02-master-data-customers-products",
+      "title": "ข้อมูลหลัก ลูกค้า และสินค้า",
+      "path": "Users Manaul Qacc/videos/02-master-data-customers-products.mp4",
+      "raw": "Users Manaul Qacc/videos/_raw-webm/page@2a6fe3c782607bac04eaec5f788b70a8.webm",
+      "error": null,
+      "type": "real-browser-recording",
+      "source_path": "videos/02-master-data-customers-products.mp4",
+      "source_raw": "videos/_raw-webm/page@2a6fe3c782607bac04eaec5f788b70a8.webm"
+    },
+    {
+      "id": "03-sales-quotation-to-invoice",
+      "title": "การขาย ใบเสนอราคา ถึงใบแจ้งหนี้",
+      "path": "Users Manaul Qacc/videos/03-sales-quotation-to-invoice.mp4",
+      "raw": "Users Manaul Qacc/videos/_raw-webm/page@5e001b872e044ffe60683b9f004dc4da.webm",
+      "error": null,
+      "type": "real-browser-recording",
+      "source_path": "videos/03-sales-quotation-to-invoice.mp4",
+      "source_raw": "videos/_raw-webm/page@5e001b872e044ffe60683b9f004dc4da.webm"
+    },
+    {
+      "id": "04-invoice-receipt-payment",
+      "title": "ใบแจ้งหนี้ ใบเสร็จ และรับชำระ",
+      "path": "Users Manaul Qacc/videos/04-invoice-receipt-payment.mp4",
+      "raw": "Users Manaul Qacc/videos/_raw-webm/page@747ab0fe80c020c14f28b332460f55f4.webm",
+      "error": null,
+      "type": "real-browser-recording",
+      "source_path": "videos/04-invoice-receipt-payment.mp4",
+      "source_raw": "videos/_raw-webm/page@747ab0fe80c020c14f28b332460f55f4.webm"
+    },
+    {
+      "id": "05-purchase-expense-flow",
+      "title": "การซื้อและรายจ่าย",
+      "path": "Users Manaul Qacc/videos/05-purchase-expense-flow.mp4",
+      "raw": "Users Manaul Qacc/videos/_raw-webm/page@ef4627a8e44c145983b42d96a71f6c6a.webm",
+      "error": null,
+      "type": "real-browser-recording",
+      "source_path": "videos/05-purchase-expense-flow.mp4",
+      "source_raw": "videos/_raw-webm/page@ef4627a8e44c145983b42d96a71f6c6a.webm"
+    },
+    {
+      "id": "06-accounting-etax-reports",
+      "title": "รายงานบัญชี ภาษี e-Tax และตรวจเอกสาร",
+      "path": "Users Manaul Qacc/videos/06-accounting-etax-reports.mp4",
+      "raw": "Users Manaul Qacc/videos/_raw-webm/page@8dedd199d26de742e2b99cb557a41a72.webm",
+      "error": null,
+      "type": "real-browser-recording",
+      "source_path": "videos/06-accounting-etax-reports.mp4",
+      "source_raw": "videos/_raw-webm/page@8dedd199d26de742e2b99cb557a41a72.webm"
+    }
+  ]
+}
