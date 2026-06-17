@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-06-11T03:27:15.483Z",
-  "baseUrl": "http://localhost:5173",
-  "runDate": "2026-06-11",
-  "demoDataPrefix": "MANUAL_DEMO_20260611",
+  "generatedAt": "2026-06-17T09:18:52.761Z",
+  "baseUrl": "https://qacc.erpth.net",
+  "runDate": "2026-06-17",
+  "demoDataPrefix": "MANUAL_DEMO_20260617",
   "note": "Capture uses local q01 admin through Vite proxy. Dynamic routes use sample id/template ids and are recorded with their real loaded/error/empty/restricted state.",
   "coverage": [
     {
@@ -29,13 +29,13 @@
       "screenshot": "screenshots/dashboard.png",
       "finalUrl": "/dashboard",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ สวัสดี, Administrator ภาพรวมธุรกิจ ยอดขาย รายจ่าย กำไร และงานที่ต้องติดตามจากข้อมูลจริงของระบบ สร",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ สวัสดี, Administrator ภาพรวมธุรกิจ ยอดขาย รายจ่าย กำไร และงานที่ต้องติดตามจาก",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 3027
+      "elapsedMs": 3122
     },
     {
       "id": "customers-list",
@@ -45,13 +45,13 @@
       "screenshot": "screenshots/customers-list.png",
       "finalUrl": "/customers",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · รายชื่อติดต่อ รายชื่อติดต่อ / Contacts จัดการข้อมูลรายชื่อผู้ติดต่อ (res.partner) ทั้งลู",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · รายชื่อติดต่อ รายชื่อติดต่อ / Contacts จัดการข้อมูลรายชื่อผู้ติดต่อ ",
       "hasTable": true,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 2304
+      "elapsedMs": 2791
     },
     {
       "id": "customers-new",
@@ -61,13 +61,13 @@
       "screenshot": "screenshots/customers-new.png",
       "finalUrl": "/customers/new",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · รายชื่อติดต่อ · เพิ่ม เพิ่มรายชื่อติดต่อ ข้อมูลรายชื่อผู้ติดต่อ (res.partner) ทั้งลูกค้า",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · รายชื่อติดต่อ · เพิ่ม เพิ่มรายชื่อติดต่อ ข้อมูลรายชื่อผู้ติดต่อ (res",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1988
+      "elapsedMs": 2457
     },
     {
       "id": "customers-detail",
@@ -78,13 +78,13 @@
       "screenshot": "screenshots/customers-detail.png",
       "finalUrl": "/customers/1",
       "status": "not-found",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · รายชื่อติดต่อ · รายละเอียด รายละเอียดรายชื่อติดต่อ ข้อมูลรายชื่อผู้ติดต่อ (res.partner) ",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · รายชื่อติดต่อ · รายละเอียด รายละเอียดรายชื่อติดต่อ ข้อมูลรายชื่อผู้ต",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1900
+      "elapsedMs": 2317
     },
     {
       "id": "customers-edit",
@@ -95,13 +95,13 @@
       "screenshot": "screenshots/customers-edit.png",
       "finalUrl": "/customers/1/edit",
       "status": "not-found",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · รายชื่อติดต่อ · แก้ไข แก้ไขรายชื่อติดต่อ ข้อมูลรายชื่อผู้ติดต่อ (res.partner) ทั้งลูกค้า",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · รายชื่อติดต่อ · แก้ไข แก้ไขรายชื่อติดต่อ ข้อมูลรายชื่อผู้ติดต่อ (res",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1983
+      "elapsedMs": 2380
     },
     {
       "id": "products-list",
@@ -110,14 +110,14 @@
       "route": "/products",
       "screenshot": "screenshots/products-list.png",
       "finalUrl": "/products",
-      "status": "empty-state",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · สินค้า สินค้า / Products จัดการสินค้าและบริการ (list / create / update) จาก Odoo18 ผ่าน ",
+      "status": "loaded",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · สินค้า สินค้า / Products จัดการสินค้าและบริการ (list / create / upda",
       "hasTable": true,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1884
+      "elapsedMs": 2401
     },
     {
       "id": "products-new",
@@ -127,13 +127,13 @@
       "screenshot": "screenshots/products-new.png",
       "finalUrl": "/products/new",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · สินค้า · เพิ่ม เพิ่มสินค้า ตัวจัดการสินค้า/บริการสำหรับ Odoo18 (adt_th_api) ยกเลิก บันทึ",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · สินค้า · เพิ่ม เพิ่มสินค้า ตัวจัดการสินค้า/บริการสำหรับ Odoo18 (adt_",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 2024
+      "elapsedMs": 4852
     },
     {
       "id": "products-edit",
@@ -144,13 +144,13 @@
       "screenshot": "screenshots/products-edit.png",
       "finalUrl": "/products/1/edit",
       "status": "not-found",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · สินค้า · แก้ไข แก้ไขสินค้า ตัวจัดการสินค้า/บริการสำหรับ Odoo18 (adt_th_api) ยกเลิก บันทึ",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · สินค้า · แก้ไข แก้ไขสินค้า ตัวจัดการสินค้า/บริการสำหรับ Odoo18 (adt_",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 2060
+      "elapsedMs": 3153
     },
     {
       "id": "sales-orders-list",
@@ -160,13 +160,13 @@
       "screenshot": "screenshots/sales-orders-list.png",
       "finalUrl": "/sales/orders",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · ใบเสนอราคา · SALE ORDER ใบเสนอราคา / Sale Order จัดการใบเสนอราคาและคำสั่งขาย สินค้า + เพ",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · ใบเสนอราคา · SALE ORDER ใบเสนอราคา / Sale Order จัดการใบเสนอราคาและค",
       "hasTable": true,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 2100
+      "elapsedMs": 2797
     },
     {
       "id": "sales-orders-new",
@@ -176,13 +176,13 @@
       "screenshot": "screenshots/sales-orders-new.png",
       "finalUrl": "/sales/orders/new",
       "status": "error",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · ใบเสนอราคา · SALE ORDER สร้างใบเสนอราคา / Sale Order รองรับการทำงานร่วมกับ Odoo18 (adt_t",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · ใบเสนอราคา · SALE ORDER สร้างใบเสนอราคา / Sale Order รองรับการทำงานร",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1987
+      "elapsedMs": 2686
     },
     {
       "id": "sales-orders-detail",
@@ -193,13 +193,13 @@
       "screenshot": "screenshots/sales-orders-detail.png",
       "finalUrl": "/sales/orders/1",
       "status": "not-found",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · ใบเสนอราคา · รายละเอียด รายละเอียดใบเสนอราคา / Sale Order กำลังโหลดข้อมูล... พิมพ์ Send ",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · ใบเสนอราคา · รายละเอียด รายละเอียดใบเสนอราคา / Sale Order กำลังโหลดข",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1973
+      "elapsedMs": 3117
     },
     {
       "id": "sales-orders-edit",
@@ -210,13 +210,13 @@
       "screenshot": "screenshots/sales-orders-edit.png",
       "finalUrl": "/sales/orders/1/edit",
       "status": "not-found",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ ไม่พบเอกสารขายที่ต้องการ",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ ไม่พบเอกสารขายที่ต้องการ",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1886
+      "elapsedMs": 3216
     },
     {
       "id": "sales-orders-print",
@@ -233,7 +233,7 @@
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1737
+      "elapsedMs": 1941
     },
     {
       "id": "sales-delivery-detail",
@@ -244,13 +244,13 @@
       "screenshot": "screenshots/sales-delivery-detail.png",
       "finalUrl": "/sales/deliveries/1",
       "status": "error",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · DELIVERY ไม่พบ Delivery โหลดข้อมูลไม่สำเร็จ Delivery not found",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · DELIVERY ไม่พบ Delivery โหลดข้อมูลไม่สำเร็จ Delivery not found",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1924
+      "elapsedMs": 2480
     },
     {
       "id": "sales-invoices-list",
@@ -259,14 +259,14 @@
       "route": "/sales/invoices",
       "screenshot": "screenshots/sales-invoices-list.png",
       "finalUrl": "/sales/invoices",
-      "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · ใบแจ้งหนี้ ใบแจ้งหนี้ ค้นหา ดู และจัดการเอกสารขาย + สร้างใบแจ้งหนี้ พิมพ์รายงาน ทั้งหมด ",
+      "status": "empty-state",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · ใบแจ้งหนี้ ใบแจ้งหนี้ ค้นหา ดู และจัดการเอกสารขาย + สร้างใบแจ้งหนี้ ",
       "hasTable": true,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 2561
+      "elapsedMs": 2437
     },
     {
       "id": "sales-receipts-list",
@@ -275,14 +275,14 @@
       "route": "/sales/receipts",
       "screenshot": "screenshots/sales-receipts-list.png",
       "finalUrl": "/sales/receipts",
-      "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · ใบเสร็จรับเงิน ใบเสร็จรับเงิน เปิดเอกสารต้นทางเพื่อรับชำระเงิน ออกใบเสร็จ และส่ง e-Tax ต",
+      "status": "empty-state",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · ใบเสร็จรับเงิน ใบเสร็จรับเงิน เปิดเอกสารต้นทางเพื่อรับชำระเงิน ออกใบ",
       "hasTable": true,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 2239
+      "elapsedMs": 2359
     },
     {
       "id": "sales-invoices-new",
@@ -292,13 +292,13 @@
       "screenshot": "screenshots/sales-invoices-new.png",
       "finalUrl": "/sales/invoices/new",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · ใบแจ้งหนี้ สร้างใบแจ้งหนี้ใหม่ กรอกข้อมูลใบแจ้งหนี้ บันทึกแบบร่างอัตโนมัติ 11/06/2569 10",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · ใบแจ้งหนี้ สร้างใบแจ้งหนี้ใหม่ กรอกข้อมูลใบแจ้งหนี้ บันทึกแบบร่างอัต",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 2070
+      "elapsedMs": 2327
     },
     {
       "id": "sales-invoices-detail",
@@ -309,13 +309,13 @@
       "screenshot": "screenshots/sales-invoices-detail.png",
       "finalUrl": "/sales/invoices/1",
       "status": "error",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ ไม่พบข้อมูล ไม่สามารถโหลดข้อมูลใบแจ้งหนี้ได้ เกิดข้อผิดพลาด Invoice not found กลับไปหน้ารายการ",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ ไม่พบข้อมูล ไม่สามารถโหลดข้อมูลใบแจ้งหนี้ได้ เกิดข้อผิดพลาด Invoice not found",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1900
+      "elapsedMs": 3420
     },
     {
       "id": "sales-invoices-edit",
@@ -326,13 +326,13 @@
       "screenshot": "screenshots/sales-invoices-edit.png",
       "finalUrl": "/sales/invoices/1/edit",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · ใบแจ้งหนี้ แก้ไขใบแจ้งหนี้ แก้ไข #1 ยกเลิก ข้อมูลหลัก ลูกค้า* พิมพ์อย่างน้อย 1 ตัวอักษรเ",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายรับ · ใบแจ้งหนี้ แก้ไขใบแจ้งหนี้ แก้ไข #1 ยกเลิก ข้อมูลหลัก ลูกค้า* พิมพ์อ",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1860
+      "elapsedMs": 2314
     },
     {
       "id": "notes-list",
@@ -342,13 +342,13 @@
       "screenshot": "screenshots/notes-list.png",
       "finalUrl": "/notes",
       "status": "error",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายงาน · ใบเพิ่ม/ลดหนี้ ใบเพิ่ม/ลดหนี้ รวม Sales และ Purchase ในเมนูเดียว หมวดเอกสาร Sales Purcha",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายงาน · ใบเพิ่ม/ลดหนี้ ใบเพิ่ม/ลดหนี้ รวม Sales และ Purchase ในเมนูเดียว หมว",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1917
+      "elapsedMs": 2516
     },
     {
       "id": "sales-notes-alias",
@@ -358,13 +358,13 @@
       "screenshot": "screenshots/sales-notes-alias.png",
       "finalUrl": "/notes?domain=sales",
       "status": "error",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายงาน · ใบเพิ่ม/ลดหนี้ ใบเพิ่ม/ลดหนี้ รวม Sales และ Purchase ในเมนูเดียว หมวดเอกสาร Sales Purcha",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายงาน · ใบเพิ่ม/ลดหนี้ ใบเพิ่ม/ลดหนี้ รวม Sales และ Purchase ในเมนูเดียว หมว",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1884
+      "elapsedMs": 2328
     },
     {
       "id": "sales-notes-detail",
@@ -375,13 +375,13 @@
       "screenshot": "screenshots/sales-notes-detail.png",
       "finalUrl": "/sales/notes/1",
       "status": "not-found",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ ไม่พบข้อมูล ไม่สามารถโหลดข้อมูลใบเพิ่ม/ลดหนี้ได้ column account_move.adt_approval_team_id does no",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ ไม่พบข้อมูล ไม่สามารถโหลดข้อมูลใบเพิ่ม/ลดหนี้ได้ column account_move.adt_appr",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1912
+      "elapsedMs": 2535
     },
     {
       "id": "purchase-orders-list",
@@ -391,13 +391,13 @@
       "screenshot": "screenshots/purchase-orders-list.png",
       "finalUrl": "/purchases/orders",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายจ่าย · ใบสั่งซื้อ ใบสั่งซื้อ ค้นหา ดู และจัดการใบสั่งซื้อ + สร้างใบสั่งซื้อ พิมพ์รายงาน ทั้งหม",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายจ่าย · ใบสั่งซื้อ ใบสั่งซื้อ ค้นหา ดู และจัดการใบสั่งซื้อ + สร้างใบสั่งซื้",
       "hasTable": true,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1917
+      "elapsedMs": 2339
     },
     {
       "id": "purchase-orders-new",
@@ -407,13 +407,13 @@
       "screenshot": "screenshots/purchase-orders-new.png",
       "finalUrl": "/purchases/orders/new",
       "status": "empty-state",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายจ่าย · ใบสั่งซื้อ สร้างใบสั่งซื้อ autosaved 11/06/2569 10:25 ยกเลิก สร้างใบสั่งซื้อ ข้อมูลใบสั",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายจ่าย · ใบสั่งซื้อ สร้างใบสั่งซื้อ autosaved 17/06/2569 16:16 ยกเลิก สร้างใ",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1986
+      "elapsedMs": 2635
     },
     {
       "id": "purchase-orders-detail",
@@ -424,13 +424,13 @@
       "screenshot": "screenshots/purchase-orders-detail.png",
       "finalUrl": "/purchases/orders/1",
       "status": "error",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ เกิดข้อผิดพลาด Invalid purchase order response format กลับไปหน้ารายการ",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ เกิดข้อผิดพลาด Invalid purchase order response format กลับไปหน้ารายการ",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1921
+      "elapsedMs": 2175
     },
     {
       "id": "purchase-orders-edit",
@@ -441,13 +441,13 @@
       "screenshot": "screenshots/purchase-orders-edit.png",
       "finalUrl": "/purchases/orders/1/edit",
       "status": "empty-state",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายจ่าย · ใบสั่งซื้อ แก้ไขใบสั่งซื้อ ยกเลิก บันทึกการแก้ไข ข้อมูลใบสั่งซื้อ ผู้ขาย* Tip: พิมพ์อย่",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายจ่าย · ใบสั่งซื้อ แก้ไขใบสั่งซื้อ ยกเลิก บันทึกการแก้ไข ข้อมูลใบสั่งซื้อ ผ",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1942
+      "elapsedMs": 2503
     },
     {
       "id": "purchase-receipts-detail",
@@ -458,13 +458,13 @@
       "screenshot": "screenshots/purchase-receipts-detail.png",
       "finalUrl": "/purchases/receipts/1",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายจ่าย · RECEIPT Receipt WH/IN/00001 Customer 01 เปิดใน Odoo กลับ done Origin: P00001 คู่ค้า Cus",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายจ่าย · RECEIPT Receipt WH/IN/00001 Customer 01 เปิดใน Odoo กลับ done Origi",
       "hasTable": true,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1888
+      "elapsedMs": 2333
     },
     {
       "id": "purchase-bills-detail",
@@ -475,13 +475,13 @@
       "screenshot": "screenshots/purchase-bills-detail.png",
       "finalUrl": "/purchases/bills/1",
       "status": "error",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายจ่าย · VENDOR BILL ไม่พบ Vendor Bill ไม่สามารถโหลดข้อมูลได้ Internal server error กลับไปใบสั่ง",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายจ่าย · VENDOR BILL ไม่พบ Vendor Bill ไม่สามารถโหลดข้อมูลได้ Internal serve",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1899
+      "elapsedMs": 2317
     },
     {
       "id": "purchase-notes-alias",
@@ -491,13 +491,13 @@
       "screenshot": "screenshots/purchase-notes-alias.png",
       "finalUrl": "/notes?domain=purchase",
       "status": "error",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายงาน · ใบเพิ่ม/ลดหนี้ ใบเพิ่ม/ลดหนี้ รวม Sales และ Purchase ในเมนูเดียว หมวดเอกสาร Sales Purcha",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายงาน · ใบเพิ่ม/ลดหนี้ ใบเพิ่ม/ลดหนี้ รวม Sales และ Purchase ในเมนูเดียว หมว",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1905
+      "elapsedMs": 2259
     },
     {
       "id": "purchase-notes-detail",
@@ -508,13 +508,13 @@
       "screenshot": "screenshots/purchase-notes-detail.png",
       "finalUrl": "/purchases/notes/1",
       "status": "not-found",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ ไม่พบข้อมูล ไม่สามารถโหลดข้อมูลใบเพิ่ม/ลดหนี้ซื้อได้ column account_move.adt_approval_team_id doe",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ ไม่พบข้อมูล ไม่สามารถโหลดข้อมูลใบเพิ่ม/ลดหนี้ซื้อได้ column account_move.adt_",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1910
+      "elapsedMs": 2178
     },
     {
       "id": "purchase-requests-list",
@@ -523,14 +523,14 @@
       "route": "/purchases/requests",
       "screenshot": "screenshots/purchase-requests-list.png",
       "finalUrl": "/purchases/requests",
-      "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายจ่าย · คำขอซื้อ คำขอซื้อ ค้นหา ดู และจัดการคำขอซื้อ สินค้า + เพิ่มสินค้า + สร้างคำขอซื้อ พิมพ์",
+      "status": "empty-state",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายจ่าย · คำขอซื้อ คำขอซื้อ ค้นหา ดู และจัดการคำขอซื้อ สินค้า + เพิ่มสินค้า +",
       "hasTable": true,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1950
+      "elapsedMs": 2200
     },
     {
       "id": "purchase-requests-new",
@@ -540,30 +540,30 @@
       "screenshot": "screenshots/purchase-requests-new.png",
       "finalUrl": "/purchases/requests/new",
       "status": "not-found",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายจ่าย · คำขอซื้อ · สร้าง สร้างคำขอซื้อ จัดการคำขอซื้อให้พร้อมส่งอนุมัติ autosaved 11/06/2569 10",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายจ่าย · คำขอซื้อ · สร้าง สร้างคำขอซื้อ จัดการคำขอซื้อให้พร้อมส่งอนุมัติ aut",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 2035
+      "elapsedMs": 2483
     },
     {
       "id": "purchase-requests-detail",
-      "title": "PR00002",
+      "title": "",
       "chapter": "การซื้อ",
       "route": "/purchases/requests/1",
       "dynamic": true,
       "screenshot": "screenshots/purchase-requests-detail.png",
       "finalUrl": "/purchases/requests/1",
-      "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายจ่าย · คำขอซื้อ · รายละเอียด PR00002 รายละเอียดคำขอซื้อ กลับ แก้ไข Confirm → ส่งอนุมัติ ยกเลิก",
-      "hasTable": true,
+      "status": "not-found",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ Purchase request not found",
+      "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1879
+      "elapsedMs": 2611
     },
     {
       "id": "purchase-requests-edit",
@@ -574,13 +574,13 @@
       "screenshot": "screenshots/purchase-requests-edit.png",
       "finalUrl": "/purchases/requests/1/edit",
       "status": "not-found",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายจ่าย · คำขอซื้อ · แก้ไข แก้ไขคำขอซื้อ จัดการคำขอซื้อให้พร้อมส่งอนุมัติ ยกเลิก บันทึกเป็นร่าง ส",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายจ่าย · คำขอซื้อ · แก้ไข แก้ไขคำขอซื้อ จัดการคำขอซื้อให้พร้อมส่งอนุมัติ ยกเ",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 2052
+      "elapsedMs": 2521
     },
     {
       "id": "expenses-list",
@@ -590,13 +590,13 @@
       "screenshot": "screenshots/expenses-list.png",
       "finalUrl": "/expenses",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายจ่าย · รายจ่าย รายจ่าย ค้นหา ดู และจัดการรายจ่าย + สร้างรายจ่าย พิมพ์รายงาน ทั้งหมด 11 ร่าง 7 ",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายจ่าย · รายจ่าย รายจ่าย ค้นหา ดู และจัดการรายจ่าย + สร้างรายจ่าย พิมพ์รายงา",
       "hasTable": true,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 2033
+      "elapsedMs": 2562
     },
     {
       "id": "expenses-new",
@@ -606,13 +606,13 @@
       "screenshot": "screenshots/expenses-new.png",
       "finalUrl": "/expenses/new",
       "status": "empty-state",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายจ่าย · สร้างรายจ่าย สร้างรายจ่ายใหม่ บันทึกรายจ่ายและรายการสินค้า/บริการ ยกเลิก บันทึก ข้อมูลห",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ รายจ่าย · สร้างรายจ่าย สร้างรายจ่ายใหม่ บันทึกรายจ่ายและรายการสินค้า/บริการ ย",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1934
+      "elapsedMs": 2617
     },
     {
       "id": "expenses-detail",
@@ -623,13 +623,13 @@
       "screenshot": "screenshots/expenses-detail.png",
       "finalUrl": "/expenses/1",
       "status": "error",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ เกิดข้อผิดพลาดในการโหลดข้อมูล Expense with ID 1 not found กลับไปหน้ารายการ",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ เกิดข้อผิดพลาดในการโหลดข้อมูล Expense with ID 1 not found กลับไปหน้ารายการ",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 2042
+      "elapsedMs": 2425
     },
     {
       "id": "document-review",
@@ -637,15 +637,15 @@
       "chapter": "รายจ่ายและเอกสารตรวจสอบ",
       "route": "/accounting/document-review",
       "screenshot": "screenshots/document-review.png",
-      "finalUrl": "/accounting/document-review?id=46",
-      "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ บัญชี · กล่องงานตรวจสอบ กล่องงานตรวจสอบ รวมงานรออนุมัติและเอกสารที่ต้องตรวจไว้ในที่เดียว เพื่อให้",
+      "finalUrl": "/accounting/document-review",
+      "status": "not-found",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ บัญชี · กล่องงานตรวจสอบ กล่องงานตรวจสอบ รวมงานรออนุมัติและเอกสารที่ต้องตรวจไว",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 2117
+      "elapsedMs": 2701
     },
     {
       "id": "accounting-reports",
@@ -655,13 +655,13 @@
       "screenshot": "screenshots/accounting-reports.png",
       "finalUrl": "/accounting/reports",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING รายงานบัญชี ศูนย์รวมรายงานมาตรฐานไทย พร้อม รายละเอียดไปเอกสารที่เกี่ยวข้อง ไปหน",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING รายงานบัญชี ศูนย์รวมรายงานมาตรฐานไทย พร้อม รายละเอียดไปเอกส",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 2065
+      "elapsedMs": 2548
     },
     {
       "id": "profit-loss",
@@ -671,13 +671,13 @@
       "screenshot": "screenshots/profit-loss.png",
       "finalUrl": "/accounting/reports/profit-loss",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS งบกำไรขาดทุน (Profit & Loss) คลิก รายละเอียด เพื่อดู General Ledger ร",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS งบกำไรขาดทุน (Profit & Loss) คลิก รายละเอียด เพื่",
       "hasTable": true,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 2755
+      "elapsedMs": 2971
     },
     {
       "id": "balance-sheet",
@@ -687,13 +687,13 @@
       "screenshot": "screenshots/balance-sheet.png",
       "finalUrl": "/accounting/reports/balance-sheet",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS งบดุล (Balance Sheet) คลิก รายละเอียดเพื่อดู General Ledger รายบัญชี ",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS งบดุล (Balance Sheet) คลิก รายละเอียดเพื่อดู Gene",
       "hasTable": true,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 2752
+      "elapsedMs": 3479
     },
     {
       "id": "general-ledger",
@@ -702,14 +702,14 @@
       "route": "/accounting/reports/general-ledger",
       "screenshot": "screenshots/general-ledger.png",
       "finalUrl": "/accounting/reports/general-ledger",
-      "status": "error",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS สมุดบัญชีแยกประเภท (General Ledger) Phase 2: เชื่อมต่อ API และสามารถ ",
+      "status": "loaded",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS สมุดบัญชีแยกประเภท (General Ledger) Phase 2: เชื่",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1940
+      "elapsedMs": 4333
     },
     {
       "id": "trial-balance",
@@ -719,13 +719,13 @@
       "screenshot": "screenshots/trial-balance.png",
       "finalUrl": "/accounting/reports/trial-balance",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS งบทดลอง (Trial Balance) สรุปยอดเดบิต/เครดิตและคงเหลือตามบัญชี กลับไปร",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS งบทดลอง (Trial Balance) สรุปยอดเดบิต/เครดิตและคงเ",
       "hasTable": true,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 2207
+      "elapsedMs": 2574
     },
     {
       "id": "partner-ledger",
@@ -734,14 +734,14 @@
       "route": "/accounting/reports/partner-ledger",
       "screenshot": "screenshots/partner-ledger.png",
       "finalUrl": "/accounting/reports/partner-ledger",
-      "status": "error",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS ลูกหนี้/เจ้าหนี้ (Partner Ledger) ดู ledger แยกตามคู่ค้า และ รายละเอี",
+      "status": "loaded",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS ลูกหนี้/เจ้าหนี้ (Partner Ledger) ดู ledger แยกตา",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1902
+      "elapsedMs": 3439
     },
     {
       "id": "partner-ledger-drilldown",
@@ -752,13 +752,13 @@
       "screenshot": "screenshots/partner-ledger-drilldown.png",
       "finalUrl": "/accounting/reports/partner-ledger/partner/1",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS Partner Ledger: Chonlatee Innovation รายละเอียดจาก Aged Receivables/P",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS Partner Ledger: Chonlatee Innovation รายละเอียดจา",
       "hasTable": true,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1909
+      "elapsedMs": 2515
     },
     {
       "id": "aged-receivables",
@@ -767,14 +767,14 @@
       "route": "/accounting/reports/aged-receivables",
       "screenshot": "screenshots/aged-receivables.png",
       "finalUrl": "/accounting/reports/aged-receivables",
-      "status": "error",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS อายุลูกหนี้ (Aged Receivables) ดูรายการคงค้างตามอายุ พร้อม รายละเอียด",
-      "hasTable": false,
+      "status": "loaded",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS อายุลูกหนี้ (Aged Receivables) ดูรายการคงค้างตามอ",
+      "hasTable": true,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1898
+      "elapsedMs": 2468
     },
     {
       "id": "aged-payables",
@@ -783,14 +783,14 @@
       "route": "/accounting/reports/aged-payables",
       "screenshot": "screenshots/aged-payables.png",
       "finalUrl": "/accounting/reports/aged-payables",
-      "status": "error",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS อายุเจ้าหนี้ (Aged Payables) ดูรายการคงค้างตามอายุ พร้อม รายละเอียดไป",
-      "hasTable": false,
+      "status": "loaded",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS อายุเจ้าหนี้ (Aged Payables) ดูรายการคงค้างตามอาย",
+      "hasTable": true,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1897
+      "elapsedMs": 3474
     },
     {
       "id": "cash-book",
@@ -799,14 +799,14 @@
       "route": "/accounting/reports/cash-book",
       "screenshot": "screenshots/cash-book.png",
       "finalUrl": "/accounting/reports/cash-book",
-      "status": "error",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS สมุดเงินสด (Cash Book) สรุปรายการสมุดรายวันจากข้อมูลจริงในระบบ กลับไป",
+      "status": "not-found",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS สมุดเงินสด (Cash Book) สรุปรายการสมุดรายวันจากข้อ",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1897
+      "elapsedMs": 2866
     },
     {
       "id": "bank-book",
@@ -815,14 +815,14 @@
       "route": "/accounting/reports/bank-book",
       "screenshot": "screenshots/bank-book.png",
       "finalUrl": "/accounting/reports/bank-book",
-      "status": "error",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS สมุดเงินฝากธนาคาร (Bank Book) สรุปรายการสมุดรายวันจากข้อมูลจริงในระบบ",
+      "status": "not-found",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS สมุดเงินฝากธนาคาร (Bank Book) สรุปรายการสมุดรายวั",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1896
+      "elapsedMs": 2632
     },
     {
       "id": "vat-report",
@@ -831,14 +831,14 @@
       "route": "/accounting/reports/vat",
       "screenshot": "screenshots/vat-report.png",
       "finalUrl": "/accounting/reports/vat",
-      "status": "error",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS รายงาน VAT ภาษีซื้อ/ภาษีขาย ตามช่วงวันที่ กลับไปรายงานบัญชี VAT Setti",
+      "status": "loaded",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS รายงาน VAT ภาษีซื้อ/ภาษีขาย ตามช่วงวันที่ กลับไปร",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1911
+      "elapsedMs": 4325
     },
     {
       "id": "wht-report",
@@ -848,13 +848,13 @@
       "screenshot": "screenshots/wht-report.png",
       "finalUrl": "/accounting/reports/wht",
       "status": "not-found",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS รายงานภาษีหัก ณ ที่จ่าย (WHT) สรุปรายการตามแบบภงด. (Phase 2) กลับไปรา",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS รายงานภาษีหัก ณ ที่จ่าย (WHT) สรุปรายการตามแบบภงด",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1913
+      "elapsedMs": 2507
     },
     {
       "id": "tax-settings",
@@ -864,13 +864,13 @@
       "screenshot": "screenshots/tax-settings.png",
       "finalUrl": "/accounting/tax-settings",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · TAX SETTINGS VAT and Taxes Settings ตั้งค่า VAT และ taxes จาก backend เป็น so",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · TAX SETTINGS VAT and Taxes Settings ตั้งค่า VAT และ taxes",
       "hasTable": true,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 2613
+      "elapsedMs": 2806
     },
     {
       "id": "etax-dashboard",
@@ -880,13 +880,13 @@
       "screenshot": "screenshots/etax-dashboard.png",
       "finalUrl": "/accounting/etax",
       "status": "not-found",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ บัญชี · เอกสาร E-TAX เอกสาร e-Tax ติดตามคิว e-Tax ดูสถานะ INET และจัดการเอกสารจากหน้ารายการเดียว ",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ บัญชี · เอกสาร E-TAX เอกสาร e-Tax ติดตามคิว e-Tax ดูสถานะ INET และจัดการเอกสา",
       "hasTable": true,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 2031
+      "elapsedMs": 2484
     },
     {
       "id": "etax-settings",
@@ -896,30 +896,30 @@
       "screenshot": "screenshots/etax-settings.png",
       "finalUrl": "/accounting/etax-settings",
       "status": "error",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ ACCOUNTING · E-TAX · SETTINGS e-Tax Settings ตั้งค่าการทำงานที่ปลอดภัยและ backend-managed โดยไม่เ",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ ACCOUNTING · E-TAX · SETTINGS e-Tax Settings ตั้งค่าการทำงานที่ปลอดภัยและ bac",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 2231
+      "elapsedMs": 2881
     },
     {
       "id": "gl-account-drilldown",
-      "title": "General Ledger",
+      "title": "General Ledger: 120000 Account Receivable",
       "chapter": "บัญชี/ภาษี/e-Tax",
       "route": "/accounting/reports/general-ledger/account/1",
       "dynamic": true,
       "screenshot": "screenshots/gl-account-drilldown.png",
       "finalUrl": "/accounting/reports/general-ledger/account/1",
-      "status": "error",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS General Ledger รายละเอียดจาก Profit & Loss / Balance Sheet ย้อนกลับ ร",
-      "hasTable": false,
+      "status": "loaded",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS General Ledger: 120000 Account Receivable รายละเอ",
+      "hasTable": true,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1983
+      "elapsedMs": 2868
     },
     {
       "id": "move-line-detail",
@@ -929,14 +929,14 @@
       "dynamic": true,
       "screenshot": "screenshots/move-line-detail.png",
       "finalUrl": "/accounting/reports/move-lines/1",
-      "status": "error",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS รายละเอียดรายการบัญชี #1 ดูรายละเอียดบรรทัดบัญชี และรายการใน journal ",
+      "status": "loaded",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · REPORTS รายละเอียดรายการบัญชี #1 ดูรายละเอียดบรรทัดบัญชี ",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1882
+      "elapsedMs": 3584
     },
     {
       "id": "accounting-admin",
@@ -946,13 +946,13 @@
       "screenshot": "screenshots/accounting-admin.png",
       "finalUrl": "/accounting/admin",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · ADMIN Accounting Admin (COA / Journals) จัดการ Chart of Accounts และสมุดรายวั",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ HOME · ACCOUNTING · ADMIN Accounting Admin (COA / Journals) จัดการ Chart of A",
       "hasTable": true,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 4086
+      "elapsedMs": 4832
     },
     {
       "id": "excel-import",
@@ -962,13 +962,13 @@
       "screenshot": "screenshots/excel-import.png",
       "finalUrl": "/excel-import",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ TOOLS · EXCEL IMPORT นำเข้าข้อมูลจาก Excel อัปโหลดไฟล์ .xlsx เพื่อสร้างลูกค้า สินค้า รายจ่าย หรือ",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ TOOLS · EXCEL IMPORT นำเข้าข้อมูลจาก Excel อัปโหลดไฟล์ .xlsx เพื่อสร้างลูกค้า",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1969
+      "elapsedMs": 2492
     },
     {
       "id": "backend-connection",
@@ -978,13 +978,13 @@
       "screenshot": "screenshots/backend-connection.png",
       "finalUrl": "/backend-connection",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ ตั้งค่าระบบ · การเชื่อมต่อ ตั้งค่าการเชื่อมต่อระบบ สำหรับผู้ดูแลระบบ ใช้สร้างบริษัทใหม่และตั้งค่า",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ ตั้งค่าระบบ · การเชื่อมต่อ ตั้งค่าการเชื่อมต่อระบบ สำหรับผู้ดูแลระบบ ใช้สร้าง",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1953
+      "elapsedMs": 2417
     },
     {
       "id": "agent-dashboard",
@@ -994,13 +994,13 @@
       "screenshot": "screenshots/agent-dashboard.png",
       "finalUrl": "/agent",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ AGENT Agent Dashboard AI-powered operations กลับ ตั้งค่า Agent Token ต้องการ Agent Token เพื่อใช้",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ AGENT Agent Dashboard AI-powered operations กลับ ตั้งค่า Agent Token ต้องการ ",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1876
+      "elapsedMs": 2313
     },
     {
       "id": "agent-ocr",
@@ -1010,13 +1010,13 @@
       "screenshot": "screenshots/agent-ocr.png",
       "finalUrl": "/agent/ocr",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ AGENT · OCR OCR - สแกนเอกสาร สแกนข้อความจากภาพหรือ PDF กลับ อัปโหลดไฟล์ ลากไฟล์มาวาง หรือคลิกเพื่",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ AGENT · OCR OCR - สแกนเอกสาร สแกนข้อความจากภาพหรือ PDF กลับ อัปโหลดไฟล์ ลากไฟ",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1873
+      "elapsedMs": 2801
     },
     {
       "id": "agent-expense",
@@ -1026,13 +1026,13 @@
       "screenshot": "screenshots/agent-expense.png",
       "finalUrl": "/agent/expense",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ AGENT · EXPENSE Auto-post Expense - รายจ่ายจากใบเสร็จ อัปโหลดใบเสร็จเพื่อสร้างรายจ่ายอัตโนมัติด้ว",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ AGENT · EXPENSE Auto-post Expense - รายจ่ายจากใบเสร็จ อัปโหลดใบเสร็จเพื่อสร้า",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1870
+      "elapsedMs": 2259
     },
     {
       "id": "agent-quotation",
@@ -1042,13 +1042,13 @@
       "screenshot": "screenshots/agent-quotation.png",
       "finalUrl": "/agent/quotation",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ AGENT · QUOTATION Create Quotation - สร้างใบเสนอราคา สร้างใบเสนอราคาจากเอกสารหรือข้อมูลที่กรอก กล",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ AGENT · QUOTATION Create Quotation - สร้างใบเสนอราคา สร้างใบเสนอราคาจากเอกสาร",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1907
+      "elapsedMs": 2294
     },
     {
       "id": "agent-contact",
@@ -1058,13 +1058,13 @@
       "screenshot": "screenshots/agent-contact.png",
       "finalUrl": "/agent/contact",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ AGENT · CONTACT Create Contact - เพิ่มผู้ติดต่อจากนามบัตร สแกนนามบัตรหรือกรอกข้อมูลเพื่อเพิ่มผู้ต",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ AGENT · CONTACT Create Contact - เพิ่มผู้ติดต่อจากนามบัตร สแกนนามบัตรหรือกรอก",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1992
+      "elapsedMs": 2251
     },
     {
       "id": "agent-invoice",
@@ -1074,13 +1074,13 @@
       "screenshot": "screenshots/agent-invoice.png",
       "finalUrl": "/agent/invoice",
       "status": "empty-state",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ AGENT · INVOICE Create Invoice - สร้างใบแจ้งหนี้ สร้างใบแจ้งหนี้จากเอกสารหรือข้อมูลที่กรอก กลับ ข",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ AGENT · INVOICE Create Invoice - สร้างใบแจ้งหนี้ สร้างใบแจ้งหนี้จากเอกสารหรือ",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1956
+      "elapsedMs": 2390
     },
     {
       "id": "reports-studio",
@@ -1090,13 +1090,13 @@
       "screenshot": "screenshots/reports-studio.png",
       "finalUrl": "/reports-studio",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ Dashboard Pick a template, edit blocks, preview, then print/PDF. Branding Template Library Recent",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ Dashboard Pick a template, edit blocks, preview, then print/PDF. Branding Tem",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1928
+      "elapsedMs": 2307
     },
     {
       "id": "reports-studio-branding",
@@ -1106,13 +1106,13 @@
       "screenshot": "screenshots/reports-studio-branding.png",
       "finalUrl": "/reports-studio/branding",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ Company Branding Defaults load from the system. Use “Save” to persist changes. Saved Save Reset B",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ Company Branding Defaults load from the system. Use “Save” to persist changes",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 2003
+      "elapsedMs": 2271
     },
     {
       "id": "reports-studio-templates",
@@ -1122,13 +1122,13 @@
       "screenshot": "screenshots/reports-studio-templates.png",
       "finalUrl": "/reports-studio/templates",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ Template Library Defaults are read-only originals. Create a custom copy to edit safely. Refresh d",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ Template Library Defaults are read-only originals. Create a custom copy to ed",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 2005
+      "elapsedMs": 2317
     },
     {
       "id": "reports-studio-editor",
@@ -1139,13 +1139,13 @@
       "screenshot": "screenshots/reports-studio-editor.png",
       "finalUrl": "/reports-studio/editor/quotation_default_v1",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ This is a default template (read-only). Create a custom copy to edit safely. Create editable copy",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ This is a default template (read-only). Create a custom copy to edit safely. ",
       "hasTable": true,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1946
+      "elapsedMs": 2327
     },
     {
       "id": "reports-studio-preview",
@@ -1156,13 +1156,13 @@
       "screenshot": "screenshots/reports-studio-preview.png",
       "finalUrl": "/reports-studio/preview/quotation_default_v1",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ Preview A4 accurate preview with print CSS. Quick Print Open PDF Back to Editor Record ID Show gu",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ Preview A4 accurate preview with print CSS. Quick Print Open PDF Back to Edit",
       "hasTable": true,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 2018
+      "elapsedMs": 3407
     },
     {
       "id": "reports-studio-settings",
@@ -1172,13 +1172,13 @@
       "screenshot": "screenshots/reports-studio-settings.png",
       "finalUrl": "/reports-studio/settings",
       "status": "loaded",
-      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ Settings Connection + PDF service endpoint (frontend only). Saved Reset Odoo API Leave blank to u",
+      "textSample": "Chonlatee Innovation ระบบงานบัญชีสำหรับธุรกิจไทย TWS Partners Test Company ชลธี อินโนเวชั่น บริษัท ควิค บิสซิเนส จำกัด เอบีซี Chonlatee Innovation โหมดมืด TH Administrator ออกจากระบบ Settings Connection + PDF service endpoint (frontend only). Saved Reset Odoo ",
       "hasTable": false,
       "hasForm": true,
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1908
+      "elapsedMs": 2234
     },
     {
       "id": "reports-studio-print",
@@ -1195,7 +1195,7 @@
       "hasModal": false,
       "hasHorizontalOverflow": false,
       "error": null,
-      "elapsedMs": 1716
+      "elapsedMs": 1888
     }
   ],
   "mobileShots": [],
