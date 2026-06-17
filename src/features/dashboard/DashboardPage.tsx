@@ -14,6 +14,7 @@ import { getEtaxSummary } from '@/api/services/etax.service'
 import { getAssistantTasks } from '@/api/services/ai-assistant.service'
 import { approvalAction, listApprovalTasks } from '@/api/services/approval.service'
 import { hasScope } from '@/lib/scopes'
+import { isAdminUser } from '@/lib/adminAccess'
 import { getAssistantLanguage, setAssistantLanguage, type AssistantLanguage } from '@/lib/assistantLanguage'
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts'
@@ -172,6 +173,7 @@ export function DashboardPage() {
   const queryClient = useQueryClient()
   const user = useAuthStore((s) => s.user)
   const instancePublicId = useAuthStore((s) => s.instancePublicId)
+  const canAccessAdminSetup = isAdminUser(user)
   const canSeeKpis = hasScope('dashboard')
   const canSeeReports = hasScope('reports')
   const [assistantLang, setAssistantLangState] = useState<AssistantLanguage>(() => getAssistantLanguage())
@@ -852,7 +854,7 @@ export function DashboardPage() {
             </Card>
           </div>
         ) : null}
-        {cardVisibility.backend ? (
+        {cardVisibility.backend && canAccessAdminSetup ? (
           <div className="col-md-6 col-xl-3">
             <Card onClick={() => navigate('/backend-connection')} role="button" tabIndex={0} className="qf-dashboard-card qf-hover-lift h-100">
               <p className="small fw-medium text-muted mb-2">ระบบหลังบ้าน</p>

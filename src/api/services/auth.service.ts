@@ -18,6 +18,11 @@ export interface AuthUser {
   instancePublicId?: string
   companyId?: number
   companies?: { id: number; name: string }[]
+  isAdmin?: boolean
+  is_admin?: boolean
+  isSystem?: boolean
+  is_system?: boolean
+  allowed_scopes?: string[] | string
 }
 
 export interface LoginResponse {
@@ -104,6 +109,8 @@ function webSessionBaseUrlCandidates() {
 
 type OdooWebSessionAuthResult = {
   uid?: number
+  is_admin?: boolean
+  is_system?: boolean
   user_context?: { lang?: string }
   username?: string
   user_name?: string
@@ -194,6 +201,8 @@ async function loginViaWebSession(payload: LoginPayload): Promise<LoginResponse>
     companyId: currentCompany.id || undefined,
     companyName: currentCompany.name || undefined,
     companies: allowedCompanies,
+    isAdmin: Boolean(result.is_admin),
+    isSystem: Boolean(result.is_system),
   }
   return {
     // Session-cookie mode fallback for local/dev when custom auth route is unavailable.
@@ -251,6 +260,8 @@ async function getMeViaWebSession(): Promise<MeResponse> {
     companyName: currentCompany.name,
     companies: allowedCompanies,
     instancePublicId: currentCompany.id ? String(currentCompany.id) : '',
+    isAdmin: Boolean(r.is_admin),
+    isSystem: Boolean(r.is_system),
   }
 }
 

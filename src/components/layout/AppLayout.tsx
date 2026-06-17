@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { useAuthStore } from '@/features/auth/store'
 import { hasScope } from '@/lib/scopes'
+import { isAdminUser } from '@/lib/adminAccess'
 import { ConfigBanner } from '@/components/system/ConfigBanner'
 import { AvatarAssistant } from '@/features/assistant/AvatarAssistant'
 import { listApprovalTasks } from '@/api/services/approval.service'
@@ -38,6 +39,7 @@ export function AppLayout() {
   const isSwitchingCompany = useAuthStore((s) => s.isSwitchingCompany)
   const instancePublicId = useAuthStore((s) => s.instancePublicId)
   const user = useAuthStore((s) => s.user)
+  const canAccessAdminSetup = isAdminUser(user)
   const hideMobileNav =
     /\/sales\/orders\/new(?:\/)?$/.test(location.pathname) ||
     /\/sales\/orders\/\d+\/edit(?:\/)?$/.test(location.pathname) ||
@@ -83,7 +85,9 @@ export function AppLayout() {
     { path: '/products', label: 'สินค้า/บริการ', scope: 'products', icon: 'bi-box-seam' },
     { path: '/excel-import', label: 'นำเข้า Excel', scope: 'excel', icon: 'bi-file-earmark-spreadsheet' },
     { path: '/reports-studio', label: 'สตูดิโอรายงาน', mobileLabel: 'สตูดิโอ\nรายงาน', icon: 'bi-layout-text-window-reverse' },
-    { path: '/backend-connection', label: 'ตั้งค่าการเชื่อมต่อ', scope: 'auth', icon: 'bi-plug' },
+    ...(canAccessAdminSetup
+      ? [{ path: '/backend-connection', label: 'ตั้งค่าการเชื่อมต่อ', scope: 'auth', icon: 'bi-plug' }]
+      : []),
     { path: '/accounting/tax-settings', label: 'ตั้งค่า VAT/ภาษี', scope: 'accounting_reports', icon: 'bi-percent' },
   ]
   const mobileNavItems = navItems.filter((item) => item.showOnMobile)
@@ -92,6 +96,14 @@ export function AppLayout() {
 
   const canSwitchCompany = Boolean(user && user.companies && user.companies.length > 1)
   const isPathActive = (prefix: string) => location.pathname.startsWith(prefix)
+  const settingsChildren: SidebarItem['children'] = [
+    ...(canAccessAdminSetup
+      ? [{ path: '/backend-connection', label: 'ตั้งค่าการเชื่อมต่อ', scope: 'auth' }]
+      : []),
+    { path: '/accounting/tax-settings', label: 'ตั้งค่า VAT/ภาษี', scope: 'accounting_reports' },
+    { path: '/excel-import', label: 'นำเข้า Excel', scope: 'excel' },
+    { path: '/reports-studio', label: 'สตูดิโอรายงาน' },
+  ]
 
   const sidebarItems: SidebarItem[] = [
     { path: '/dashboard', label: 'แดชบอร์ด', icon: 'bi-grid-1x2', active: isPathActive('/dashboard') },
@@ -135,17 +147,11 @@ export function AppLayout() {
     { path: '/customers', label: 'ผู้ติดต่อ', icon: 'bi-person-rolodex', active: isPathActive('/customers'), scope: 'contacts' },
     { path: '/products', label: 'สินค้า', icon: 'bi-box-seam', active: isPathActive('/products'), scope: 'products' },
     {
-      path: '/backend-connection',
+      path: canAccessAdminSetup ? '/backend-connection' : '/accounting/tax-settings',
       label: 'ตั้งค่า',
       icon: 'bi-sliders',
       active: isPathActive('/backend-connection') || isPathActive('/accounting/tax-settings') || isPathActive('/excel-import') || isPathActive('/reports-studio'),
-      scope: 'auth',
-      children: [
-        { path: '/backend-connection', label: 'ตั้งค่าการเชื่อมต่อ', scope: 'auth' },
-        { path: '/accounting/tax-settings', label: 'ตั้งค่า VAT/ภาษี', scope: 'accounting_reports' },
-        { path: '/excel-import', label: 'นำเข้า Excel', scope: 'excel' },
-        { path: '/reports-studio', label: 'สตูดิโอรายงาน' },
-      ],
+      children: settingsChildren,
     },
   ]
 

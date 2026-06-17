@@ -14,6 +14,7 @@ import {
 import { toApiError } from '@/api/response'
 import { useAuthStore } from '@/features/auth/store'
 import { useSettingsStore } from '@/app/core/storage/settingsStore'
+import { isAdminUser } from '@/lib/adminAccess'
 
 export function BackendConnectionPage() {
   const [companyName, setCompanyName] = useState('')
@@ -23,12 +24,19 @@ export function BackendConnectionPage() {
   const [result, setResult] = useState<RegisterCompanyResponse | null>(null)
 
   const login = useAuthStore((s) => s.login)
+  const user = useAuthStore((s) => s.user)
   const settings = useSettingsStore((s) => s.settings)
   const patchSettings = useSettingsStore((s) => s.patchSettings)
+  const canProvisionCompany = isAdminUser(user)
 
   const handleProvision = async (e: FormEvent) => {
     e.preventDefault()
     setProvisionError(undefined)
+
+    if (!canProvisionCompany) {
+      setProvisionError('เฉพาะ Admin เท่านั้นที่สามารถสร้างบริษัทใหม่และผู้ใช้ Admin ได้.')
+      return
+    }
 
     const masterKey = import.meta.env.VITE_REGISTER_MASTER_KEY
     if (!masterKey) {
@@ -67,6 +75,26 @@ export function BackendConnectionPage() {
         breadcrumb="ตั้งค่าระบบ · การเชื่อมต่อ"
       />
 
+      {!canProvisionCompany ? (
+        <div className="mx-auto max-w-3xl">
+          <Card className="qf-pro-card">
+            <div className="flex items-start gap-3">
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-3 bg-accentGold/15 text-accentGold">
+                <i className="bi bi-shield-lock text-lg" aria-hidden="true" />
+              </span>
+              <div>
+                <h2 className="h5 mb-2 fw-semibold text-primaryDark">
+                  จำกัดสิทธิ์เฉพาะ Admin
+                </h2>
+                <p className="mb-0 text-sm text-surfaceDark/75">
+                  หน้าสร้างบริษัทใหม่และผู้ใช้ Admin ถูกซ่อนจากผู้ใช้ทั่วไป
+                  หากต้องใช้งานหน้านี้ กรุณาเข้าสู่ระบบด้วยบัญชีผู้ดูแลระบบ.
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      ) : (
       <div className="mx-auto grid max-w-5xl gap-4 lg:grid-cols-2">
         <Card
           className="qf-pro-card"
@@ -244,6 +272,7 @@ export function BackendConnectionPage() {
           )}
         </Card>
       </div>
+      )}
     </div>
   )
 }
