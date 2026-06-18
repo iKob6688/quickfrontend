@@ -48,10 +48,17 @@
   flex-wrap: nowrap !important;
   overflow-x: auto !important;
   overflow-y: hidden !important;
+  cursor: grab;
+  -webkit-overflow-scrolling: touch;
+  user-select: none;
   border-radius: 9999px !important;
   background: #f8fafc;
   border: 1px solid #eef2ff;
   padding: 4px;
+}
+
+.qf-app .qf-tabs.qf-tabs--dragging {
+  cursor: grabbing;
 }
 
 .qf-app .qf-tabs .qf-tabs__btn {
@@ -61,6 +68,7 @@
   border-radius: 9999px !important;
   padding: 0.45rem 1.25rem !important;
   white-space: nowrap;
+  user-select: none;
 }
 
 .qf-app .qf-tabs .qf-tabs__btn--active {
