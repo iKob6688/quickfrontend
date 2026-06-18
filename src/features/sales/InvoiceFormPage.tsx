@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Spinner, Alert } from 'react-bootstrap'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { extractFieldErrors, type FieldErrors } from '@/lib/formErrors'
 import { clearDraft, loadDraft, loadRecentNotes, pushRecentNote, saveDraft } from '@/lib/formDrafts'
 import { toast } from '@/lib/toastStore'
@@ -30,6 +30,14 @@ function normalizeNotesForTextarea(raw?: string | null): string {
 
 const INVOICE_DRAFT_KEY = 'qf:draft:invoice-form:create:v1'
 const INVOICE_RECENT_NOTES_KEY = 'qf:recent-notes:invoice:v1'
+
+function hasMeaningfulInvoiceDraft(data: InvoicePayload) {
+  return (
+    data.customerId > 0 ||
+    (data.notes || '').trim().length > 0 ||
+    (data.lines || []).length > 0
+  )
+}
 
 export function InvoiceFormPage() {
   const { id } = useParams<{ id: string }>()
@@ -173,6 +181,7 @@ export function InvoiceFormPage() {
   const [draftUpdatedAt, setDraftUpdatedAt] = useState<string | null>(null)
   const [draftGateResolved, setDraftGateResolved] = useState(false)
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
+  const skipNextDraftSaveRef = useRef(false)
 
   useEffect(() => {
     setRecentNotes(loadRecentNotes(INVOICE_RECENT_NOTES_KEY))
@@ -195,6 +204,15 @@ export function InvoiceFormPage() {
     if (isEdit) return
     if (!draftGateResolved) return
     if (draftPendingRestore) return
+    if (skipNextDraftSaveRef.current) {
+      skipNextDraftSaveRef.current = false
+      return
+    }
+    if (!hasMeaningfulInvoiceDraft(formData)) {
+      clearDraft(INVOICE_DRAFT_KEY)
+      setDraftSavedAt(null)
+      return
+    }
     const timer = window.setTimeout(() => {
       saveDraft(INVOICE_DRAFT_KEY, formData)
       setDraftSavedAt(new Date().toISOString())
@@ -263,8 +281,11 @@ export function InvoiceFormPage() {
                     type="button"
                     size="sm"
                     onClick={() => {
+                      clearDraft(INVOICE_DRAFT_KEY)
                       setFormData(draftPendingRestore)
                       setDraftPendingRestore(null)
+                      setDraftUpdatedAt(null)
+                      setDraftSavedAt(null)
                       toast.info('กู้แบบร่างสำเร็จ')
                     }}
                   >
@@ -275,9 +296,12 @@ export function InvoiceFormPage() {
                     size="sm"
                     variant="secondary"
                     onClick={() => {
+                      skipNextDraftSaveRef.current = true
                       clearDraft(INVOICE_DRAFT_KEY)
                       setDraftPendingRestore(null)
                       setDraftUpdatedAt(null)
+                      setDraftSavedAt(null)
+                      toast.success('ลบแบบร่างแล้ว')
                     }}
                   >
                     ลบแบบร่าง

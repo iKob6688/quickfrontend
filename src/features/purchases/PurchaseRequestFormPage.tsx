@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert } from 'react-bootstrap'
@@ -39,6 +39,25 @@ const EMPTY_LINE: PurchaseRequestLine = {
 const PURCHASE_REQUEST_DRAFT_KEY = 'qf:draft:purchase-request-form:create:v1'
 const PURCHASE_REQUEST_RECENT_NOTES_KEY = 'qf:recent-notes:purchase-request:v1'
 
+function hasMeaningfulPurchaseRequestDraft(data: Partial<PurchaseRequestPayload>) {
+  const hasMeaningfulLine = (data.lines || []).some((line) => {
+    const quantity = Number(line.quantity || 0)
+    const estimatedCost = Number(line.estimatedCost || 0)
+    return Boolean(
+      line.productId ||
+      (line.description || '').trim() ||
+      (Number.isFinite(quantity) && quantity !== 1) ||
+      (Number.isFinite(estimatedCost) && estimatedCost > 0),
+    )
+  })
+
+  return Boolean(
+    (data.origin || '').trim() ||
+    (data.notes || '').trim() ||
+    hasMeaningfulLine,
+  )
+}
+
 function formatMoney(value: number) {
   return value.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
@@ -58,6 +77,7 @@ export function PurchaseRequestFormPage() {
   const [draftUpdatedAt, setDraftUpdatedAt] = useState<string | null>(null)
   const [draftGateResolved, setDraftGateResolved] = useState(false)
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
+  const skipNextDraftSaveRef = useRef(false)
   const [submitIntent, setSubmitIntent] = useState<'save' | 'submit'>('save')
   const [quantityInputs, setQuantityInputs] = useState<Record<number, string>>({})
   const [priceInputs, setPriceInputs] = useState<Record<number, string>>({})
@@ -121,6 +141,15 @@ export function PurchaseRequestFormPage() {
     if (isEdit) return
     if (!draftGateResolved) return
     if (draftPendingRestore) return
+    if (skipNextDraftSaveRef.current) {
+      skipNextDraftSaveRef.current = false
+      return
+    }
+    if (!hasMeaningfulPurchaseRequestDraft(draft)) {
+      clearDraft(PURCHASE_REQUEST_DRAFT_KEY)
+      setDraftSavedAt(null)
+      return
+    }
     const timer = window.setTimeout(() => {
       saveDraft(PURCHASE_REQUEST_DRAFT_KEY, draft)
       setDraftSavedAt(new Date().toISOString())
@@ -387,8 +416,12 @@ export function PurchaseRequestFormPage() {
               size="sm"
               type="button"
               onClick={() => {
+                clearDraft(PURCHASE_REQUEST_DRAFT_KEY)
                 setDraft((prev) => ({ ...prev, ...draftPendingRestore }))
                 setDraftPendingRestore(null)
+                setDraftUpdatedAt(null)
+                setDraftSavedAt(null)
+                toast.info('กู้ draft สำเร็จ')
               }}
             >
               กู้ draft
@@ -398,8 +431,12 @@ export function PurchaseRequestFormPage() {
               variant="secondary"
               type="button"
               onClick={() => {
+                skipNextDraftSaveRef.current = true
                 clearDraft(PURCHASE_REQUEST_DRAFT_KEY)
                 setDraftPendingRestore(null)
+                setDraftUpdatedAt(null)
+                setDraftSavedAt(null)
+                toast.success('ลบ draft แล้ว')
               }}
             >
               ลบ draft

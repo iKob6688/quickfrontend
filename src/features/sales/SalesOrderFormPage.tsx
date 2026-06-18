@@ -66,6 +66,14 @@ function normalizeSalesLine(line: SalesOrderLine): SalesOrderLine {
   }
 }
 
+function hasMeaningfulSalesOrderDraft(data: SalesOrderPayload) {
+  return (
+    data.partnerId > 0 ||
+    (data.notes || '').trim().length > 0 ||
+    (data.lines || []).length > 0
+  )
+}
+
 export function SalesOrderFormPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -181,6 +189,7 @@ export function SalesOrderFormPage() {
   const [draftUpdatedAt, setDraftUpdatedAt] = useState<string | null>(null)
   const [draftGateResolved, setDraftGateResolved] = useState(false)
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
+  const skipNextDraftSaveRef = useRef(false)
 
   const salesTaxesQuery = useQuery({
     queryKey: ['tax-admin', 'sales-order-form', 'sale'],
@@ -215,6 +224,15 @@ export function SalesOrderFormPage() {
     if (isEdit) return
     if (!draftGateResolved) return
     if (draftPendingRestore) return
+    if (skipNextDraftSaveRef.current) {
+      skipNextDraftSaveRef.current = false
+      return
+    }
+    if (!hasMeaningfulSalesOrderDraft(formData)) {
+      clearDraft(SALES_ORDER_DRAFT_KEY)
+      setDraftSavedAt(null)
+      return
+    }
     const timer = window.setTimeout(() => {
       saveDraft(SALES_ORDER_DRAFT_KEY, formData)
       setDraftSavedAt(new Date().toISOString())
@@ -569,8 +587,11 @@ export function SalesOrderFormPage() {
                   size="sm"
                   type="button"
                   onClick={() => {
+                    clearDraft(SALES_ORDER_DRAFT_KEY)
                     setFormData(draftPendingRestore)
                     setDraftPendingRestore(null)
+                    setDraftUpdatedAt(null)
+                    setDraftSavedAt(null)
                     toast.info('กู้ draft สำเร็จ')
                   }}
                 >
@@ -581,9 +602,12 @@ export function SalesOrderFormPage() {
                   type="button"
                   variant="secondary"
                   onClick={() => {
+                    skipNextDraftSaveRef.current = true
                     clearDraft(SALES_ORDER_DRAFT_KEY)
                     setDraftPendingRestore(null)
                     setDraftUpdatedAt(null)
+                    setDraftSavedAt(null)
+                    toast.success('ลบ draft แล้ว')
                   }}
                 >
                   ลบ draft
