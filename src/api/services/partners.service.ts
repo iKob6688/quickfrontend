@@ -161,6 +161,109 @@ interface BackendPartnerDetail {
   [key: string]: unknown // Allow additional fields
 }
 
+type RawRecord = Record<string, unknown>
+type PartnerMutationRaw = BackendPartnerDetail | RawRecord | number
+
+function parseNumber(v: unknown): number {
+  if (typeof v === 'number' && Number.isFinite(v)) return v
+  if (typeof v === 'string') {
+    const n = Number(v.replace(/,/g, '').trim())
+    return Number.isFinite(n) ? n : 0
+  }
+  return 0
+}
+
+function extractPartnerId(raw: unknown): number {
+  if (typeof raw === 'number') return Number.isFinite(raw) ? raw : 0
+  if (!raw || typeof raw !== 'object') return 0
+  const record = raw as RawRecord
+  return parseNumber(
+    record.id ??
+      record.partner_id ??
+      record.partnerId ??
+      record.contact_id ??
+      record.contactId ??
+      record.res_id ??
+      record.resId ??
+      record.record_id ??
+      record.recordId,
+  )
+}
+
+function hasPartnerDetailShape(raw: unknown): raw is BackendPartnerDetail {
+  if (!raw || typeof raw !== 'object') return false
+  const record = raw as RawRecord
+  return (
+    extractPartnerId(record) > 0 ||
+    typeof record.name === 'string' ||
+    typeof record.display_name === 'string' ||
+    typeof record.displayName === 'string' ||
+    typeof record.email === 'string' ||
+    typeof record.phone === 'string'
+  )
+}
+
+async function findPartnerByPayload(payload: PartnerUpsertPayload): Promise<PartnerDetail | null> {
+  const name = String(payload.name || '').trim()
+  if (!name) return null
+
+  const listed = await listPartners({
+    q: name,
+    limit: 10,
+    ...(payload.active !== undefined ? { active: payload.active } : {}),
+  })
+
+  const exactName = name.toLowerCase()
+  const vat = String(payload.vat || '').trim()
+  const email = String(payload.email || '').trim().toLowerCase()
+  const phone = String(payload.phone || payload.mobile || '').trim()
+
+  const candidate =
+    listed.items.find((item) => String(item.name || '').trim().toLowerCase() === exactName) ||
+    listed.items.find((item) => Boolean(vat) && item.vat === vat) ||
+    listed.items.find((item) => Boolean(email) && String(item.email || '').trim().toLowerCase() === email) ||
+    listed.items.find((item) => Boolean(phone) && String(item.phone || '').trim() === phone) ||
+    listed.items[0]
+
+  if (!candidate?.id) return null
+  return getPartner(candidate.id)
+}
+
+async function normalizePartnerMutationResponse(
+  raw: PartnerMutationRaw,
+  payload: PartnerUpsertPayload,
+  fallbackId?: number,
+): Promise<PartnerDetail> {
+  const resolvedId = extractPartnerId(raw) || fallbackId || 0
+
+  if (resolvedId > 0) {
+    try {
+      return await getPartner(resolvedId)
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.warn('[partners] failed to fetch partner after mutation', {
+          resolvedId,
+          raw,
+          error,
+        })
+      }
+    }
+  }
+
+  if (hasPartnerDetailShape(raw)) {
+    const mapped = mapBackendPartnerDetailToFrontend({
+      ...(raw as BackendPartnerDetail),
+      id: resolvedId || extractPartnerId(raw),
+    })
+    if (mapped.id > 0) return mapped
+  }
+
+  const lookedUp = await findPartnerByPayload(payload)
+  if (lookedUp) return lookedUp
+
+  throw new Error('สร้างรายชื่อติดต่อสำเร็จ แต่ไม่สามารถ resolve รายการที่สร้างได้')
+}
+
 /**
  * Maps backend partner summary to frontend format
  */
@@ -476,8 +579,8 @@ export async function createPartner(payload: PartnerUpsertPayload) {
       ...(payload.active !== undefined ? { active: payload.active } : {}),
     }),
   )
-  const raw = unwrapResponse<BackendPartnerDetail>(response)
-  return mapBackendPartnerDetailToFrontend(raw)
+  const raw = unwrapResponse<PartnerMutationRaw>(response)
+  return normalizePartnerMutationResponse(raw, payload)
 }
 
 export async function updatePartner(id: number, payload: PartnerUpsertPayload) {
@@ -512,8 +615,8 @@ export async function updatePartner(id: number, payload: PartnerUpsertPayload) {
       ...(payload.active !== undefined ? { active: payload.active } : {}),
     }),
   )
-  const raw = unwrapResponse<BackendPartnerDetail>(response)
-  return mapBackendPartnerDetailToFrontend(raw)
+  const raw = unwrapResponse<PartnerMutationRaw>(response)
+  return normalizePartnerMutationResponse(raw, payload, id)
 }
 
 export async function archivePartner(id: number) {
