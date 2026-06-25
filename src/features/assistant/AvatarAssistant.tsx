@@ -19,6 +19,7 @@ import { readAssistantPageContext } from '@/lib/assistantPageContext'
 import { getInstanceId } from '@/lib/instanceId'
 import { toast, useToastStore } from '@/lib/toastStore'
 import { toApiError } from '@/api/response'
+import { useSettingsStore } from '@/app/core/storage/settingsStore'
 import './avatar-assistant.css'
 
 type ChatItem = {
@@ -108,6 +109,7 @@ const AVATAR_SRC = '/avatar-assistant.png'
 export function AvatarAssistant() {
   const navigate = useNavigate()
   const location = useLocation()
+  const scanSlipEnabled = useSettingsStore((state) => state.settings.scanSlipEnabled)
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [caps, setCaps] = useState<AssistantCapabilities | null>(null)
@@ -505,6 +507,8 @@ export function AvatarAssistant() {
       route.startsWith('/products') ||
       route.startsWith('/sales/') ||
       route.startsWith('/purchases/') ||
+      route.startsWith('/accounting/document-review') ||
+      route.startsWith('/accounting/pending-reconcile') ||
       route.startsWith('/accounting/etax') ||
       route.startsWith('/accounting/reports') ||
       route.startsWith('/reports-studio')
@@ -1214,6 +1218,18 @@ export function AvatarAssistant() {
               {traceMeta.scopeContext?.db || '-'}
             </div>
             <div className="avatar-assistant-quick mb-2">
+              {scanSlipEnabled ? (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary"
+                  onClick={() => {
+                    navigate('/accounting/pending-reconcile?source=assistant&upload=1')
+                    setOpen(false)
+                  }}
+                >
+                  Scan Slip
+                </button>
+              ) : null}
               <button type="button" className="btn btn-sm btn-light" disabled={loading || !assistantAgentEnabled} onClick={() => setInput('ค้นลูกค้า')}>
                 ค้นลูกค้า
               </button>

@@ -2,6 +2,7 @@ import axios from 'axios'
 import { apiClient } from '@/api/client'
 import { unwrapResponse, ApiError } from '@/api/response'
 import { makeRpc } from '@/api/services/rpc'
+import { getAccessToken } from '@/lib/authToken'
 
 export interface LoginPayload {
   login: string
@@ -59,9 +60,10 @@ export interface RegisterCompanyResponse {
 // NOTE: axios baseURL is VITE_API_BASE_URL (= '/api'), so endpoint paths here must NOT start with '/api'
 const basePath = '/th/v1/auth'
 const AUTH_TIMEOUT_MS = Number(import.meta.env.VITE_AUTH_TIMEOUT_MS || 15000)
+const WEB_SESSION_TOKEN = '__odoo_web_session__'
 
 function uniqueStrings(values: Array<string | null | undefined>) {
-  return Array.from(new Set(values.filter((value): value is string => Boolean(value && value.trim()))))
+  return Array.from(new Set(values.filter((value): value is string => value !== null && value !== undefined)))
 }
 
 function normalizeBaseUrl(value?: string | null) {
@@ -100,7 +102,7 @@ function webSessionBaseUrlCandidates() {
     addRootAndOdooVariants(apiBase)
   }
 
-  if (proxyTarget) {
+  if (proxyTarget && typeof window === 'undefined') {
     addRootAndOdooVariants(proxyTarget)
   }
 
@@ -207,7 +209,7 @@ async function loginViaWebSession(payload: LoginPayload): Promise<LoginResponse>
   return {
     // Session-cookie mode fallback for local/dev when custom auth route is unavailable.
     // Keep a marker token so frontend considers itself authenticated.
-    token: '__odoo_web_session__',
+    token: WEB_SESSION_TOKEN,
     user,
     companies: allowedCompanies,
   }
@@ -328,6 +330,9 @@ export async function login(payload: LoginPayload) {
 }
 
 export async function getMe() {
+  if (getAccessToken() === WEB_SESSION_TOKEN) {
+    return getMeViaWebSession()
+  }
   const body = makeRpc({})
   try {
     const response = await apiClient.post(`${basePath}/me`, body, {
@@ -351,6 +356,10 @@ export async function getMe() {
 }
 
 export async function logout() {
+  if (getAccessToken() === WEB_SESSION_TOKEN) {
+    await logoutViaWebSession()
+    return
+  }
   const body = makeRpc({})
   try {
     await apiClient.post(`${basePath}/logout`, body)

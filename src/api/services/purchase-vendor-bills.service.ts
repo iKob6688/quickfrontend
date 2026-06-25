@@ -1,5 +1,5 @@
 import { apiClient } from '@/api/client'
-import { unwrapResponse } from '@/api/response'
+import { toApiError, unwrapResponse } from '@/api/response'
 import { makeRpc } from '@/api/services/rpc'
 import type { RegisterPaymentPayload } from '@/api/services/invoices.service'
 
@@ -41,6 +41,19 @@ export interface PurchaseVendorBill {
   lines: PurchaseVendorBillLine[]
   payments?: PurchaseVendorBillPayment[]
   purchaseOrders?: Array<{ id: number; number?: string }>
+}
+
+export interface PurchaseVendorBillSearchParams {
+  q?: string
+  vendorId?: number
+  limit?: number
+  offset?: number
+}
+
+export interface PurchaseVendorBillSearchResponse {
+  items: PurchaseVendorBill[]
+  total: number
+  endpointUnavailable: boolean
 }
 
 const basePath = '/th/v1/purchases/bills'
@@ -128,6 +141,50 @@ function normalizeBill(raw: unknown): PurchaseVendorBill {
           })
           .filter((po) => po.id > 0)
       : [],
+  }
+}
+
+export async function searchPurchaseVendorBills(
+  params?: PurchaseVendorBillSearchParams,
+): Promise<PurchaseVendorBillSearchResponse> {
+  const body = makeRpc({
+    ...(params?.q ? { q: params.q } : {}),
+    ...(params?.vendorId ? { vendorId: params.vendorId } : {}),
+    ...(params?.limit ? { limit: params.limit } : {}),
+    ...(params?.offset ? { offset: params.offset } : {}),
+  })
+
+  try {
+    const response = await apiClient.post(`${basePath}/list`, body)
+    const rawPayload = unwrapResponse<unknown>(response)
+
+    const rows = Array.isArray(rawPayload)
+      ? rawPayload
+      : rawPayload && typeof rawPayload === 'object' && Array.isArray((rawPayload as { items?: unknown[] }).items)
+        ? ((rawPayload as { items?: unknown[] }).items as unknown[])
+        : []
+    const total = Array.isArray(rawPayload)
+      ? rawPayload.length
+      : Number((rawPayload as { total?: number }).total || rows.length || 0)
+
+    return {
+      items: rows
+        .map((row) => normalizeBill(row))
+        .filter((row) => row.id > 0),
+      total: Number.isFinite(total) ? total : rows.length,
+      endpointUnavailable: false,
+    }
+  } catch (error) {
+    const apiError = toApiError(error)
+    if (
+      apiError.status === 404 ||
+      apiError.status === 405 ||
+      apiError.code === 'NOT_FOUND' ||
+      apiError.code === 'ROUTE_NOT_FOUND'
+    ) {
+      return { items: [], total: 0, endpointUnavailable: true }
+    }
+    throw error
   }
 }
 

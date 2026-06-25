@@ -28,6 +28,7 @@ const settingsSchema = z.object({
   odooBaseUrl: z.string().trim().default(''),
   apiToken: z.string().trim().default(''),
   pdfServiceUrl: z.string().trim().default('/api/print/pdf'),
+  scanSlipEnabled: z.boolean().default(true),
   defaultTemplateIdByDocType: defaultTemplateIdByDocTypeSchema,
   dateDisplayFormat: z.enum(['DD/MM/YYYY', 'DD-MM-YYYY', 'D MMMM YYYY']).default('DD/MM/YYYY'),
   dateCalendar: z.enum(['gregorian', 'buddhist']).default('buddhist'),

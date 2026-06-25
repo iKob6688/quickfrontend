@@ -19,6 +19,7 @@ import { getAssistantLanguage, setAssistantLanguage, type AssistantLanguage } fr
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts'
 import { toast } from '@/lib/toastStore'
+import { useSettingsStore } from '@/app/core/storage/settingsStore'
 
 function formatLocalISODate(d: Date) {
   const y = d.getFullYear()
@@ -173,6 +174,7 @@ export function DashboardPage() {
   const queryClient = useQueryClient()
   const user = useAuthStore((s) => s.user)
   const instancePublicId = useAuthStore((s) => s.instancePublicId)
+  const scanSlipEnabled = useSettingsStore((s) => s.settings.scanSlipEnabled)
   const canAccessAdminSetup = isAdminUser(user)
   const canSeeKpis = hasScope('dashboard')
   const canSeeReports = hasScope('reports')
@@ -456,6 +458,10 @@ export function DashboardPage() {
           <Button variant="secondary" className="px-4 py-2 qf-hover-lift" onClick={() => navigate('/expenses/new')}>
             <i className="bi bi-cash me-2" />
             บันทึกค่าใช้จ่าย
+          </Button>
+          <Button variant="secondary" className="px-4 py-2 qf-hover-lift" onClick={() => navigate('/accounting/pending-reconcile?source=dashboard&upload=1')}>
+            <i className="bi bi-upc-scan me-2" />
+            {scanSlipEnabled ? 'Scan Slip' : 'เปิด Scan Slip'}
           </Button>
           <Button variant="secondary" className="px-4 py-2 qf-hover-lift" onClick={() => navigate('/sales/orders/new?type=quotation')}>
             <i className="bi bi-file-earmark-text me-2" />

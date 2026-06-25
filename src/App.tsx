@@ -22,6 +22,7 @@ import { PurchaseRequestsListPage } from '@/features/purchases/PurchaseRequestsL
 import { PurchaseRequestFormPage } from '@/features/purchases/PurchaseRequestFormPage'
 import { PurchaseRequestDetailPage } from '@/features/purchases/PurchaseRequestDetailPage'
 import { PurchaseVendorBillDetailPage } from '@/features/purchases/PurchaseVendorBillDetailPage'
+import { PendingReconcilePage } from '@/features/document-review/PendingReconcilePage'
 import { PurchaseNoteDetailPage } from '@/features/purchases/PurchaseNoteDetailPage'
 import { PurchaseReceiptDetailPage } from '@/features/purchases/PurchaseReceiptDetailPage'
 import { ExpensesListPage } from '@/features/expenses/ExpensesListPage'
@@ -129,6 +130,7 @@ function AppRoutes() {
           <Route path="/expenses/new" element={<ExpenseFormPage />} />
           <Route path="/expenses/:id" element={<ExpenseDetailPage />} />
           <Route path="/accounting/document-review" element={<DocumentReviewInboxPage />} />
+          <Route path="/accounting/pending-reconcile" element={<PendingReconcilePage />} />
           <Route path="/accounting/reports" element={<AccountingReportsPage />} />
           <Route path="/accounting/reports/profit-loss" element={<ProfitLossReportPage />} />
           <Route path="/accounting/reports/balance-sheet" element={<BalanceSheetReportPage />} />

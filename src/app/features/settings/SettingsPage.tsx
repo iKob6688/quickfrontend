@@ -12,9 +12,10 @@ const settingsFormSchema = z.object({
   odooBaseUrl: z.string().trim().optional(),
   apiToken: z.string().trim().optional(),
   pdfServiceUrl: z.string().trim().optional(),
+  scanSlipEnabled: z.boolean().default(true),
 })
 
-type SettingsForm = z.infer<typeof settingsFormSchema>
+type SettingsForm = z.input<typeof settingsFormSchema>
 
 export function SettingsPage() {
   const settings = useSettingsStore((s) => s.settings)
@@ -43,6 +44,7 @@ export function SettingsPage() {
         patchSettings({
           odooBaseUrl: values.odooBaseUrl?.trim() || '',
           apiToken: values.apiToken?.trim() || '',
+          scanSlipEnabled: values.scanSlipEnabled || false,
           pdfServiceUrl: values.pdfServiceUrl?.trim() || '/api/print/pdf',
         })
         setStatus('saved')
@@ -104,9 +106,27 @@ export function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Scan slip</CardTitle>
+            <CardDescription>เปิด/ปิดการใช้งาน scan-to-go ช่วยจัดการสลิปแบบ qacc ได้</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium">เปิดฟังก์ชัน Scan Slip (qacc)</div>
+                <div className="text-xs text-slate-500">เมื่อปิด ระบบจะซ่อน workflow ค้างจ่ายจากกล่องเอกสาร</div>
+              </div>
+              <input
+                type="checkbox"
+                {...form.register('scanSlipEnabled')}
+                className="h-4 w-4"
+              />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
 }
-
-

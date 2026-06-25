@@ -28,6 +28,7 @@ import {
   type DocumentReviewStatus,
   type DocumentReviewUpdatePayload,
 } from '@/api/services/document-review.service'
+import { useSettingsStore } from '@/app/core/storage/settingsStore'
 import './document-review.css'
 
 type FilterKey = 'all' | 'new' | 'needs_review' | 'validation_issue' | 'draft_ready' | 'linked' | 'error'
@@ -311,6 +312,7 @@ export function DocumentReviewInboxPage() {
 
   const debouncedSearch = useDebouncedValue(search, 300)
   const debouncedPartnerSearch = useDebouncedValue(partnerSearch, 250)
+  const scanSlipEnabled = useSettingsStore((state) => state.settings.scanSlipEnabled)
   const currentFilter = FILTER_CONFIG[filter]
   const shouldShowApprovals = viewMode === 'all' || viewMode === 'approvals'
   const shouldShowDocuments = viewMode === 'all' || viewMode === 'documents'
@@ -577,6 +579,11 @@ export function DocumentReviewInboxPage() {
 
   const sendCopilotPrompt = async (prompt: string) => {
     await copilotMutation.mutateAsync(prompt)
+  }
+
+  const goToPendingReconcile = () => {
+    if (!selectedId || !scanSlipEnabled) return
+    navigate(`/accounting/pending-reconcile?extraction_id=${selectedId}`)
   }
 
   const renderPreview = () => {
@@ -1158,6 +1165,14 @@ export function DocumentReviewInboxPage() {
                       </div>
                     ) : null}
                     <div className="d-flex flex-wrap gap-2 mt-4">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={goToPendingReconcile}
+                        disabled={!scanSlipEnabled || detail.document_type !== 'payment_slip'}
+                      >
+                        ไปหน้า Pending Reconcile
+                      </Button>
                       <Button
                         size="sm"
                         onClick={() => createDraftMutation.mutate()}

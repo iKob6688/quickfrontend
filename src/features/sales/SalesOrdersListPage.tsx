@@ -11,12 +11,14 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { listSalesOrders, type SalesOrderStatus } from '@/api/services/sales-orders.service'
 import { useAppDateFormatter } from '@/lib/dateFormat'
+import { useSettingsStore } from '@/app/core/storage/settingsStore'
 
 type StatusTab = 'all' | SalesOrderStatus
 
 export function SalesOrdersListPage() {
   const navigate = useNavigate()
   const formatDate = useAppDateFormatter()
+  const scanSlipEnabled = useSettingsStore((state) => state.settings.scanSlipEnabled)
   const [searchParams] = useSearchParams()
   const typeParam = searchParams.get('type')
   const forcedOrderType = typeParam === 'sale' ? 'sale' : typeParam === 'quotation' ? 'quotation' : undefined
@@ -178,6 +180,12 @@ export function SalesOrdersListPage() {
             <Button size="sm" variant="secondary" onClick={() => navigate('/sales/orders/new?orderType=quotation')}>
               + สร้างใบเสนอราคา
             </Button>
+            {scanSlipEnabled ? (
+              <Button size="sm" variant="secondary" onClick={() => navigate('/accounting/pending-reconcile?source=sales&upload=1')}>
+                <i className="bi bi-upc-scan me-1" />
+                Scan Slip
+              </Button>
+            ) : null}
             <Button size="sm" onClick={() => navigate('/sales/orders/new?orderType=sale')}>
               + สร้าง Sale Order
             </Button>

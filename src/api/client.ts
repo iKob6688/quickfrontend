@@ -10,6 +10,7 @@ const baseURL =
 const apiKey = import.meta.env.VITE_API_KEY
 const odooDb = import.meta.env.VITE_ODOO_DB
 const requestTimeoutMs = Number(import.meta.env.VITE_API_TIMEOUT_MS || 45000)
+const WEB_SESSION_TOKEN = '__odoo_web_session__'
 
 export const apiClient = axios.create({
   baseURL,
@@ -51,13 +52,14 @@ function handleUnauthorized() {
 
 apiClient.interceptors.request.use((config) => {
   const token = getAccessToken()
+  const isWebSessionToken = token === WEB_SESSION_TOKEN
   const instanceId = getInstanceId()
   const agentToken = getAgentToken()
 
   // Start from existing headers to avoid dropping anything the caller set.
   const headers = AxiosHeaders.from(config.headers ?? {})
 
-  if (token) {
+  if (token && !isWebSessionToken) {
     headers.set('Authorization', `Bearer ${token}`)
   }
 
@@ -91,7 +93,9 @@ apiClient.interceptors.response.use(
   (response) => {
     // Odoo type="json" may respond 200 with ApiEnvelope Unauthorized.
     if (isUnauthorizedEnvelope(response.data)) {
-      handleUnauthorized()
+      if (getAccessToken() !== WEB_SESSION_TOKEN) {
+        handleUnauthorized()
+      }
       return Promise.reject(new Error('Unauthorized'))
     }
     return response

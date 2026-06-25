@@ -12,10 +12,12 @@ import { useNavigate } from 'react-router-dom'
 import { Spinner } from 'react-bootstrap'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { useAppDateFormatter } from '@/lib/dateFormat'
+import { useSettingsStore } from '@/app/core/storage/settingsStore'
 
 export function ExpensesListPage() {
   const navigate = useNavigate()
   const formatDate = useAppDateFormatter()
+  const scanSlipEnabled = useSettingsStore((state) => state.settings.scanSlipEnabled)
   type StatusTab = 'all' | 'draft' | 'reported' | 'approved' | 'posted' | 'done' | 'refused'
   const [tab, setTab] = useState<StatusTab>('all')
   const [q, setQ] = useState('')
@@ -172,6 +174,12 @@ export function ExpensesListPage() {
             >
               + สร้างรายจ่าย
             </Button>
+            {scanSlipEnabled ? (
+              <Button size="sm" variant="secondary" onClick={() => navigate('/accounting/pending-reconcile?source=expense&upload=1')}>
+                <i className="bi bi-upc-scan me-1" />
+                Scan Slip
+              </Button>
+            ) : null}
             <Button size="sm" variant="secondary" disabled>
               พิมพ์รายงาน
             </Button>

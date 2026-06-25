@@ -1,6 +1,7 @@
 import { apiClient } from '@/api/client'
 import { ApiError, toApiError, unwrapResponse } from '@/api/response'
 import { makeRpc } from '@/api/services/rpc'
+import { getAccessToken } from '@/lib/authToken'
 
 export type AssistantMode = 'approve_required' | 'auto_safe' | 'plan_only'
 
@@ -203,15 +204,19 @@ export interface AssistantTaskItem {
   }
 }
 
-const ENABLE_AI_LEGACY_WEB_FALLBACK = import.meta.env.VITE_AI_LEGACY_WEB_FALLBACK === '1'
+const ENABLE_AI_LEGACY_WEB_FALLBACK =
+  import.meta.env.VITE_AI_LEGACY_WEB_FALLBACK === '1' ||
+  (import.meta.env.DEV && import.meta.env.VITE_AI_LEGACY_WEB_FALLBACK !== '0')
+const WEB_SESSION_TOKEN = '__odoo_web_session__'
 
 async function postWithFallback<T>(apiPath: string, webPath: string, payload: Record<string, unknown>) {
   const rpcPayload = makeRpc(payload)
   // Production-grade default: use canonical /api/th/v1/ai/* contract only.
   // Legacy /web/adt fallback is opt-in by env flag for old deployments.
-  const candidates: Array<{ url: string; baseURL?: string }> = [{ url: apiPath }]
+  const candidates: Array<{ url: string; baseURL?: string }> =
+    getAccessToken() === WEB_SESSION_TOKEN ? [{ url: webPath, baseURL: '' }] : [{ url: apiPath }]
   if (ENABLE_AI_LEGACY_WEB_FALLBACK) {
-    candidates.push({ url: webPath })
+    candidates.push({ url: webPath, baseURL: '' })
   }
   let lastError: unknown = null
   const attempted: string[] = []
@@ -222,7 +227,7 @@ async function postWithFallback<T>(apiPath: string, webPath: string, payload: Re
       const response = await apiClient.post(
         candidate.url,
         rpcPayload,
-        candidate.baseURL ? { baseURL: candidate.baseURL } : undefined,
+        candidate.baseURL !== undefined ? { baseURL: candidate.baseURL } : undefined,
       )
       return unwrapResponse<T>(response)
     } catch (err) {

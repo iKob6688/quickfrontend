@@ -9,9 +9,10 @@ import { ConfigBanner } from '@/components/system/ConfigBanner'
 import { AvatarAssistant } from '@/features/assistant/AvatarAssistant'
 import { listApprovalTasks } from '@/api/services/approval.service'
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useMemo, useState } from 'react'
+import { type KeyboardEvent, useEffect, useMemo, useState } from 'react'
 import { getThemeMode, setThemeMode, type ThemeMode } from '@/lib/themeMode'
 import { toast } from '@/lib/toastStore'
+import { useSettingsStore } from '@/app/core/storage/settingsStore'
 
 type NavItem = {
   path: string
@@ -63,6 +64,7 @@ export function AppLayout() {
   const [showSearchModal, setShowSearchModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const scanSlipEnabled = useSettingsStore((state) => state.settings.scanSlipEnabled)
 
   const restrictedScopeTitle = (scope?: string) =>
     scope
@@ -79,6 +81,9 @@ export function AppLayout() {
     { path: '/purchases/requests', label: 'คำขอซื้อ', scope: 'purchase', icon: 'bi-clipboard-check' },
     { path: '/expenses', label: 'รายจ่าย', scope: 'expense', icon: 'bi-cash-stack' },
     { path: '/accounting/document-review', label: 'กล่องงานตรวจสอบ', scope: 'accounting_reports', icon: 'bi-inboxes' },
+    ...(scanSlipEnabled
+      ? [{ path: '/accounting/pending-reconcile', label: 'Pending Reconcile', scope: 'accounting_reports', icon: 'bi-cash-coin' }]
+      : []),
     { path: '/accounting/reports', label: 'รายงานบัญชี', scope: 'accounting_reports', icon: 'bi-graph-up-arrow' },
     { path: '/accounting/etax', label: 'เอกสาร e-Tax', scope: 'etax', icon: 'bi-receipt-cutoff' },
     { path: '/customers', label: 'รายชื่อติดต่อ', scope: 'contacts', icon: 'bi-people' },
@@ -105,6 +110,9 @@ export function AppLayout() {
       : []),
     ...(canAccessAdminSetup
       ? [{ path: '/settings/sales-document-numbering', label: 'ตั้งค่าเลขเอกสารขาย', scope: 'invoice' }]
+      : []),
+    ...(scanSlipEnabled
+      ? [{ path: '/accounting/pending-reconcile', label: 'Pending Reconcile', scope: 'accounting_reports' }]
       : []),
     { path: '/accounting/tax-settings', label: 'ตั้งค่า VAT/ภาษี', scope: 'accounting_reports' },
     { path: '/excel-import', label: 'นำเข้า Excel', scope: 'excel' },
@@ -142,10 +150,17 @@ export function AppLayout() {
       path: '/accounting/document-review',
       label: 'การบัญชี',
       icon: 'bi-journal-check',
-      active: isPathActive('/accounting') && !isPathActive('/accounting/reports') && !isPathActive('/accounting/tax-settings'),
+      active:
+        isPathActive('/accounting') &&
+        !isPathActive('/accounting/reports') &&
+        !isPathActive('/accounting/tax-settings') &&
+        !isPathActive('/accounting/pending-reconcile'),
       scope: 'accounting_reports',
       children: [
         { path: '/accounting/document-review', label: 'กล่องงานตรวจสอบ', scope: 'accounting_reports' },
+        ...(scanSlipEnabled
+          ? [{ path: '/accounting/pending-reconcile', label: 'Pending Reconcile', scope: 'accounting_reports' }]
+          : []),
         { path: '/accounting/etax', label: 'เอกสาร e-Tax', scope: 'etax' },
       ],
     },
@@ -168,11 +183,17 @@ export function AppLayout() {
       { label: 'สร้างใบเสนอราคา', path: '/sales/orders/new', icon: 'bi-file-earmark-text', shortcut: 'QT', scope: 'invoice' },
       { label: 'ไปหน้าแดชบอร์ด', path: '/dashboard', icon: 'bi-grid-1x2', shortcut: 'DB' },
       { label: 'รายงานกำไรขาดทุน', path: '/accounting/reports/profit-loss', icon: 'bi-graph-up-arrow', shortcut: 'PL', scope: 'accounting_reports' },
+      ...(scanSlipEnabled
+        ? [
+            { label: 'Scan Slip / Upload Payment Slip', path: '/accounting/pending-reconcile?source=assistant&upload=1', icon: 'bi-upc-scan', shortcut: 'SLIP', scope: 'accounting_reports' },
+            { label: 'Pending Reconcile', path: '/accounting/pending-reconcile', icon: 'bi-cash-coin', shortcut: 'RCL', scope: 'accounting_reports' },
+          ]
+        : []),
       { label: 'เอกสาร e-Tax', path: '/accounting/etax', icon: 'bi-receipt-cutoff', shortcut: 'ETX', scope: 'etax' },
       { label: 'รายชื่อติดต่อ', path: '/customers', icon: 'bi-person-rolodex', shortcut: 'CON', scope: 'contacts' },
       { label: 'สินค้า/บริการ', path: '/products', icon: 'bi-box-seam', shortcut: 'PROD', scope: 'products' },
     ],
-    [],
+    [scanSlipEnabled],
   )
 
   const filteredCommands = searchCommands.filter((cmd) => {
@@ -203,7 +224,7 @@ export function AppLayout() {
     closeCommandPalette()
   }
 
-  const handleModalKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleModalKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault()
       if (filteredCommands.length > 0) {
@@ -252,7 +273,7 @@ export function AppLayout() {
   }, [])
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: globalThis.KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setShowSearchModal((prev) => !prev)

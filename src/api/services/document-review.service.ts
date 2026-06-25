@@ -30,6 +30,20 @@ export type DocumentType =
 
 export type SuggestedTarget = 'vendor_bill' | 'expense' | 'review_only'
 
+export type PaymentSlipTransactionType = 'purchase' | 'sale' | 'internal_transfer' | ''
+
+export interface PaymentSlipPayload {
+  flow?: string
+  source?: string
+  transaction_type?: PaymentSlipTransactionType
+  partner_name?: string
+  description?: string
+  amount?: number
+  date?: string
+  reference?: string
+  ocr_confidence?: number
+}
+
 export interface DocumentReviewIssue {
   id: number
   code: string
@@ -122,6 +136,7 @@ export interface DocumentReviewListItem {
   blocking_issue_count: number
   attachment_count?: number
   preview_attachment_id?: number
+  payment_payload?: PaymentSlipPayload
 }
 
 export interface DocumentReviewDetail {
@@ -164,6 +179,7 @@ export interface DocumentReviewDetail {
   attachments: DocumentReviewAttachment[]
   issues: DocumentReviewIssue[]
   accounting_suggestion?: AccountingSuggestion
+  payment_payload?: PaymentSlipPayload
 }
 
 export interface DocumentReviewListResponse {
@@ -177,6 +193,7 @@ export interface DocumentReviewListParams {
   offset?: number
   states?: DocumentReviewState[]
   review_states?: DocumentReviewStatus[]
+  document_types?: DocumentType[]
   search?: string
 }
 
@@ -199,6 +216,14 @@ export interface AccountingSuggestionUpdatePayload {
   suggested_tax_ids?: number[]
   suggested_journal_id?: number | null
   suggested_analytic_account_id?: number | null
+}
+
+export interface UploadPaymentSlipPayload {
+  file: File
+  source?: string
+  transaction_type?: PaymentSlipTransactionType
+  partner_name?: string
+  description?: string
 }
 
 type ReviewPayload<T> = T & {
@@ -230,6 +255,7 @@ export async function listDocumentReviewItems(params: DocumentReviewListParams) 
       ...(params.offset !== undefined ? { offset: params.offset } : {}),
       ...(params.states?.length ? { states: params.states } : {}),
       ...(params.review_states?.length ? { review_states: params.review_states } : {}),
+      ...(params.document_types?.length ? { document_types: params.document_types } : {}),
       ...(params.search ? { search: params.search } : {}),
     }),
   )
@@ -286,4 +312,21 @@ export async function markDocumentUnsupported(extractionId: number) {
 export async function createDocumentDraft(extractionId: number) {
   const response = await apiClient.post('/line/review/create-draft', makeRpc({ extraction_id: extractionId }))
   return unwrapReviewPayload<{ linked_model?: string; linked_res_id?: number; linked_move_id?: number }>(response)
+}
+
+export async function uploadPaymentSlip(payload: UploadPaymentSlipPayload) {
+  const form = new FormData()
+  form.append('file', payload.file)
+  if (payload.source) form.append('source', payload.source)
+  if (payload.transaction_type) form.append('transaction_type', payload.transaction_type)
+  if (payload.partner_name) form.append('partner_name', payload.partner_name)
+  if (payload.description) form.append('description', payload.description)
+  const response = await apiClient.post('/line/review/upload-payment-slip', form)
+  return unwrapReviewPayload<{
+    intake_id: number
+    extraction_id: number
+    name?: string
+    state: DocumentReviewState
+    review_state: DocumentReviewStatus
+  }>(response)
 }
