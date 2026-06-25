@@ -10,6 +10,7 @@ import { InvoiceFormPage } from '@/features/sales/InvoiceFormPage'
 import { SalesNoteDetailPage } from '@/features/sales/SalesNoteDetailPage'
 import { NotesListPage } from '@/features/notes/NotesListPage'
 import { SalesOrdersListPage } from '@/features/sales/SalesOrdersListPage'
+import { SalesDocumentNumberingSettingsPage } from '@/features/sales/SalesDocumentNumberingSettingsPage'
 import { SalesOrderDetailPage } from '@/features/sales/SalesOrderDetailPage'
 import { SalesOrderFormPage } from '@/features/sales/SalesOrderFormPage'
 import { SalesOrderPrintPreviewPage } from '@/features/sales/SalesOrderPrintPreviewPage'
@@ -107,6 +108,7 @@ function AppRoutes() {
           <Route path="/sales/notes" element={<Navigate to="/notes?domain=sales" replace />} />
           <Route path="/sales/notes/:id" element={<SalesNoteDetailPage />} />
           <Route path="/sales/orders" element={<SalesOrdersListPage />} />
+          <Route path="/settings/sales-document-numbering" element={<SalesDocumentNumberingSettingsPage />} />
           <Route path="/sales/orders/new" element={<SalesOrderFormPage />} />
           <Route path="/sales/orders/:id" element={<SalesOrderDetailPage />} />
           <Route path="/sales/orders/:id/edit" element={<SalesOrderFormPage />} />
