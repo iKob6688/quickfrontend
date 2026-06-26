@@ -150,6 +150,26 @@ function asCurrency(value?: number, currency = 'THB') {
   }) + ` ${currency}`
 }
 
+function getLinkedAccountingRoute(
+  detail: Pick<DocumentReviewDetail, 'linked_model' | 'linked_res_id' | 'payment_payload'>,
+) {
+  if (detail.linked_model !== 'account.move' || !detail.linked_res_id) return null
+  if (detail.payment_payload?.transaction_type === 'sale') return `/sales/invoices/${detail.linked_res_id}`
+  return `/purchases/bills/${detail.linked_res_id}`
+}
+
+function getLinkedDocumentLabel(
+  detail: Pick<DocumentReviewDetail, 'linked_model' | 'linked_res_id' | 'payment_payload'>,
+) {
+  if (!detail.linked_model || !detail.linked_res_id) return ''
+  if (detail.linked_model === 'account.move') {
+    return detail.payment_payload?.transaction_type === 'sale'
+      ? `Customer Invoice Draft #${detail.linked_res_id}`
+      : `Vendor Bill Draft #${detail.linked_res_id}`
+  }
+  return `${detail.linked_model} #${detail.linked_res_id}`
+}
+
 function toInputNumber(value?: number) {
   return typeof value === 'number' && Number.isFinite(value) ? String(value) : ''
 }
@@ -557,6 +577,8 @@ export function DocumentReviewInboxPage() {
     vat: selectedPartner?.vat || detail?.matched_partner_vat,
     stateName: selectedPartner?.stateName || detail?.matched_partner_state_name,
   })
+  const linkedAccountingRoute = detail ? getLinkedAccountingRoute(detail) : null
+  const linkedDocumentLabel = detail ? getLinkedDocumentLabel(detail) : ''
 
   const saveDisabled = !editor || saveMutation.isPending || !detail
 
@@ -790,6 +812,11 @@ export function DocumentReviewInboxPage() {
                     <div className="text-start">
                       <div className="fw-semibold text-dark">{item.vendor_name || item.document_number || item.name}</div>
                       <div className="small text-muted">{item.document_date || 'ไม่ระบุวันที่'} · {item.document_type.replace(/_/g, ' ')}</div>
+                      {item.review_state === 'draft_created' ? (
+                        <div className="small document-review__success-text mt-1">
+                          สร้าง Draft แล้ว{item.matched_partner_name ? ` · ${item.matched_partner_name}` : ''}
+                        </div>
+                      ) : null}
                     </div>
                     <Badge tone={getStateTone(item)}>{getStateLabel(item.state)}</Badge>
                   </div>
@@ -1165,6 +1192,41 @@ export function DocumentReviewInboxPage() {
                       </div>
                     ) : null}
                     <div className="d-flex flex-wrap gap-2 mt-4">
+                      {detail.linked_model && detail.linked_res_id ? (
+                        <div className="document-review__linked-draft">
+                          <div>
+                            <div className="fw-semibold">สร้าง Draft แล้ว</div>
+                            <div className="small">
+                              {linkedDocumentLabel}
+                              {detail.total_amount ? ` · ${asCurrency(detail.total_amount, detail.currency_name || 'THB')}` : ''}
+                              {detail.document_date ? ` · วันที่ ${detail.document_date}` : ''}
+                            </div>
+                            <div className="small text-muted">
+                              ถ้าค้นหาในรายการไม่เจอ ให้เปิดจากปุ่มนี้โดยตรง เพราะเอกสาร draft ใน Odoo อาจยังใช้เลขชั่วคราว `/` จนกว่าจะ post
+                            </div>
+                          </div>
+                          <div className="d-flex flex-wrap gap-2">
+                            {linkedAccountingRoute ? (
+                              <Button size="sm" onClick={() => navigate(linkedAccountingRoute)}>
+                                เปิด Draft ใน Qacc
+                              </Button>
+                            ) : null}
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() =>
+                                window.open(
+                                  `/web#id=${detail.linked_res_id}&model=${detail.linked_model}&view_type=form`,
+                                  '_blank',
+                                  'noopener,noreferrer',
+                                )
+                              }
+                            >
+                              เปิดใน Odoo
+                            </Button>
+                          </div>
+                        </div>
+                      ) : null}
                       <Button
                         size="sm"
                         variant="secondary"
@@ -1187,21 +1249,6 @@ export function DocumentReviewInboxPage() {
                       <Button size="sm" variant="secondary" onClick={() => unsupportedMutation.mutate()} isLoading={unsupportedMutation.isPending}>
                         ทำเครื่องหมายว่าไม่รองรับ
                       </Button>
-                      {detail.linked_model && detail.linked_res_id ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            if (detail.linked_model === 'account.move') {
-                              navigate(`/purchases/bills/${detail.linked_res_id}`)
-                              return
-                            }
-                            window.open(`/web#id=${detail.linked_res_id}&model=${detail.linked_model}&view_type=form`, '_blank', 'noopener,noreferrer')
-                          }}
-                        >
-                          เปิดเอกสารที่เชื่อมไว้
-                        </Button>
-                      ) : null}
                     </div>
                   </Card>
                 </div>
