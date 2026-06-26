@@ -153,7 +153,9 @@ function asCurrency(value?: number, currency = 'THB') {
 function getLinkedAccountingRoute(
   detail: Pick<DocumentReviewDetail, 'linked_model' | 'linked_res_id' | 'payment_payload'>,
 ) {
-  if (detail.linked_model !== 'account.move' || !detail.linked_res_id) return null
+  if (!detail.linked_res_id) return null
+  if (detail.linked_model === 'hr.expense') return `/expenses/${detail.linked_res_id}`
+  if (detail.linked_model !== 'account.move') return null
   if (detail.payment_payload?.transaction_type === 'sale') return `/sales/invoices/${detail.linked_res_id}`
   return `/purchases/bills/${detail.linked_res_id}`
 }
@@ -162,6 +164,7 @@ function getLinkedDocumentLabel(
   detail: Pick<DocumentReviewDetail, 'linked_model' | 'linked_res_id' | 'payment_payload'>,
 ) {
   if (!detail.linked_model || !detail.linked_res_id) return ''
+  if (detail.linked_model === 'hr.expense') return `Expense Draft #${detail.linked_res_id}`
   if (detail.linked_model === 'account.move') {
     return detail.payment_payload?.transaction_type === 'sale'
       ? `Customer Invoice Draft #${detail.linked_res_id}`
