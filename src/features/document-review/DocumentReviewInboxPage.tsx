@@ -494,11 +494,19 @@ export function DocumentReviewInboxPage() {
       return createDocumentDraft(selectedId)
     },
     onSuccess: async (result) => {
-      toast.success('สร้าง draft บิลผู้ขายแล้ว')
+      toast.success(result.linked_model === 'hr.expense' ? 'สร้างรายจ่ายร่างแล้ว' : 'สร้าง draft แล้ว')
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['document-review', 'items'] }),
         queryClient.invalidateQueries({ queryKey: ['document-review', 'detail', selectedId] }),
       ])
+      if (result.linked_model === 'hr.expense' && result.linked_res_id) {
+        navigate(`/expenses/${result.linked_res_id}`)
+        return
+      }
+      if (result.linked_model === 'account.move' && result.linked_res_id) {
+        navigate(`/purchases/bills/${result.linked_res_id}`)
+        return
+      }
       if (result.linked_move_id) {
         navigate(`/purchases/bills/${result.linked_move_id}`)
       }
