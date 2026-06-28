@@ -25,6 +25,8 @@ export interface PurchaseVendorBillPayment {
 export interface PurchaseVendorBill {
   id: number
   number?: string
+  odooName?: string
+  ref?: string
   vendorId: number
   vendorName: string
   invoiceDate?: string | null
@@ -41,11 +43,31 @@ export interface PurchaseVendorBill {
   lines: PurchaseVendorBillLine[]
   payments?: PurchaseVendorBillPayment[]
   purchaseOrders?: Array<{ id: number; number?: string }>
+  source?: {
+    type?: 'manual' | 'line_scan' | string
+    label?: string
+    fromLine?: boolean
+    extractionId?: number
+    extractionName?: string
+    intakeId?: number
+    intakeName?: string
+    lineUser?: string
+    lineRoomId?: string
+    createdAt?: string | null
+    ocrReference?: string
+  }
+  sourceType?: string
+  sourceLabel?: string
+  needsApproval?: boolean
+  readyToConfirm?: boolean
 }
 
 export interface PurchaseVendorBillSearchParams {
   q?: string
   vendorId?: number
+  status?: 'draft' | 'posted' | 'paid' | 'cancelled'
+  fromLine?: boolean
+  needsApproval?: boolean
   limit?: number
   offset?: number
 }
@@ -89,6 +111,8 @@ function normalizeBill(raw: unknown): PurchaseVendorBill {
   return {
     id: pickId(item),
     number: item.number ? String(item.number) : undefined,
+    odooName: item.odooName ? String(item.odooName) : (item.odoo_name ? String(item.odoo_name) : undefined),
+    ref: item.ref ? String(item.ref) : undefined,
     vendorId: n(item.vendorId ?? item.vendor_id),
     vendorName: String(item.vendorName ?? item.vendor_name ?? ''),
     invoiceDate: item.invoiceDate ? String(item.invoiceDate) : (item.invoice_date ? String(item.invoice_date) : null),
@@ -141,6 +165,11 @@ function normalizeBill(raw: unknown): PurchaseVendorBill {
           })
           .filter((po) => po.id > 0)
       : [],
+    source: item.source && typeof item.source === 'object' ? item.source as PurchaseVendorBill['source'] : undefined,
+    sourceType: item.sourceType ? String(item.sourceType) : (item.source_type ? String(item.source_type) : undefined),
+    sourceLabel: item.sourceLabel ? String(item.sourceLabel) : (item.source_label ? String(item.source_label) : undefined),
+    needsApproval: Boolean(item.needsApproval ?? item.needs_approval),
+    readyToConfirm: Boolean(item.readyToConfirm ?? item.ready_to_confirm),
   }
 }
 
@@ -150,6 +179,9 @@ export async function searchPurchaseVendorBills(
   const body = makeRpc({
     ...(params?.q ? { q: params.q } : {}),
     ...(params?.vendorId ? { vendorId: params.vendorId } : {}),
+    ...(params?.status ? { status: params.status } : {}),
+    ...(params?.fromLine ? { fromLine: true, from_line: true } : {}),
+    ...(params?.needsApproval ? { needsApproval: true, needs_approval: true } : {}),
     ...(params?.limit ? { limit: params.limit } : {}),
     ...(params?.offset ? { offset: params.offset } : {}),
   })

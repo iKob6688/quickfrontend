@@ -7,8 +7,9 @@ import { Badge } from '@/components/ui/Badge'
 import { useMemo, useState } from 'react'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { listExpenses } from '@/api/services/expenses.service'
+import { searchPurchaseVendorBills, type PurchaseVendorBill } from '@/api/services/purchase-vendor-bills.service'
 import { checkExpensesApiAvailable } from '@/api/services/expenses-check.service'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Spinner } from 'react-bootstrap'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { useAppDateFormatter } from '@/lib/dateFormat'
@@ -16,10 +17,15 @@ import { useSettingsStore } from '@/app/core/storage/settingsStore'
 
 export function ExpensesListPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const formatDate = useAppDateFormatter()
   const scanSlipEnabled = useSettingsStore((state) => state.settings.scanSlipEnabled)
+  type DocumentMode = 'expenses' | 'vendor_bills'
   type StatusTab = 'all' | 'draft' | 'reported' | 'approved' | 'posted' | 'done' | 'refused'
+  type VendorBillTab = 'all' | 'from_line' | 'needs_approval' | 'draft' | 'posted' | 'paid' | 'cancelled'
+  const [documentMode, setDocumentMode] = useState<DocumentMode>(searchParams.get('view') === 'vendor_bills' ? 'vendor_bills' : 'expenses')
   const [tab, setTab] = useState<StatusTab>('all')
+  const [vendorBillTab, setVendorBillTab] = useState<VendorBillTab>('all')
   const [q, setQ] = useState('')
   const qDebounced = useDebouncedValue(q, 300)
   const limit = 30
@@ -53,11 +59,38 @@ export function ExpensesListPage() {
   const expenses = useMemo(() => {
     return query.data?.pages.flatMap((p) => p) ?? []
   }, [query.data?.pages])
+  const vendorBillQuery = useQuery({
+    queryKey: ['purchaseVendorBills', vendorBillTab, qDebounced, limit],
+    queryFn: () =>
+      searchPurchaseVendorBills({
+        q: qDebounced || undefined,
+        status: ['draft', 'posted', 'paid', 'cancelled'].includes(vendorBillTab)
+          ? (vendorBillTab as PurchaseVendorBill['status'])
+          : undefined,
+        fromLine: vendorBillTab === 'from_line',
+        needsApproval: vendorBillTab === 'needs_approval',
+        limit,
+        offset: 0,
+      }),
+    staleTime: 30_000,
+    enabled: apiCheckQuery.data?.available !== false,
+  })
   const countsQuery = useQuery({
     queryKey: ['expenses-counts', qDebounced],
     queryFn: () =>
       listExpenses({
         search: qDebounced || undefined,
+        limit: 1000,
+        offset: 0,
+      }),
+    staleTime: 30_000,
+    enabled: apiCheckQuery.data?.available !== false,
+  })
+  const vendorBillCountsQuery = useQuery({
+    queryKey: ['purchaseVendorBills-counts', qDebounced],
+    queryFn: () =>
+      searchPurchaseVendorBills({
+        q: qDebounced || undefined,
         limit: 1000,
         offset: 0,
       }),
@@ -72,6 +105,16 @@ export function ExpensesListPage() {
     }
     return base
   }, [countsQuery.data])
+  const vendorBillCounts = useMemo(() => {
+    const base = { all: 0, from_line: 0, needs_approval: 0, draft: 0, posted: 0, paid: 0, cancelled: 0 } as Record<VendorBillTab, number>
+    for (const bill of vendorBillCountsQuery.data?.items ?? []) {
+      base.all += 1
+      base[bill.status] += 1
+      if (bill.source?.fromLine) base.from_line += 1
+      if (bill.needsApproval) base.needs_approval += 1
+    }
+    return base
+  }, [vendorBillCountsQuery.data?.items])
 
   // Transform API data to table rows
   const rows = useMemo(() => {
@@ -159,6 +202,100 @@ export function ExpensesListPage() {
       },
     },
   ]
+  const vendorBillRows = useMemo(() => vendorBillQuery.data?.items ?? [], [vendorBillQuery.data?.items])
+
+  const vendorBillColumns: Column<PurchaseVendorBill>[] = [
+    {
+      key: 'number',
+      header: 'เลขที่เอกสาร',
+      className: 'text-nowrap',
+      cell: (bill) => (
+        <div className="d-flex flex-column gap-1">
+          <button
+            type="button"
+            className="btn btn-link p-0 fw-semibold text-primary text-decoration-none font-monospace text-start"
+            onClick={() => navigate(`/purchases/bills/${bill.id}`)}
+          >
+            {bill.number || `Draft #${bill.id}`}
+          </button>
+          <div className="d-flex flex-wrap gap-1">
+            <Badge tone="blue">Vendor Bill</Badge>
+            {bill.source?.fromLine ? <Badge tone="green">LINE Scan</Badge> : null}
+            {bill.needsApproval ? <Badge tone="amber">Needs Approval</Badge> : null}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'vendor',
+      header: 'ผู้ขาย',
+      cell: (bill) => (
+        <div>
+          <div className="fw-semibold">{bill.vendorName || '—'}</div>
+          <div className="small text-muted">{bill.ref || bill.source?.ocrReference || 'ไม่มีอ้างอิง'}</div>
+        </div>
+      ),
+    },
+    {
+      key: 'source',
+      header: 'ที่มา',
+      cell: (bill) => (
+        <div className="small">
+          <div className="fw-semibold">{bill.sourceLabel || bill.source?.label || 'Manual'}</div>
+          {bill.source?.lineUser ? <div className="text-muted">LINE: {bill.source.lineUser}</div> : null}
+          {bill.source?.extractionId ? <div className="text-muted">Extraction #{bill.source.extractionId}</div> : null}
+        </div>
+      ),
+    },
+    {
+      key: 'date',
+      header: 'วันที่บิล',
+      className: 'text-nowrap',
+      cell: (bill) => <span>{bill.invoiceDate ? formatDate(bill.invoiceDate) : '—'}</span>,
+    },
+    {
+      key: 'total',
+      header: 'มูลค่ารวม',
+      className: 'text-end',
+      cell: (bill) => (
+        <span className="fw-semibold font-monospace">
+          {bill.total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {bill.currency}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'สถานะ',
+      className: 'text-nowrap',
+      cell: (bill) => {
+        const tone = bill.status === 'paid' ? 'green' : bill.status === 'posted' ? 'blue' : bill.status === 'draft' ? 'gray' : 'red'
+        const label = bill.status === 'paid' ? 'ชำระแล้ว' : bill.status === 'posted' ? 'ยืนยันแล้ว' : bill.status === 'draft' ? 'ร่าง' : 'ยกเลิก'
+        return <Badge tone={tone}>{label}</Badge>
+      },
+    },
+    {
+      key: 'actions',
+      header: 'ดำเนินการ',
+      className: 'text-nowrap',
+      cell: (bill) => (
+        <div className="d-flex flex-wrap gap-2">
+          <Button size="sm" variant="secondary" onClick={() => navigate(`/purchases/bills/${bill.id}`)}>
+            ตรวจสอบ
+          </Button>
+          {bill.status === 'draft' ? (
+            <Button size="sm" onClick={() => navigate(`/purchases/bills/${bill.id}`)}>
+              Confirm Vendor Bill
+            </Button>
+          ) : null}
+          {(bill.status === 'posted' || bill.status === 'paid') ? (
+            <Button size="sm" variant="secondary" onClick={() => navigate(`/purchases/bills/${bill.id}`)}>
+              ไปชำระเงิน
+            </Button>
+          ) : null}
+        </div>
+      ),
+    },
+  ]
 
   return (
     <div>
@@ -188,30 +325,56 @@ export function ExpensesListPage() {
       />
 
       <div className="mb-4 d-flex flex-column gap-3 flex-sm-row align-items-sm-center justify-content-sm-between">
-        <Tabs
-          value={tab}
-          onChange={setTab}
-          items={[
-            { key: 'all', label: 'ทั้งหมด', count: statusCounts.all },
-            { key: 'draft', label: 'ร่าง', count: statusCounts.draft },
-            { key: 'reported', label: 'รายงานแล้ว', count: statusCounts.reported },
-            { key: 'approved', label: 'อนุมัติแล้ว', count: statusCounts.approved },
-            { key: 'posted', label: 'ลงบัญชีแล้ว', count: statusCounts.posted },
-            { key: 'done', label: 'เสร็จสิ้น', count: statusCounts.done },
-            { key: 'refused', label: 'ปฏิเสธ', count: statusCounts.refused },
-          ]}
-        />
+        <div className="d-flex flex-column gap-2">
+          <Tabs
+            value={documentMode}
+            onChange={setDocumentMode}
+            items={[
+              { key: 'expenses', label: 'รายจ่ายทั่วไป', count: statusCounts.all },
+              { key: 'vendor_bills', label: 'Vendor Bills', count: vendorBillCounts.all },
+            ]}
+          />
+          {documentMode === 'expenses' ? (
+            <Tabs
+              value={tab}
+              onChange={setTab}
+              items={[
+                { key: 'all', label: 'ทั้งหมด', count: statusCounts.all },
+                { key: 'draft', label: 'ร่าง', count: statusCounts.draft },
+                { key: 'reported', label: 'รายงานแล้ว', count: statusCounts.reported },
+                { key: 'approved', label: 'อนุมัติแล้ว', count: statusCounts.approved },
+                { key: 'posted', label: 'ลงบัญชีแล้ว', count: statusCounts.posted },
+                { key: 'done', label: 'เสร็จสิ้น', count: statusCounts.done },
+                { key: 'refused', label: 'ปฏิเสธ', count: statusCounts.refused },
+              ]}
+            />
+          ) : (
+            <Tabs
+              value={vendorBillTab}
+              onChange={setVendorBillTab}
+              items={[
+                { key: 'all', label: 'ทั้งหมด', count: vendorBillCounts.all },
+                { key: 'from_line', label: 'จาก LINE', count: vendorBillCounts.from_line },
+                { key: 'needs_approval', label: 'รออนุมัติ', count: vendorBillCounts.needs_approval },
+                { key: 'draft', label: 'รอยืนยัน', count: vendorBillCounts.draft },
+                { key: 'posted', label: 'ยืนยันแล้ว', count: vendorBillCounts.posted },
+                { key: 'paid', label: 'ชำระแล้ว', count: vendorBillCounts.paid },
+                { key: 'cancelled', label: 'ยกเลิก', count: vendorBillCounts.cancelled },
+              ]}
+            />
+          )}
+        </div>
         <div className="d-flex gap-2 w-100 justify-content-sm-end" style={{ maxWidth: '560px' }}>
           <div className="w-100" style={{ maxWidth: '360px' }}>
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="ค้นหาเลขที่เอกสาร / พนักงาน"
+              placeholder={documentMode === 'vendor_bills' ? 'ค้นหา Vendor Bill / ผู้ขาย / ref / id' : 'ค้นหาเลขที่เอกสาร / พนักงาน'}
               leftAdornment={<i className="bi bi-search"></i>}
             />
           </div>
-          {(q || tab !== 'all') && (
-            <Button size="sm" variant="ghost" onClick={() => { setQ(''); setTab('all') }}>
+          {(q || tab !== 'all' || vendorBillTab !== 'all') && (
+            <Button size="sm" variant="ghost" onClick={() => { setQ(''); setTab('all'); setVendorBillTab('all') }}>
               ล้างตัวกรอง
             </Button>
           )}
@@ -244,14 +407,21 @@ export function ExpensesListPage() {
         </div>
       ) : null}
 
-      {query.isLoading ? (
+      {documentMode === 'expenses' && query.isLoading ? (
         <div className="d-flex justify-content-center align-items-center py-5">
           <Spinner animation="border" role="status">
             <span className="visually-hidden">กำลังโหลด...</span>
           </Spinner>
           <span className="ms-3">กำลังโหลดข้อมูล...</span>
         </div>
-      ) : query.isError ? (
+      ) : documentMode === 'vendor_bills' && vendorBillQuery.isLoading ? (
+        <div className="d-flex justify-content-center align-items-center py-5">
+          <Spinner animation="border" role="status">
+            <span className="visually-hidden">กำลังโหลด...</span>
+          </Spinner>
+          <span className="ms-3">กำลังโหลด Vendor Bills...</span>
+        </div>
+      ) : documentMode === 'expenses' && query.isError ? (
         <div className="alert alert-danger">
           <p className="fw-semibold mb-2">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
           <p className="small mb-2">
@@ -261,37 +431,74 @@ export function ExpensesListPage() {
             ลองอีกครั้ง
           </Button>
         </div>
+      ) : documentMode === 'vendor_bills' && vendorBillQuery.isError ? (
+        <div className="alert alert-danger">
+          <p className="fw-semibold mb-2">เกิดข้อผิดพลาดในการโหลด Vendor Bills</p>
+          <p className="small mb-2">
+            {vendorBillQuery.error instanceof Error ? vendorBillQuery.error.message : 'Unknown error'}
+          </p>
+          <Button size="sm" onClick={() => vendorBillQuery.refetch()}>
+            ลองอีกครั้ง
+          </Button>
+        </div>
       ) : (
         <div className="d-flex flex-column gap-3">
-          <DataTable
-            title="รายการรายจ่าย"
-            right={
-              <div className="d-flex align-items-center gap-2">
-                <Button size="sm" variant="ghost" onClick={() => query.refetch()}>
-                  <i className="bi bi-arrow-clockwise me-1"></i>
-                  รีเฟรช
-                </Button>
-              </div>
-            }
-            columns={columns}
-            rows={rows}
-            empty={
-              <div>
-                <p className="h6 fw-semibold mb-2">ยังไม่มีข้อมูล</p>
-                <p className="small text-muted mb-0">
-                  {qDebounced
-                    ? 'ไม่พบข้อมูลที่ค้นหา ลองค้นหาด้วยคำอื่น'
-                    : 'ยังไม่มีรายจ่ายในระบบ'}
-                </p>
-              </div>
-            }
-          />
+          {documentMode === 'expenses' ? (
+            <DataTable
+              title="รายการรายจ่าย"
+              right={
+                <div className="d-flex align-items-center gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => query.refetch()}>
+                    <i className="bi bi-arrow-clockwise me-1"></i>
+                    รีเฟรช
+                  </Button>
+                </div>
+              }
+              columns={columns}
+              rows={rows}
+              empty={
+                <div>
+                  <p className="h6 fw-semibold mb-2">ยังไม่มีข้อมูล</p>
+                  <p className="small text-muted mb-0">
+                    {qDebounced
+                      ? 'ไม่พบข้อมูลที่ค้นหา ลองค้นหาด้วยคำอื่น'
+                      : 'ยังไม่มีรายจ่ายในระบบ'}
+                  </p>
+                </div>
+              }
+            />
+          ) : (
+            <DataTable
+              title="Vendor Bills / บิลผู้ขาย"
+              right={
+                <div className="d-flex align-items-center gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => vendorBillQuery.refetch()}>
+                    <i className="bi bi-arrow-clockwise me-1"></i>
+                    รีเฟรช
+                  </Button>
+                </div>
+              }
+              columns={vendorBillColumns}
+              rows={vendorBillRows}
+              rowKey={(bill) => bill.id}
+              empty={
+                <div>
+                  <p className="h6 fw-semibold mb-2">ยังไม่มี Vendor Bill</p>
+                  <p className="small text-muted mb-0">
+                    {qDebounced
+                      ? 'ไม่พบ Vendor Bill ที่ค้นหา ลองค้นหาด้วยชื่อผู้ขาย ref หรือ id'
+                      : 'Vendor Bill draft จาก LINE/Scan Slip จะแสดงที่นี่'}
+                  </p>
+                </div>
+              }
+            />
+          )}
 
           <div className="d-flex justify-content-between align-items-center">
             <div className="small text-muted">
-              แสดงแล้ว {rows.length} รายการ
+              แสดงแล้ว {documentMode === 'expenses' ? rows.length : vendorBillRows.length} รายการ
             </div>
-            {query.hasNextPage ? (
+            {documentMode === 'expenses' && query.hasNextPage ? (
               <Button
                 size="sm"
                 variant="secondary"

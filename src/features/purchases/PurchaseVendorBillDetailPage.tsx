@@ -251,6 +251,29 @@ export function PurchaseVendorBillDetailPage() {
         }
       />
 
+      {bill.source?.fromLine ? (
+        <div className="alert alert-info d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+          <div>
+            <div className="fw-semibold">สร้างจาก LINE Scan Slip</div>
+            <div className="small">
+              {bill.source.lineUser ? `LINE: ${bill.source.lineUser}` : 'LINE source'}
+              {bill.source.ocrReference ? ` · OCR ref: ${bill.source.ocrReference}` : ''}
+              {bill.source.extractionId ? ` · Extraction #${bill.source.extractionId}` : ''}
+            </div>
+          </div>
+          <div className="d-flex flex-wrap gap-2">
+            <Button size="sm" variant="secondary" onClick={() => navigate('/expenses?view=vendor_bills')}>
+              กลับไป รายจ่าย &gt; Vendor Bills
+            </Button>
+            {bill.status === 'draft' ? (
+              <Button size="sm" onClick={() => postMutation.mutate()} disabled={postMutation.isPending}>
+                {postMutation.isPending ? 'กำลัง Confirm...' : 'Confirm Vendor Bill'}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
       <CreateNoteModal
         open={creditNoteOpen}
         onClose={() => setCreditNoteOpen(false)}
