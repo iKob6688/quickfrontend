@@ -15,6 +15,7 @@ import { listPartners, type PartnerSummary } from '@/api/services/partners.servi
 import { sendAssistantChat } from '@/api/services/ai-assistant.service'
 import {
   createDocumentDraft,
+  fetchDocumentReviewAttachmentBlob,
   getDocumentReviewDetail,
   listDocumentReviewItems,
   markDocumentUnsupported,
@@ -275,6 +276,14 @@ function isPdfAttachment(attachment?: DocumentReviewAttachment) {
   return attachment?.mimetype === 'application/pdf'
 }
 
+function getAttachmentDownloadHref(attachment: DocumentReviewAttachment) {
+  const webContentMatch = attachment.download_url.match(/\/web\/content\/(\d+)/)
+  if (webContentMatch?.[1]) {
+    return `/api/line/review/attachment/${webContentMatch[1]}?download=true`
+  }
+  return attachment.download_url
+}
+
 function buildLocalCopilotFallback(prompt: string, detail: DocumentReviewDetail | undefined) {
   if (!detail) return 'เลือกเอกสารก่อน แล้วฉันจะช่วยอธิบายบริบทของผลการดึงข้อมูลให้'
   const lower = prompt.toLowerCase()
@@ -323,6 +332,9 @@ export function DocumentReviewInboxPage() {
   const [editor, setEditor] = useState<EditorState | null>(null)
   const [suggestionEditor, setSuggestionEditor] = useState<SuggestionEditorState | null>(null)
   const [selectedAttachmentId, setSelectedAttachmentId] = useState<number | null>(null)
+  const [previewObjectUrl, setPreviewObjectUrl] = useState<string | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewError, setPreviewError] = useState<string | null>(null)
   const [partnerSearch, setPartnerSearch] = useState('')
   const [copilotOpen, setCopilotOpen] = useState(true)
   const [copilotInput, setCopilotInput] = useState('')
@@ -409,6 +421,45 @@ export function DocumentReviewInboxPage() {
     () => detail?.attachments.find((attachment) => attachment.id === selectedAttachmentId) || detail?.attachments[0],
     [detail?.attachments, selectedAttachmentId],
   )
+
+  useEffect(() => {
+    let objectUrl: string | null = null
+    let active = true
+
+    setPreviewObjectUrl(null)
+    setPreviewError(null)
+
+    if (!selectedAttachment || (!isImageAttachment(selectedAttachment) && !isPdfAttachment(selectedAttachment))) {
+      setPreviewLoading(false)
+      return undefined
+    }
+
+    setPreviewLoading(true)
+    fetchDocumentReviewAttachmentBlob(selectedAttachment, 'preview')
+      .then((blob) => {
+        const nextObjectUrl = URL.createObjectURL(blob)
+        if (active) {
+          objectUrl = nextObjectUrl
+          setPreviewObjectUrl(objectUrl)
+          setPreviewError(null)
+        } else {
+          URL.revokeObjectURL(nextObjectUrl)
+        }
+      })
+      .catch((error) => {
+        if (active) {
+          setPreviewError(toApiError(error).message || 'ไม่สามารถโหลดตัวอย่างไฟล์แนบได้')
+        }
+      })
+      .finally(() => {
+        if (active) setPreviewLoading(false)
+      })
+
+    return () => {
+      active = false
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [selectedAttachment])
 
   const partnerOptionsQuery = useQuery({
     queryKey: ['document-review', 'partners', debouncedPartnerSearch],
@@ -623,16 +674,48 @@ export function DocumentReviewInboxPage() {
     if (!selectedAttachment) {
       return <div className="text-muted small">ไม่มีไฟล์แนบสำหรับแสดงตัวอย่าง</div>
     }
+    if (previewLoading) {
+      return (
+        <div className="document-review__generic-file">
+          <Spinner animation="border" size="sm" />
+          <div className="fw-semibold">กำลังโหลดตัวอย่างเอกสาร</div>
+          <div className="small text-muted">{selectedAttachment.name}</div>
+        </div>
+      )
+    }
+    if (previewError) {
+      return (
+        <div className="document-review__generic-file">
+          <i className="bi bi-image-alt fs-2 text-muted" aria-hidden="true" />
+          <div className="fw-semibold">โหลดตัวอย่างเอกสารไม่สำเร็จ</div>
+          <div className="small text-muted">{previewError}</div>
+          <a
+            href={getAttachmentDownloadHref(selectedAttachment)}
+            className="btn btn-sm btn-outline-secondary mt-2"
+            target="_blank"
+            rel="noreferrer"
+          >
+            เปิด/ดาวน์โหลดไฟล์
+          </a>
+        </div>
+      )
+    }
     if (isImageAttachment(selectedAttachment)) {
-      return <img src={selectedAttachment.preview_url} alt={selectedAttachment.name} className="document-review__image" />
+      return previewObjectUrl ? (
+        <img src={previewObjectUrl} alt={selectedAttachment.name} className="document-review__image" />
+      ) : (
+        <div className="text-muted small">ยังไม่มีตัวอย่างรูปภาพ</div>
+      )
     }
     if (isPdfAttachment(selectedAttachment)) {
-      return (
+      return previewObjectUrl ? (
         <iframe
-          src={selectedAttachment.preview_url}
+          src={previewObjectUrl}
           title={selectedAttachment.name}
           className="document-review__iframe"
         />
+      ) : (
+        <div className="text-muted small">ยังไม่มีตัวอย่าง PDF</div>
       )
     }
     return (
@@ -906,7 +989,7 @@ export function DocumentReviewInboxPage() {
                     ))}
                     {selectedAttachment ? (
                       <a
-                        href={selectedAttachment.download_url}
+                        href={getAttachmentDownloadHref(selectedAttachment)}
                         className="btn btn-sm btn-outline-secondary"
                         target="_blank"
                         rel="noreferrer"

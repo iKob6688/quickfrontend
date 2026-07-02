@@ -226,6 +226,8 @@ export interface UploadPaymentSlipPayload {
   description?: string
 }
 
+export type DocumentReviewAttachmentFetchMode = 'preview' | 'download'
+
 type ReviewPayload<T> = T & {
   success: boolean
   error?: string | { message?: string; code?: string; details?: unknown } | null
@@ -245,6 +247,70 @@ function unwrapReviewPayload<T>(response: AxiosResponse<unknown>): T {
     })
   }
   return payload
+}
+
+function toAttachmentPath(rawUrl?: string) {
+  if (!rawUrl) return ''
+  try {
+    const parsed = new URL(rawUrl, window.location.origin)
+    return `${parsed.pathname}${parsed.search}`
+  } catch {
+    return rawUrl
+  }
+}
+
+function buildAttachmentBlobCandidates(attachment: DocumentReviewAttachment, mode: DocumentReviewAttachmentFetchMode) {
+  const requestedUrl = toAttachmentPath(mode === 'download' ? attachment.download_url : attachment.preview_url)
+  const downloadFlag = mode === 'download' ? 'true' : 'false'
+  const candidates: Array<{ url: string; baseURL?: string }> = []
+
+  const pushCandidate = (url: string, baseURL?: string) => {
+    if (!url) return
+    if (candidates.some((candidate) => candidate.url === url && candidate.baseURL === baseURL)) return
+    candidates.push({ url, baseURL })
+  }
+
+  if (attachment.id) {
+    pushCandidate(`/line/review/attachment/${attachment.id}?download=${downloadFlag}`)
+    pushCandidate(`/api/line/review/attachment/${attachment.id}?download=${downloadFlag}`, '')
+  }
+
+  if (requestedUrl.startsWith('/api/')) {
+    pushCandidate(requestedUrl.replace(/^\/api/, ''))
+    pushCandidate(requestedUrl, '')
+  } else if (requestedUrl.startsWith('/line/')) {
+    pushCandidate(requestedUrl)
+    pushCandidate(`/api${requestedUrl}`, '')
+  } else if (requestedUrl) {
+    const webContentMatch = requestedUrl.match(/\/web\/content\/(\d+)/)
+    if (webContentMatch?.[1]) {
+      pushCandidate(`/line/review/attachment/${webContentMatch[1]}?download=${downloadFlag}`)
+      pushCandidate(`/api/line/review/attachment/${webContentMatch[1]}?download=${downloadFlag}`, '')
+    }
+    pushCandidate(requestedUrl, '')
+  }
+
+  return candidates
+}
+
+export async function fetchDocumentReviewAttachmentBlob(
+  attachment: DocumentReviewAttachment,
+  mode: DocumentReviewAttachmentFetchMode = 'preview',
+) {
+  const candidates = buildAttachmentBlobCandidates(attachment, mode)
+  let lastError: unknown
+  for (const candidate of candidates) {
+    try {
+      const response = await apiClient.get(candidate.url, {
+        ...(candidate.baseURL !== undefined ? { baseURL: candidate.baseURL } : {}),
+        responseType: 'blob',
+      })
+      return response.data as Blob
+    } catch (error) {
+      lastError = error
+    }
+  }
+  throw lastError || new ApiError('Unable to load document attachment preview')
 }
 
 export async function listDocumentReviewItems(params: DocumentReviewListParams) {
