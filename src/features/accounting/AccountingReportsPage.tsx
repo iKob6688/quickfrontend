@@ -118,6 +118,22 @@ const cards: ReportCard[] = [
     path: '/accounting/reports/wht',
     ready: true,
   },
+  {
+    title: 'RD e-Filing Submissions',
+    subtitle: 'คิว printout / เตรียมยื่นแบบ / ตรวจสถานะ RD e-Filing',
+    icon: 'bi-cloud-arrow-up',
+    tone: 'green',
+    path: '/accounting/rd-efiling',
+    ready: true,
+  },
+  {
+    title: 'Official Thai Forms',
+    subtitle: 'ภ.พ.30, PND, monthly pack, และ export log จาก adt_th_official_reports',
+    icon: 'bi-file-earmark-pdf',
+    tone: 'purple',
+    path: '/accounting/reports/official-thai-forms',
+    ready: true,
+  },
 ]
 
 function toneClass(tone: ReportCard['tone']) {

@@ -48,6 +48,8 @@ import { GeneralLedgerAccountDrilldownPage } from '@/features/accounting/General
 import { MoveLineDetailPage } from '@/features/accounting/MoveLineDetailPage'
 import { AccountingAdminPage } from '@/features/accounting/AccountingAdminPage'
 import { VatSettingsAdminPage } from '@/features/accounting/VatSettingsAdminPage'
+import { RdEfilingSubmissionsPage } from '@/features/accounting/RdEfilingSubmissionsPage'
+import { OfficialThaiReportsPage } from '@/features/accounting/OfficialThaiReportsPage'
 import { EtaxDashboardPage } from '@/features/etax/EtaxDashboardPage'
 import { EtaxSettingsPage } from '@/features/etax/EtaxSettingsPage'
 import { BackendConnectionPage } from '@/features/backend-connection/BackendConnectionPage'
@@ -144,6 +146,8 @@ function AppRoutes() {
           <Route path="/accounting/reports/bank-book" element={<BookReportPage mode="bank" />} />
           <Route path="/accounting/reports/vat" element={<VatReportPage />} />
           <Route path="/accounting/reports/wht" element={<WhtReportPage />} />
+          <Route path="/accounting/reports/official-thai-forms" element={<OfficialThaiReportsPage />} />
+          <Route path="/accounting/rd-efiling" element={<RdEfilingSubmissionsPage />} />
           <Route path="/accounting/tax-settings" element={<VatSettingsAdminPage />} />
           <Route path="/accounting/etax" element={<EtaxDashboardPage />} />
           <Route path="/accounting/etax-settings" element={<EtaxSettingsPage />} />
