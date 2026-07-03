@@ -130,6 +130,7 @@ export function AppLayout() {
       children: [
         { path: '/sales/orders', label: 'ใบเสนอราคา/SO', scope: 'invoice' },
         { path: '/sales/invoices', label: 'ใบแจ้งหนี้', scope: 'invoice' },
+        { path: '/sales/invoices/chonlatee/new', label: 'Chonlatee Billing', scope: 'invoice' },
         { path: '/sales/receipts', label: 'ใบเสร็จรับเงิน', scope: 'invoice' },
         { path: '/notes', label: 'ใบเพิ่ม/ลดหนี้', scope: 'invoice' },
       ],

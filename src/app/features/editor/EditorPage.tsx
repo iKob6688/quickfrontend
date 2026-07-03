@@ -6,6 +6,8 @@ import type { AnyBlock, TemplateV1 } from '@/app/core/types/template'
 import { useTemplateStore } from '@/app/core/storage/templateStore'
 import { useBrandingStore } from '@/app/core/storage/brandingStore'
 import { useSettingsStore } from '@/app/core/storage/settingsStore'
+import { useAuthStore } from '@/features/auth/store'
+import { getCompanyTemplateDefaultsKey, resolveDefaultTemplateId } from '@/lib/reportTemplateDefaults'
 import { MockOdooProvider } from '@/app/core/odoo/MockOdooProvider'
 import { HttpOdooProvider } from '@/app/core/odoo/HttpOdooProvider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/shell/ui/card'
@@ -64,6 +66,8 @@ export function EditorPage() {
   const branding = useBrandingStore((s) => s.branding)
   const settings = useSettingsStore((s) => s.settings)
   const patchSettings = useSettingsStore((s) => s.patchSettings)
+  const user = useAuthStore((s) => s.user)
+  const instancePublicId = useAuthStore((s) => s.instancePublicId)
 
   const tpl = useMemo(() => templates.find((t) => t.id === templateId), [templates, templateId])
 
@@ -115,7 +119,12 @@ export function EditorPage() {
 
   const isReadOnly = !!tpl.isDefault
   const currentDefaultId =
-    tpl.docType === 'trf_receipt' ? undefined : settings.defaultTemplateIdByDocType?.[tpl.docType]
+    tpl.docType === 'trf_receipt'
+      ? undefined
+      : resolveDefaultTemplateId(settings, tpl.docType, {
+          companyName: user?.companyName,
+          instancePublicId,
+        })
   const isCurrentDefault = currentDefaultId === tpl.id
 
   return (
@@ -183,15 +192,37 @@ export function EditorPage() {
           <Button
             variant="secondary"
             onClick={() => {
+              const companyKey = getCompanyTemplateDefaultsKey({
+                companyName: user?.companyName,
+                instancePublicId,
+              })
+              const nextCompanyDefaults = companyKey
+                ? {
+                    ...settings.companyTemplateIdByCompanyKey,
+                    [companyKey]: {
+                      ...(settings.companyTemplateIdByCompanyKey?.[companyKey] || {}),
+                      [tpl.docType]: tpl.id,
+                    },
+                  }
+                : settings.companyTemplateIdByCompanyKey
               patchSettings({
-                defaultTemplateIdByDocType: {
-                  ...settings.defaultTemplateIdByDocType,
-                  [tpl.docType]: tpl.id,
-                },
+                ...(companyKey
+                  ? { companyTemplateIdByCompanyKey: nextCompanyDefaults }
+                  : {
+                      defaultTemplateIdByDocType: {
+                        ...settings.defaultTemplateIdByDocType,
+                        [tpl.docType]: tpl.id,
+                      },
+                    }),
               })
               setSaveHint('Set as default')
               window.setTimeout(() => setSaveHint(''), 1200)
-              toast.success('ตั้งค่าเริ่มต้นสำหรับการพิมพ์แล้ว', `Template: ${tpl.id}`)
+              toast.success(
+                'ตั้งค่าเริ่มต้นสำหรับการพิมพ์แล้ว',
+                companyKey
+                  ? `บริษัท ${user?.companyName || '-'} ใช้ Template: ${tpl.id}`
+                  : `Template: ${tpl.id}`,
+              )
             }}
             title="Set as default template for printing"
           >

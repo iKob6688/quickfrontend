@@ -20,6 +20,16 @@ export interface InvoicePayload {
   currency: string
   lines: InvoiceLine[]
   notes?: string
+  reference?: string
+  contact?: string
+  salesperson?: string
+  project?: string
+  invoiceRefTop?: string
+  employeeId?: number | null
+  employeeName?: string
+  billingPeriod?: string
+  billingSubject?: string
+  billingType?: string
 }
 
 export interface PaymentRecord {
@@ -73,6 +83,11 @@ export interface Invoice extends InvoicePayload {
   updatedAt: string
   number?: string
   customerName?: string
+  reference?: string
+  contact?: string
+  salesperson?: string
+  project?: string
+  invoiceRefTop?: string
 }
 
 export interface InvoiceListItem {
@@ -327,6 +342,11 @@ function normalizeInvoice(raw: unknown): Invoice {
     updatedAt: String(item.updatedAt ?? item.updated_at ?? item.write_date ?? ''),
     number: item.number ? String(item.number) : undefined,
     customerName: item.customerName ? String(item.customerName) : undefined,
+    reference: item.reference ? String(item.reference) : undefined,
+    contact: item.contact ? String(item.contact) : undefined,
+    salesperson: item.salesperson ? String(item.salesperson) : undefined,
+    project: item.project ? String(item.project) : undefined,
+    invoiceRefTop: item.invoiceRefTop ? String(item.invoiceRefTop) : undefined,
   }
 }
 

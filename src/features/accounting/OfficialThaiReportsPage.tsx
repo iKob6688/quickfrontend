@@ -16,6 +16,7 @@ import {
 } from '@/api/services/official-reports.service'
 import { toApiError } from '@/api/response'
 import { toast } from '@/lib/toastStore'
+import { useAuthStore } from '@/features/auth/store'
 
 function isoMonthValue(date: Date) {
   const year = date.getFullYear()
@@ -68,29 +69,32 @@ function certificateOptionLabel(cert: WhtCertificateListItem) {
 export function OfficialThaiReportsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const user = useAuthStore((s) => s.user)
   const [periodMonth, setPeriodMonth] = useState(() => isoMonthValue(new Date()))
   const [selectedWhtCertificateId, setSelectedWhtCertificateId] = useState<number | null>(null)
+  const [activeTemplateId, setActiveTemplateId] = useState<number | null>(null)
 
   const { year, month } = useMemo(() => parseMonthValue(periodMonth), [periodMonth])
   const dateFrom = `${periodMonth}-01`
   const dateTo = `${periodMonth}-${new Date(year, month, 0).getDate().toString().padStart(2, '0')}`
 
   const formsQuery = useQuery({
-    queryKey: ['official-reports', 'forms'],
-    queryFn: () => listOfficialForms(),
+    queryKey: ['official-reports', 'forms', user?.companyId],
+    queryFn: () => listOfficialForms({ companyId: user?.companyId }),
     staleTime: 60_000,
   })
 
   const logsQuery = useQuery({
-    queryKey: ['official-reports', 'logs'],
-    queryFn: () => listOfficialExportLogs({ limit: 20 }),
+    queryKey: ['official-reports', 'logs', user?.companyId],
+    queryFn: () => listOfficialExportLogs({ companyId: user?.companyId, limit: 20 }),
     staleTime: 15_000,
   })
 
   const whtCertificatesQuery = useQuery({
-    queryKey: ['official-reports', 'wht-certificates', dateFrom, dateTo],
+    queryKey: ['official-reports', 'wht-certificates', user?.companyId, dateFrom, dateTo],
     queryFn: () =>
       listWhtCertificates({
+        companyId: user?.companyId,
         dateFrom,
         dateTo,
         limit: 100,
@@ -108,6 +112,7 @@ export function OfficialThaiReportsPage() {
   const packMutation = useMutation({
     mutationFn: () =>
       generateMonthlyOfficialPack({
+        companyId: user?.companyId,
         year,
         month,
         includeDraft: false,
@@ -130,6 +135,7 @@ export function OfficialThaiReportsPage() {
     mutationFn: ({ templateId, sourceId }: { templateId: number; sourceId?: number }) =>
       generateOfficialForm({
         templateId,
+        companyId: user?.companyId,
         dateFrom,
         dateTo,
         ...(sourceId !== undefined
@@ -139,16 +145,33 @@ export function OfficialThaiReportsPage() {
             }
           : {}),
       }),
+    onMutate: ({ templateId }) => {
+      setActiveTemplateId(templateId)
+    },
     onSuccess: (data) => {
-      toast.success('สร้างแบบทางการแล้ว', data.exportLog.name)
+      const attachmentUrl = data.exportLog.attachmentUrl
+      toast.success(
+        attachmentUrl ? 'สร้างแบบทางการแล้ว' : 'สร้างรายการส่งออกแล้ว',
+        attachmentUrl
+          ? data.exportLog.name
+          : `${data.exportLog.name} ยังไม่มีไฟล์แนบจาก server`,
+      )
       if (data.exportLog.attachmentUrl) {
         window.open(data.exportLog.attachmentUrl, '_blank', 'noopener,noreferrer')
+      } else {
+        toast.info(
+          'ยังไม่มีไฟล์ให้เปิดอัตโนมัติ',
+          'ตรวจ export log ด้านล่าง หรือดู server logs/attachment mapping เพิ่มเติม',
+        )
       }
       void invalidateOfficial()
     },
     onError: (error) => {
       const apiError = toApiError(error)
       toast.error('สร้างแบบทางการไม่สำเร็จ', apiError.message)
+    },
+    onSettled: () => {
+      setActiveTemplateId(null)
     },
   })
 
@@ -245,10 +268,13 @@ export function OfficialThaiReportsPage() {
             />
           </div>
           <div className="col-md-5">
-            <div className="small text-muted mb-2">
-              ระบบจะใช้ช่วงวันที่ {dateFrom} ถึง {dateTo} สำหรับ generate แบบและ monthly pack
-            </div>
+          <div className="small text-muted mb-2">
+            ระบบจะใช้ช่วงวันที่ {dateFrom} ถึง {dateTo} สำหรับ generate แบบและ monthly pack
           </div>
+          <div className="small text-muted">
+            บริษัทปัจจุบัน: {user?.companyName || '-'} {user?.companyId ? `(ID ${user.companyId})` : ''}
+          </div>
+        </div>
           <div className="col-md-4 d-flex gap-2 justify-content-md-end flex-wrap">
             <Button size="sm" variant="secondary" onClick={() => void formsQuery.refetch()}>
               รีเฟรชแบบฟอร์ม
@@ -392,7 +418,7 @@ export function OfficialThaiReportsPage() {
                               })
                             }}
                           >
-                            Generate
+                            {activeTemplateId === item.template.id && generateMutation.isPending ? 'Generating...' : 'Generate'}
                           </Button>
                         </div>
                       ) : (
@@ -402,7 +428,7 @@ export function OfficialThaiReportsPage() {
                           disabled={!item.canGenerate || generateMutation.isPending}
                           onClick={() => generateMutation.mutate({ templateId: item.template.id })}
                         >
-                          Generate
+                          {activeTemplateId === item.template.id && generateMutation.isPending ? 'Generating...' : 'Generate'}
                         </Button>
                       )}
                     </td>

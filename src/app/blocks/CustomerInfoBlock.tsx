@@ -32,6 +32,15 @@ export function CustomerInfoBlockView({ block, ctx }: { block: CustomerInfoBlock
           </div>
           <div className="px-2 py-2 font-medium">{address || '-'}</div>
         </div>
+        {block.props.showTel ? (
+          <div className="grid grid-cols-[180px_1fr] border-t border-slate-900">
+            <div className="border-r border-slate-900 px-2 py-2">
+              <div className="font-semibold">โทรศัพท์</div>
+              <div className="text-[10px] text-slate-600">Telephone</div>
+            </div>
+            <div className="px-2 py-2 font-medium">{p.tel || '-'}</div>
+          </div>
+        ) : null}
       </div>
     )
   }
@@ -55,4 +64,3 @@ export function CustomerInfoBlockView({ block, ctx }: { block: CustomerInfoBlock
     </div>
   )
 }
-

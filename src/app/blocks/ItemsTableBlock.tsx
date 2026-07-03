@@ -94,7 +94,7 @@ export function ItemsTableBlockView({ block, ctx }: { block: ItemsTableBlock; ct
                 {it.productName ? (
                   <div className="mb-0.5 font-semibold text-slate-900">{it.productName}</div>
                 ) : null}
-                <div className={compact ? 'line-clamp-2' : ''}>{it.description}</div>
+                <div className={`whitespace-pre-wrap ${compact ? 'line-clamp-2' : ''}`.trim()}>{it.description}</div>
               </td>
               <td className="px-2 py-2 text-center">
                 {it.qty}
@@ -117,4 +117,3 @@ export function ItemsTableBlockView({ block, ctx }: { block: ItemsTableBlock; ct
     </div>
   )
 }
-

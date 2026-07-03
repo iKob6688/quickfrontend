@@ -7,6 +7,7 @@ import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { InvoicesListPage } from '@/features/sales/InvoicesListPage'
 import { InvoiceDetailPage } from '@/features/sales/InvoiceDetailPage'
 import { InvoiceFormPage } from '@/features/sales/InvoiceFormPage'
+import { ChonlateeBillingFormPage } from '@/features/sales/ChonlateeBillingFormPage'
 import { SalesNoteDetailPage } from '@/features/sales/SalesNoteDetailPage'
 import { NotesListPage } from '@/features/notes/NotesListPage'
 import { SalesOrdersListPage } from '@/features/sales/SalesOrdersListPage'
@@ -105,6 +106,7 @@ function AppRoutes() {
           <Route path="/sales/invoices" element={<InvoicesListPage />} />
           <Route path="/sales/receipts" element={<InvoicesListPage mode="receipts" />} />
           <Route path="/sales/invoices/new" element={<InvoiceFormPage />} />
+          <Route path="/sales/invoices/chonlatee/new" element={<ChonlateeBillingFormPage />} />
           <Route path="/sales/invoices/:id" element={<InvoiceDetailPage />} />
           <Route path="/sales/invoices/:id/edit" element={<InvoiceFormPage />} />
           <Route path="/notes" element={<NotesListPage />} />

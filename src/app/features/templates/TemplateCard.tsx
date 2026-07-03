@@ -7,10 +7,14 @@ import { useSettingsStore } from '@/app/core/storage/settingsStore'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/shell/ui/card'
 import { Button } from '@/app/shell/ui/button'
 import { Input } from '@/app/shell/ui/input'
+import { useAuthStore } from '@/features/auth/store'
+import { resolveDefaultTemplateIdMap } from '@/lib/reportTemplateDefaults'
 
 export function TemplateCard({ tpl }: { tpl: TemplateV1 }) {
   const navigate = useNavigate()
   const settings = useSettingsStore((s) => s.settings)
+  const user = useAuthStore((s) => s.user)
+  const instancePublicId = useAuthStore((s) => s.instancePublicId)
   const createFromDefault = useTemplateStore((s) => s.createFromDefault)
   const duplicateTemplate = useTemplateStore((s) => s.duplicateTemplate)
   const renameTemplate = useTemplateStore((s) => s.renameTemplate)
@@ -28,11 +32,11 @@ export function TemplateCard({ tpl }: { tpl: TemplateV1 }) {
   }, [tpl.isDefault, tpl.published])
 
   const isPrintDefault = useMemo(() => {
-    const map = settings.defaultTemplateIdByDocType
+    const map = resolveDefaultTemplateIdMap(settings, { companyName: user?.companyName, instancePublicId })
     if (!map) return false
     if (tpl.docType === 'trf_receipt') return false
     return map[tpl.docType] === tpl.id
-  }, [settings.defaultTemplateIdByDocType, tpl.docType, tpl.id])
+  }, [instancePublicId, settings, tpl.docType, tpl.id, user?.companyName])
 
   return (
     <div className="relative">

@@ -90,6 +90,32 @@ export const DEFAULT_TEMPLATES: TemplateV1[] = [
   }),
 
   mkDefaultTemplate({
+    id: 'invoice_chonlatee_billing_v1',
+    name: 'Chonlatee Billing Notice',
+    docType: 'invoice',
+    theme: {
+      ...baseTheme,
+      primaryColor: '#8db5d9',
+      accentColor: '#0f172a',
+      headerBarColor: '#8db5d9',
+      tableHeaderBgColor: '#8db5d9',
+      totalsBarBgColor: '#facc15',
+      totalsBarTextColor: '#111111',
+    },
+    page: basePage,
+    blocks: [
+      { id: nanoid(), type: 'title', props: { titleEn: 'BILLING NOTICE', titleTh: 'ใบแจ้งหนี้', subtitleRight: 'ต้นฉบับ / Original', showOriginalBadge: true } },
+      { id: nanoid(), type: 'customerInfo', props: { showAddress: true, showTaxId: true, showTel: true, label: 'Client / ลูกค้า' } },
+      { id: nanoid(), type: 'docMeta', props: { fields: ['number', 'date', 'dueDate', 'reference', 'salesperson', 'contact', 'project'] } },
+      { id: nanoid(), type: 'itemsTable', props: { compact: false, showUnit: true, showDiscount: false, currency: 'THB' } },
+      { id: nanoid(), type: 'summaryTotals', props: { showVat: true, showDiscount: false } },
+      { id: nanoid(), type: 'amountInWords', props: { label: 'ยอดรวมทั้งสิ้น / Total Amount' } },
+      { id: nanoid(), type: 'notes', props: { text: '' } },
+      { id: nanoid(), type: 'signature', props: { leftLabel: 'ผู้จัดทำ / Prepared By', rightLabel: 'ผู้มีอำนาจลงนาม / Authorized Signature' } },
+    ],
+  }),
+
+  mkDefaultTemplate({
     id: 'invoice_default_v1',
     name: 'Invoice (Default v1)',
     docType: 'invoice',
@@ -280,6 +306,42 @@ export const DEFAULT_TEMPLATES: TemplateV1[] = [
       { id: nanoid(), type: 'amountInWords', props: { label: 'จำนวนเงิน (ตัวอักษร) / Amount' } },
       { id: nanoid(), type: 'paymentMethod', props: { style: 'checkboxes', showBank: true, showDate: true, showChequeNo: true } },
       { id: nanoid(), type: 'signature', props: { leftLabel: 'ผู้รับ / Receiver', rightLabel: 'ผู้มีอำนาจลงนาม / Authorized' } },
+    ],
+  }),
+
+  mkDefaultTemplate({
+    id: 'receipt_full_chonlatee_tax_invoice_v1',
+    name: 'Chonlatee Receipt / Tax Invoice',
+    docType: 'receipt_full',
+    theme: {
+      ...baseTheme,
+      primaryColor: '#ffffff',
+      accentColor: '#111111',
+      headerBarColor: '#ffffff',
+      tableHeaderBgColor: '#e5e7eb',
+      totalsBarBgColor: '#ffffff',
+      totalsBarTextColor: '#111111',
+    },
+    page: basePage,
+    blocks: [
+      { id: nanoid(), type: 'header', props: { showLogo: true, showTaxId: true, showContactLines: true } },
+      {
+        id: nanoid(),
+        type: 'title',
+        props: {
+          titleEn: 'TAX INVOICE / RECEIPT',
+          titleTh: 'ใบกำกับภาษี / ใบเสร็จรับเงิน',
+          subtitleRight: 'ต้นฉบับ / ORIGINAL',
+          showOriginalBadge: true,
+        },
+      },
+      { id: nanoid(), type: 'customerInfo', props: { showAddress: true, showTaxId: true, showTel: true, label: 'Customer / ลูกค้า' } },
+      { id: nanoid(), type: 'docMeta', props: { fields: ['number', 'date', 'invoiceRefTop', 'salesperson', 'reference'] } },
+      { id: nanoid(), type: 'itemsTable', props: { compact: false, showUnit: true, showDiscount: false, currency: 'THB' } },
+      { id: nanoid(), type: 'summaryTotals', props: { showVat: true, showDiscount: false } },
+      { id: nanoid(), type: 'amountInWords', props: { label: 'จำนวนเงินรวมทั้งสิ้น / Grand Total' } },
+      { id: nanoid(), type: 'paymentMethod', props: { style: 'checkboxes', showBank: true, showDate: true, showChequeNo: true } },
+      { id: nanoid(), type: 'signature', props: { leftLabel: 'ผู้รับเงิน / Collector', rightLabel: 'ผู้รับมอบอำนาจ / Authorized Signature' } },
     ],
   }),
 

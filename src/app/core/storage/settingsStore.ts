@@ -2,17 +2,18 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { z } from 'zod'
 
-const defaultTemplateIdByDocTypeSchema = z
-  .object({
-    quotation: z.string().trim().default('quotation_default_v1'),
-    invoice: z.string().trim().default('invoice_default_v1'),
-    sales_credit_note: z.string().trim().default('sales_credit_note_default_v1'),
-    sales_debit_note: z.string().trim().default('sales_debit_note_default_v1'),
-    purchase_credit_note: z.string().trim().default('purchase_credit_note_default_v1'),
-    purchase_debit_note: z.string().trim().default('purchase_debit_note_default_v1'),
-    receipt_full: z.string().trim().default('receipt_full_default_v1'),
-    receipt_short: z.string().trim().default('receipt_short_default_v1'),
-  })
+const defaultTemplateIdByDocTypeObjectSchema = z.object({
+  quotation: z.string().trim().default('quotation_default_v1'),
+  invoice: z.string().trim().default('invoice_default_v1'),
+  sales_credit_note: z.string().trim().default('sales_credit_note_default_v1'),
+  sales_debit_note: z.string().trim().default('sales_debit_note_default_v1'),
+  purchase_credit_note: z.string().trim().default('purchase_credit_note_default_v1'),
+  purchase_debit_note: z.string().trim().default('purchase_debit_note_default_v1'),
+  receipt_full: z.string().trim().default('receipt_full_default_v1'),
+  receipt_short: z.string().trim().default('receipt_short_default_v1'),
+})
+
+const defaultTemplateIdByDocTypeSchema = defaultTemplateIdByDocTypeObjectSchema
   .default({
     quotation: 'quotation_default_v1',
     invoice: 'invoice_default_v1',
@@ -24,12 +25,18 @@ const defaultTemplateIdByDocTypeSchema = z
     receipt_short: 'receipt_short_default_v1',
   })
 
+const companyTemplateOverrideSchema = z.record(
+  z.string(),
+  defaultTemplateIdByDocTypeObjectSchema.partial().default({}),
+).default({})
+
 const settingsSchema = z.object({
   odooBaseUrl: z.string().trim().default(''),
   apiToken: z.string().trim().default(''),
   pdfServiceUrl: z.string().trim().default('/api/print/pdf'),
   scanSlipEnabled: z.boolean().default(true),
   defaultTemplateIdByDocType: defaultTemplateIdByDocTypeSchema,
+  companyTemplateIdByCompanyKey: companyTemplateOverrideSchema,
   dateDisplayFormat: z.enum(['DD/MM/YYYY', 'DD-MM-YYYY', 'D MMMM YYYY']).default('DD/MM/YYYY'),
   dateCalendar: z.enum(['gregorian', 'buddhist']).default('buddhist'),
 })

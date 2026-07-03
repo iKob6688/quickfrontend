@@ -9,6 +9,8 @@ import { Card } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { toast } from '@/lib/toastStore'
 import { useSettingsStore as useStudioSettingsStore } from '@/app/core/storage/settingsStore'
+import { useAuthStore } from '@/features/auth/store'
+import { resolveDefaultTemplateId } from '@/lib/reportTemplateDefaults'
 import { cancelPurchaseNote, getPurchaseNote, postPurchaseNote, type PurchaseNoteDetail } from '@/api/services/purchase-notes.service'
 
 const FALLBACK_TPL_PURCHASE_CREDIT = 'purchase_credit_note_default_v1'
@@ -19,6 +21,8 @@ export function PurchaseNoteDetailPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const studioSettings = useStudioSettingsStore((s) => s.settings)
+  const user = useAuthStore((s) => s.user)
+  const instancePublicId = useAuthStore((s) => s.instancePublicId)
   const noteId = id ? Number.parseInt(id, 10) : null
 
   const { data: note, isLoading, error } = useQuery({
@@ -47,10 +51,11 @@ export function PurchaseNoteDetailPage() {
     onError: (err) => toast.error('ยกเลิกเอกสารไม่สำเร็จ', err instanceof Error ? err.message : undefined),
   })
 
+  const companyTemplateParams = { companyName: user?.companyName, instancePublicId }
   const templateId =
     (note?.noteType === 'credit'
-      ? studioSettings.defaultTemplateIdByDocType?.purchase_credit_note
-      : studioSettings.defaultTemplateIdByDocType?.purchase_debit_note) ||
+      ? resolveDefaultTemplateId(studioSettings, 'purchase_credit_note', companyTemplateParams)
+      : resolveDefaultTemplateId(studioSettings, 'purchase_debit_note', companyTemplateParams)) ||
     (note?.noteType === 'credit' ? FALLBACK_TPL_PURCHASE_CREDIT : FALLBACK_TPL_PURCHASE_DEBIT)
 
   const openPrint = (mode: 'print' | 'pdf' | 'edit') => {

@@ -9,6 +9,8 @@ import { Card } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { toast } from '@/lib/toastStore'
 import { useSettingsStore as useStudioSettingsStore } from '@/app/core/storage/settingsStore'
+import { useAuthStore } from '@/features/auth/store'
+import { resolveDefaultTemplateId } from '@/lib/reportTemplateDefaults'
 import { cancelSalesNote, getSalesNote, postSalesNote, type SalesNoteDetail } from '@/api/services/sales-notes.service'
 import { EtaxWorkflowCard } from '@/features/etax/EtaxWorkflowCard'
 import { getInvoiceEtax, pollEtaxDocument, resendEtaxDocumentEmail, sendEtaxDocumentEmail, submitInvoiceEtax } from '@/api/services/etax.service'
@@ -21,6 +23,8 @@ export function SalesNoteDetailPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const studioSettings = useStudioSettingsStore((s) => s.settings)
+  const user = useAuthStore((s) => s.user)
+  const instancePublicId = useAuthStore((s) => s.instancePublicId)
   const noteId = id ? Number.parseInt(id, 10) : null
 
   const { data: note, isLoading, error } = useQuery({
@@ -75,10 +79,11 @@ export function SalesNoteDetailPage() {
     },
   })
 
+  const companyTemplateParams = { companyName: user?.companyName, instancePublicId }
   const templateId =
     (note?.noteType === 'credit'
-      ? studioSettings.defaultTemplateIdByDocType?.sales_credit_note
-      : studioSettings.defaultTemplateIdByDocType?.sales_debit_note) ||
+      ? resolveDefaultTemplateId(studioSettings, 'sales_credit_note', companyTemplateParams)
+      : resolveDefaultTemplateId(studioSettings, 'sales_debit_note', companyTemplateParams)) ||
     (note?.noteType === 'credit' ? FALLBACK_TPL_SALES_CREDIT : FALLBACK_TPL_SALES_DEBIT)
 
   const etaxDocument = etaxQuery.data?.document

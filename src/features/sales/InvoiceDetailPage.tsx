@@ -19,6 +19,8 @@ import { toast } from '@/lib/toastStore'
 import { useSettingsStore as useStudioSettingsStore } from '@/app/core/storage/settingsStore'
 import { useAppDateFormatter } from '@/lib/dateFormat'
 import { writeAssistantPageContext, type AssistantPageSelectionRecord } from '@/lib/assistantPageContext'
+import { useAuthStore } from '@/features/auth/store'
+import { resolveDefaultTemplateId } from '@/lib/reportTemplateDefaults'
 
 const FALLBACK_RS_TPL_TAX_FULL = 'receipt_full_default_v1'
 const FALLBACK_RS_TPL_TAX_SHORT = 'receipt_short_default_v1'
@@ -38,13 +40,16 @@ export function InvoiceDetailPage() {
   const [promptPayOpen, setPromptPayOpen] = useState(false)
   const [printMenuOpen, setPrintMenuOpen] = useState(false)
   const studioSettings = useStudioSettingsStore((s) => s.settings)
+  const user = useAuthStore((s) => s.user)
+  const instancePublicId = useAuthStore((s) => s.instancePublicId)
   const formatDate = useAppDateFormatter()
 
   const invoiceId = id ? Number.parseInt(id, 10) : null
   const requestedAction = searchParams.get('action')
-  const rsTplFull = studioSettings.defaultTemplateIdByDocType?.receipt_full || FALLBACK_RS_TPL_TAX_FULL
-  const rsTplShort = studioSettings.defaultTemplateIdByDocType?.receipt_short || FALLBACK_RS_TPL_TAX_SHORT
-  const rsTplInvoice = (studioSettings.defaultTemplateIdByDocType as any)?.invoice || FALLBACK_RS_TPL_INVOICE
+  const companyTemplateParams = { companyName: user?.companyName, instancePublicId }
+  const rsTplFull = resolveDefaultTemplateId(studioSettings, 'receipt_full', companyTemplateParams) || FALLBACK_RS_TPL_TAX_FULL
+  const rsTplShort = resolveDefaultTemplateId(studioSettings, 'receipt_short', companyTemplateParams) || FALLBACK_RS_TPL_TAX_SHORT
+  const rsTplInvoice = resolveDefaultTemplateId(studioSettings, 'invoice', companyTemplateParams) || FALLBACK_RS_TPL_INVOICE
 
   // When defaults are changed in another tab (e.g., Reports Studio editor),
   // Zustand in this tab won't update automatically. Rehydrate on focus/open.

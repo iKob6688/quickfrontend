@@ -329,12 +329,21 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
         actions={
           <div className="d-flex align-items-center gap-2">
             {!isReceiptMode ? (
-              <Button
-                size="sm"
-                onClick={() => navigate('/sales/invoices/new')}
-              >
-                + สร้างใบแจ้งหนี้
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  onClick={() => navigate('/sales/invoices/new')}
+                >
+                  + สร้างใบแจ้งหนี้
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => navigate('/sales/invoices/chonlatee/new')}
+                >
+                  + Chonlatee Billing
+                </Button>
+              </>
             ) : (
               <Button
                 size="sm"
