@@ -119,16 +119,16 @@ const cards: ReportCard[] = [
     ready: true,
   },
   {
-    title: 'RD e-Filing Submissions',
-    subtitle: 'คิว printout / เตรียมยื่นแบบ / ตรวจสถานะ RD e-Filing',
+    title: 'รายงานภาษีและยื่นแบบ',
+    subtitle: 'คิว printout / เตรียมยื่นแบบ / ตรวจสถานะ RD e-Filing รายเดือน',
     icon: 'bi-cloud-arrow-up',
     tone: 'green',
     path: '/accounting/rd-efiling',
     ready: true,
   },
   {
-    title: 'Official Thai Forms',
-    subtitle: 'ภ.พ.30, PND, monthly pack, และ export log จาก adt_th_official_reports',
+    title: 'แบบฟอร์มราชการไทย',
+    subtitle: 'workspace สำหรับ ภ.พ.30, PND, WHT certificate, monthly pack และ export log',
     icon: 'bi-file-earmark-pdf',
     tone: 'purple',
     path: '/accounting/reports/official-thai-forms',
@@ -186,9 +186,9 @@ export function AccountingReportsPage() {
       <Card className="p-3 mb-3">
         <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
           <div>
-            <div className="fw-semibold">แนวทางใช้งาน</div>
+            <div className="fw-semibold">แนวทางใช้งานรายเดือน</div>
             <div className="text-muted small">
-              ภาพรวมรายได้/ค่าใช้จ่าย “เดือนนี้” ถูกย้ายไปอยู่หน้าแดชบอร์ดแล้ว เพื่อให้เห็นภาพรวมเร็วขึ้น
+              เริ่มจากหน้าแดชบอร์ดเพื่อดูภาพรวม แล้วไปต่อที่ “แบบฟอร์มราชการไทย” สำหรับ readiness / ปิดงวดประจำเดือน / สร้างแบบภาษี
             </div>
           </div>
           <Button

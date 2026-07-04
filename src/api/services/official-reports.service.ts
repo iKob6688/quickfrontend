@@ -1,15 +1,22 @@
 import { apiClient } from '@/api/client'
 import { unwrapResponse } from '@/api/response'
 import { makeRpc } from '@/api/services/rpc'
+import { getAccessToken } from '@/lib/authToken'
+
+const WEB_SESSION_TOKEN = '__odoo_web_session__'
 
 async function postWithProdFallback<T>(path: string, payload: Record<string, unknown>) {
   const rpcPayload = makeRpc(payload)
-  const candidates: Array<{ url: string; baseURL?: string }> = [
+  const prefersWebSession = getAccessToken() === WEB_SESSION_TOKEN
+  const webCandidate = { url: `/web/adt${path}`, baseURL: '' }
+  const apiCandidates: Array<{ url: string; baseURL?: string }> = [
     { url: path },
     { url: `/api${path}`, baseURL: '' },
-    { url: `/web/adt${path}`, baseURL: '' },
     { url: path, baseURL: '' },
   ]
+  const candidates: Array<{ url: string; baseURL?: string }> = prefersWebSession
+    ? [webCandidate, ...apiCandidates]
+    : [...apiCandidates, webCandidate]
   let lastError: unknown = null
   const attempted: string[] = []
   for (const candidate of candidates) {
