@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
+import { TagsInput } from '@/components/ui/TagsInput'
 import { agentCreateContact, agentOcr, fileToBase64, type ContactCreateResponse, type OcrResponse } from '@/api/services/agent.service'
 import { toApiError } from '@/api/response'
 import { toast } from '@/lib/toastStore'
@@ -21,6 +22,7 @@ export function AgentContactCreatePage() {
   const [vat, setVat] = useState('')
   const [website, setWebsite] = useState('')
   const [address, setAddress] = useState('')
+  const [tags, setTags] = useState<string[]>([])
   const [result, setResult] = useState<ContactCreateResponse | null>(null)
   const [scanResult, setScanResult] = useState<string | null>(null)
 
@@ -76,7 +78,9 @@ export function AgentContactCreatePage() {
           vat: vat.trim() || undefined,
           website: website.trim() || undefined,
           street: address.trim() || undefined,
+          tags: tags.length > 0 ? tags : undefined,
         },
+        tags: tags.length > 0 ? tags : undefined,
       }
 
       if (selectedFile) {
@@ -146,6 +150,7 @@ export function AgentContactCreatePage() {
     setVat('')
     setWebsite('')
     setAddress('')
+    setTags([])
     setResult(null)
     setScanResult(null)
     contactMutation.reset()
@@ -240,6 +245,17 @@ export function AgentContactCreatePage() {
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="ที่อยู่"
+              />
+            </div>
+
+            <div className="mb-3">
+              <Label htmlFor="contactTags">แท็กผู้ติดต่อ</Label>
+              <TagsInput
+                id="contactTags"
+                value={tags}
+                onChange={setTags}
+                placeholder="พิมพ์ tag แล้วกด Enter"
+                helperText="ใช้สำหรับจัดกลุ่มลูกค้า/คู่ค้า เช่น VIP, Wholesale, Online"
               />
             </div>
 
@@ -407,4 +423,3 @@ export function AgentContactCreatePage() {
     </div>
   )
 }
-

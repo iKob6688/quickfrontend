@@ -60,6 +60,7 @@ export interface PartnerDetail {
   provinceName?: string | null
   districtId?: number | null
   subDistrictId?: number | null
+  tags?: string[]
   vatPriceMode?: 'no_vat' | 'vat_included' | 'vat_excluded'
   branchCode?: string
 }
@@ -152,6 +153,7 @@ interface BackendPartnerDetail {
   provinceName?: string | null
   districtId?: number | null
   subDistrictId?: number | null
+  tags?: string[] | Array<string | { name?: string; display_name?: string }>
   vat_price_mode?: 'no_vat' | 'vat_included' | 'vat_excluded'
   vatPriceMode?: 'no_vat' | 'vat_included' | 'vat_excluded'
   x_vat_price_mode?: 'no_vat' | 'vat_included' | 'vat_excluded'
@@ -171,6 +173,26 @@ function parseNumber(v: unknown): number {
     return Number.isFinite(n) ? n : 0
   }
   return 0
+}
+
+function toStringList(input: unknown): string[] {
+  if (!Array.isArray(input)) return []
+  return input
+    .map((item) => {
+      if (typeof item === 'string') return item.trim()
+      if (typeof item === 'number') return Number.isFinite(item) ? String(item) : ''
+      if (Array.isArray(item)) {
+        const maybeLabel = item[1]
+        return typeof maybeLabel === 'string' ? maybeLabel.trim() : ''
+      }
+      if (item && typeof item === 'object') {
+        const record = item as Record<string, unknown>
+        const name = record.name ?? record.display_name ?? record.displayName
+        return typeof name === 'string' ? name.trim() : ''
+      }
+      return ''
+    })
+    .filter(Boolean)
 }
 
 function extractPartnerId(raw: unknown): number {
@@ -347,6 +369,7 @@ function mapBackendPartnerDetailToFrontend(backend: BackendPartnerDetail): Partn
     provinceName: backend.provinceName || undefined,
     districtId: backend.districtId ?? null,
     subDistrictId: backend.subDistrictId ?? null,
+    tags: toStringList((backend as RawRecord).tags ?? (backend as RawRecord).category_ids ?? (backend as RawRecord).category_id),
     vatPriceMode,
     branchCode,
   }

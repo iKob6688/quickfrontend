@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
+import { TagsInput } from '@/components/ui/TagsInput'
 import { Alert, Form } from 'react-bootstrap'
 import { ApiError } from '@/api/response'
 import { extractFieldErrors, useFormErrors } from '@/lib/formErrors'
@@ -53,6 +54,7 @@ const DEFAULT_FORM_DATA: PartnerUpsertPayload = {
   subDistrictId: null,
   vatPriceMode: 'vat_excluded',
   branchCode: 'สำนักงานใหญ่',
+  tags: [],
 }
 
 function extractSubDistrict(street2?: string): string {
@@ -105,6 +107,7 @@ export function CustomerFormPage() {
       subDistrictId: data.subDistrictId ?? null,
       vatPriceMode: data.vatPriceMode || 'vat_excluded',
       branchCode: data.branchCode || 'สำนักงานใหญ่',
+      tags: data.tags ?? [],
     }
   }, [existingQuery.data])
 
@@ -174,6 +177,7 @@ export function CustomerFormPage() {
       zip: formData.zip?.trim() || undefined,
       vatPriceMode: formData.vatPriceMode || 'vat_excluded',
       branchCode: formData.branchCode?.trim() || undefined,
+      tags: formData.tags?.length ? formData.tags : undefined,
     })
   }
 
@@ -533,6 +537,17 @@ export function CustomerFormPage() {
                     value={formData.branchCode ?? ''}
                     onChange={(e) => updateFormData({ branchCode: e.target.value })}
                     placeholder="เช่น สำนักงานใหญ่"
+                  />
+                </div>
+
+                <div className="col-12">
+                  <Label htmlFor="customerTags">แท็กลูกค้า/ผู้ติดต่อ</Label>
+                  <TagsInput
+                    id="customerTags"
+                    value={formData.tags ?? []}
+                    onChange={(next) => updateFormData({ tags: next })}
+                    placeholder="พิมพ์ tag แล้วกด Enter"
+                    helperText="ใช้สำหรับจัดกลุ่มลูกค้า/ผู้ติดต่อ เช่น VIP, Wholesale, Online"
                   />
                 </div>
               </div>

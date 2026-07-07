@@ -115,6 +115,7 @@ export interface ContactCreateRequest {
     vat?: string
     website?: string
     address?: string
+    tags?: string[]
   }
   contact_data?: {
     name: string
@@ -124,7 +125,9 @@ export interface ContactCreateRequest {
     vat?: string
     website?: string
     street?: string
+    tags?: string[]
   }
+  tags?: string[]
 }
 
 // Invoice Create Response
