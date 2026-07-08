@@ -24,6 +24,41 @@
   background: var(--qf-card-bg);
 }
 
+.qf-so-order-line-wrap {
+  overflow-x: auto;
+}
+
+.qf-so-order-line-table {
+  width: 100%;
+  min-width: 1160px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.qf-so-order-line-table th,
+.qf-so-order-line-table td {
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  padding: 8px;
+  vertical-align: top;
+}
+
+.qf-so-order-line-table th {
+  background: #f8fafc;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.qf-so-order-line-table textarea {
+  resize: vertical;
+  min-height: 48px;
+}
+
+.qf-so-order-line-actions {
+  display: flex;
+  gap: 20px;
+  padding: 10px 16px;
+}
+
 .qf-app .btn {
   border-radius: 9999px;
   font-weight: 600;

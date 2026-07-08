@@ -13,9 +13,10 @@ interface Props {
   valueId: number | null
   onPick: (product: ProductSummary) => void
   disabled?: boolean
+  compact?: boolean
 }
 
-export function ProductCombobox({ id, valueId, onPick, disabled }: Props) {
+export function ProductCombobox({ id, valueId, onPick, disabled, compact = false }: Props) {
   const queryClient = useQueryClient()
   const [input, setInput] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
@@ -108,7 +109,7 @@ export function ProductCombobox({ id, valueId, onPick, disabled }: Props) {
   })
 
   return (
-    <div>
+    <div className={compact ? 'qf-product-combobox qf-product-combobox--compact' : 'qf-product-combobox'}>
       <Combobox
         id={id || 'productSearch'}
         value={input}
@@ -132,23 +133,25 @@ export function ProductCombobox({ id, valueId, onPick, disabled }: Props) {
           }
         }}
       />
-      <div className="d-flex align-items-center justify-content-between gap-2 mt-2">
-        <div className="small text-muted">
-          ไม่พบสินค้า? สร้างใหม่ได้ทันทีโดยไม่ออกจากฟอร์ม
+      {!compact ? (
+        <div className="d-flex align-items-center justify-content-between gap-2 mt-2">
+          <div className="small text-muted">
+            ไม่พบสินค้า? สร้างใหม่ได้ทันทีโดยไม่ออกจากฟอร์ม
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            type="button"
+            onClick={() => {
+              setCreateName(qTrim)
+              setCreateOpen(true)
+            }}
+            disabled={disabled}
+          >
+            + สร้างสินค้า
+          </Button>
         </div>
-        <Button
-          size="sm"
-          variant="ghost"
-          type="button"
-          onClick={() => {
-            setCreateName(qTrim)
-            setCreateOpen(true)
-          }}
-          disabled={disabled}
-        >
-          + สร้างสินค้า
-        </Button>
-      </div>
+      ) : null}
       {listQuery.isError ? (
         <div className="small text-danger mt-1">
           {listQuery.error instanceof Error ? listQuery.error.message : 'โหลดสินค้าไม่สำเร็จ'}

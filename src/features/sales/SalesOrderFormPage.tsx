@@ -732,157 +732,124 @@ export function SalesOrderFormPage() {
           </Card>
 
           <Card className="mt-4 p-0 qf-so-lines-card">
-            <div className="d-flex flex-column flex-sm-row align-items-sm-center justify-content-sm-between px-4 py-3 border-bottom gap-2 qf-so-list-header">
-              <h5 className="h6 fw-semibold mb-0">รายการสินค้า</h5>
-              <Button size="sm" onClick={addLine} className="qf-so-list-add-btn">
-                + เพิ่มรายการ
-              </Button>
-            </div>
+  <div className="px-4 py-3 border-bottom qf-so-list-header">
+    <h5 className="h6 fw-semibold mb-0">รายการสินค้า</h5>
+  </div>
 
-            <div className="p-3 p-sm-4">
-              {formData.lines.length === 0 ? (
-                <div className="text-center text-muted py-4 rounded-3 border bg-white">
-                  ยังไม่มีรายการสินค้า กด “+ เพิ่มรายการ” เพื่อเริ่มต้น
-                </div>
-              ) : (
-                <div className="qf-so-lines">
-                  {formData.lines.map((line, idx) => (
-                    <div key={idx} className="qf-so-line">
-                      <div className="qf-so-line__head">
-                        <span className="qf-so-line__index">รายการที่ {idx + 1}</span>
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-outline-danger qf-so-line__delete-btn"
-                          onClick={() => removeLine(idx)}
-                          title="ลบรายการ"
-                        >
-                          ลบรายการ
-                        </button>
-                      </div>
-
-                      <div className="qf-so-line__main">
-                        <div className="qf-so-line__field qf-so-line__field--product">
-                          <Label htmlFor={`so-product-${idx}`}>สินค้า/บริการ</Label>
-                          <ProductCombobox
-                            id={`so-product-${idx}`}
-                            valueId={line.productId ?? null}
-                            onPick={(product) => {
-                              const productTaxIds = Array.isArray(product.taxes)
-                                ? product.taxes.map((t) => Number(t.id)).filter((n) => Number.isFinite(n) && n > 0)
-                                : []
-                              updateLine(idx, {
-                                productId: product.id,
-                                description: (line.description || '').trim() ? line.description : product.name,
-                                unitPrice: typeof product.listPrice === 'number' ? product.listPrice : line.unitPrice,
-                                taxIds: productTaxIds.length > 0 ? productTaxIds : defaultSaleTaxId ? [defaultSaleTaxId] : [],
-                              })
-                            }}
-                          />
-                        </div>
-
-                        <div className="qf-so-line__field qf-so-line__field--description">
-                          <Label htmlFor={`so-description-${idx}`}>รายละเอียด</Label>
-                          <Input
-                            id={`so-description-${idx}`}
-                            value={line.description}
-                            onChange={(e) => updateLine(idx, { description: e.target.value })}
-                            placeholder="ชื่อสินค้า / รายละเอียด"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="qf-so-line__tax-row">
-                        <div className="qf-so-line__field qf-so-line__field--tax">
-                          <Label htmlFor={`so-tax-${idx}`}>VAT/ภาษี</Label>
-                          <select
-                            id={`so-tax-${idx}`}
-                            className="form-select"
-                            value={line.taxIds?.[0] ?? ''}
-                            onChange={(e) => {
-                              const taxId = e.target.value ? Number(e.target.value) : null
-                              updateLine(idx, { taxIds: taxId ? [taxId] : [] })
-                            }}
-                          >
-                            <option value="">ไม่กำหนดภาษี</option>
-                            {saleTaxOptions.map((tax) => (
-                              <option key={`so-tax-option-${tax.id}`} value={tax.id}>
-                                {tax.name} ({Number(tax.amount || 0)}%)
-                              </option>
-                            ))}
-                          </select>
-                          {salesTaxesQuery.isLoading ? (
-                            <div className="small text-muted mt-1">กำลังโหลดรายการ VAT...</div>
-                          ) : null}
-                          {!salesTaxesQuery.isLoading && saleTaxOptions.length === 0 ? (
-                            <div className="small text-danger mt-1">ไม่พบรายการ VAT จากระบบ กรุณาตรวจสอบการตั้งค่า taxes</div>
-                          ) : null}
-                        </div>
-                      </div>
-
-                      <div className="qf-so-line__meta">
-                        <div className="qf-so-line__field qf-so-line__field--qty">
-                          <Label htmlFor={`so-qty-${idx}`}>จำนวน</Label>
-                          <Input
-                            id={`so-qty-${idx}`}
-                            type="number"
-                            className="text-end"
-                            value={toNumberLike(line.quantity)}
-                            onChange={(e) => updateLine(idx, { quantity: toNumberLike(e.target.value) })}
-                            onBlur={(e) => updateLine(idx, { quantity: toNumberLike(e.target.value) })}
-                            min="0"
-                            step="0.01"
-                          />
-                        </div>
-
-                        <div className="qf-so-line__field qf-so-line__field--price">
-                          <Label htmlFor={`so-price-${idx}`}>ราคาต่อหน่วย</Label>
-                          <Input
-                            id={`so-price-${idx}`}
-                            type="number"
-                            className="text-end"
-                            value={toNumberLike(line.unitPrice)}
-                            onChange={(e) => updateLine(idx, { unitPrice: toNumberLike(e.target.value) })}
-                            onBlur={(e) => updateLine(idx, { unitPrice: toNumberLike(e.target.value) })}
-                            min="0"
-                            step="0.01"
-                          />
-                        </div>
-
-                        <div className="qf-so-line__field qf-so-line__field--discount">
-                          <Label htmlFor={`so-discount-${idx}`}>ส่วนลด %</Label>
-                          <Input
-                            id={`so-discount-${idx}`}
-                            type="number"
-                            className="text-end"
-                            value={toNumberLike(line.discount)}
-                            onChange={(e) => updateLine(idx, { discount: toNumberLike(e.target.value) })}
-                            onBlur={(e) => updateLine(idx, { discount: toNumberLike(e.target.value) })}
-                            min="0"
-                            max="100"
-                            step="0.01"
-                          />
-                        </div>
-
-                        <div className="qf-so-line__field qf-so-line__field--line-total">
-                          <Label htmlFor={`so-vat-amount-${idx}`}>จำนวน VAT</Label>
-                          <div id={`so-vat-amount-${idx}`} className="qf-so-line__total-box">
-                            {line.totalTax.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </div>
-                        </div>
-
-                        <div className="qf-so-line__field qf-so-line__field--line-total">
-                          <Label htmlFor={`so-total-${idx}`}>ยอดรวมรายการ</Label>
-                          <div id={`so-total-${idx}`} className="qf-so-line__total-box">
-                            {line.total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+  <div className="p-0">
+    <div className="qf-so-order-line-wrap">
+      <table className="qf-so-order-line-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>สินค้า</th>
+            <th>รายละเอียด</th>
+            <th>จำนวน</th>
+            <th>ราคาต่อหน่วย</th>
+            <th>ส่วนลด %</th>
+            <th>ภาษี</th>
+            <th>VAT</th>
+            <th>ยอดรวม</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {formData.lines.map((line, idx) => (
+            <tr key={idx}>
+              <td>{idx + 1}</td>
+              <td>
+                <ProductCombobox
+                  id={`so-product-${idx}`}
+                  valueId={line.productId ?? null}
+                  compact
+                  onPick={(product) => {
+                    const productTaxIds = Array.isArray(product.taxes)
+                      ? product.taxes.map((t) => Number(t.id)).filter((n) => Number.isFinite(n) && n > 0)
+                      : []
+                    updateLine(idx, {
+                      productId: product.id,
+                      description: (line.description || '').trim() ? line.description : product.name,
+                      unitPrice: typeof product.listPrice === 'number' ? product.listPrice : line.unitPrice,
+                      taxIds: productTaxIds.length > 0 ? productTaxIds : defaultSaleTaxId ? [defaultSaleTaxId] : [],
+                    })
+                  }}
+                />
+              </td>
+              <td>
+                <textarea
+                  className="form-control"
+                  value={line.description}
+                  onChange={(e) => updateLine(idx, { description: e.target.value })}
+                  rows={2}
+                />
+              </td>
+              <td>
+                <Input
+                  type="number"
+                  className="text-end"
+                  value={toNumberLike(line.quantity)}
+                  onChange={(e) => updateLine(idx, { quantity: toNumberLike(e.target.value) })}
+                />
+              </td>
+              <td>
+                <Input
+                  type="number"
+                  className="text-end"
+                  value={toNumberLike(line.unitPrice)}
+                  onChange={(e) => updateLine(idx, { unitPrice: toNumberLike(e.target.value) })}
+                />
+              </td>
+              <td>
+                <Input
+                  type="number"
+                  className="text-end"
+                  value={toNumberLike(line.discount)}
+                  onChange={(e) => updateLine(idx, { discount: toNumberLike(e.target.value) })}
+                />
+              </td>
+              <td>
+                <select
+                  className="form-select"
+                  value={line.taxIds?.[0] ?? ''}
+                  onChange={(e) => {
+                    const taxId = e.target.value ? Number(e.target.value) : null
+                    updateLine(idx, { taxIds: taxId ? [taxId] : [] })
+                  }}
+                >
+                  <option value="">ไม่กำหนด</option>
+                  {saleTaxOptions.map((tax) => (
+                    <option key={tax.id} value={tax.id}>
+                      {tax.name}
+                    </option>
                   ))}
-                </div>
-              )}
-            </div>
-          </Card>
+                </select>
+              </td>
+              <td className="text-end">{line.totalTax.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
+              <td className="text-end fw-bold">{line.total.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
+              <td>
+                <button type="button" className="btn btn-sm btn-link text-danger" onClick={() => removeLine(idx)}>
+                  ×
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <div className="qf-so-order-line-actions">
+      <button type="button" className="btn btn-link" onClick={addLine}>
+        เพิ่มรายการ
+      </button>
+      <button type="button" className="btn btn-link" disabled>
+        เพิ่มหัวข้อ
+      </button>
+      <button type="button" className="btn btn-link" disabled>
+        เพิ่มหมายเหตุ
+      </button>
+    </div>
+  </div>
+</Card>
         </div>
 
         <div className="col-lg-4">
