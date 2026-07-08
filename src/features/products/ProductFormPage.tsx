@@ -200,16 +200,15 @@ export function ProductFormPage() {
       ) : null}
 
       <Form id="product-form" onSubmit={onSubmit}>
-        <div className="row g-4 align-items-start">
-          <div className="col-lg-8">
-            <div className="d-flex flex-column gap-3">
-              <Tabs items={productTabs} value={activeTab} onChange={setActiveTab} className="w-100" />
+        <div className="d-flex flex-column gap-3">
+          <Tabs items={productTabs} value={activeTab} onChange={setActiveTab} className="w-100" />
 
-              <Card className="p-4">
+          <Card className="p-0 overflow-hidden">
+            <div className="p-4">
                 {activeTab === 'general' ? (
-                  <div className="row g-3">
+                  <div className="row g-3 align-items-start">
                     {isEdit && productQuery.data ? (
-                      <div className="col-12 d-flex align-items-center gap-3 mb-1">
+                      <div className="col-12 d-flex align-items-center gap-3 mb-2 pb-3 border-bottom">
                         <img
                           src={productImageSrc({
                             id: productId,
@@ -276,7 +275,7 @@ export function ProductFormPage() {
                 ) : null}
 
                 {activeTab === 'pricing' ? (
-                  <div className="row g-3">
+                  <div className="row g-3 align-items-start">
                     <div className="col-md-6">
                       <Label htmlFor="listPrice">ราคาขาย</Label>
                       <Input
@@ -349,7 +348,7 @@ export function ProductFormPage() {
 
                 {activeTab === 'advanced' ? (
                   canManageAdminFields ? (
-                    <div className="row g-3">
+                    <div className="row g-3 align-items-start">
                       <div className="col-md-4">
                         <Label htmlFor="productType">ชนิดสินค้า</Label>
                         <select
@@ -423,53 +422,66 @@ export function ProductFormPage() {
                     </div>
                   )
                 ) : null}
-              </Card>
             </div>
-          </div>
+          </Card>
 
-          <div className="col-lg-4">
-            <div className="position-sticky" style={{ top: 24 }}>
-              <Card className="p-4 mb-4">
-                <div className="qf-section-title mb-3">ตั้งค่า</div>
-                <div className="form-check form-switch mb-3">
-                  <input
-                    id="saleOk"
-                    className="form-check-input"
-                    type="checkbox"
-                    checked={Boolean(formData.saleOk)}
-                    onChange={(e) => setDraft((p) => ({ ...p, saleOk: e.target.checked }))}
-                  />
-                  <label className="form-check-label" htmlFor="saleOk">
-                    ใช้งานขาย (Sale)
-                  </label>
+          <Card className="p-0 overflow-hidden">
+            <div className="px-4 py-3 border-bottom">
+              <div className="qf-section-title mb-0">ตั้งค่า</div>
+            </div>
+            <div className="p-4">
+                <div className="row g-3">
+                  <div className="col-md-4">
+                    <div className="form-check form-switch">
+                      <input
+                        id="saleOk"
+                        className="form-check-input"
+                        type="checkbox"
+                        checked={Boolean(formData.saleOk)}
+                        onChange={(e) => setDraft((p) => ({ ...p, saleOk: e.target.checked }))}
+                      />
+                      <label className="form-check-label" htmlFor="saleOk">
+                        ใช้งานขาย (Sale)
+                      </label>
+                    </div>
+                  </div>
+                  <div className="col-md-4">
+                    <div className="form-check form-switch">
+                      <input
+                        id="purchaseOk"
+                        className="form-check-input"
+                        type="checkbox"
+                        checked={Boolean(formData.purchaseOk)}
+                        onChange={(e) => setDraft((p) => ({ ...p, purchaseOk: e.target.checked }))}
+                      />
+                      <label className="form-check-label" htmlFor="purchaseOk">
+                        ใช้งานซื้อ (Purchase)
+                      </label>
+                    </div>
+                  </div>
+                  <div className="col-md-4">
+                    <div className="form-check form-switch">
+                      <input
+                        id="active"
+                        className="form-check-input"
+                        type="checkbox"
+                        checked={Boolean(formData.active)}
+                        onChange={(e) => setDraft((p) => ({ ...p, active: e.target.checked }))}
+                      />
+                      <label className="form-check-label" htmlFor="active">
+                        ใช้งาน (Active)
+                      </label>
+                    </div>
+                  </div>
                 </div>
-                <div className="form-check form-switch mb-3">
-                  <input
-                    id="purchaseOk"
-                    className="form-check-input"
-                    type="checkbox"
-                    checked={Boolean(formData.purchaseOk)}
-                    onChange={(e) => setDraft((p) => ({ ...p, purchaseOk: e.target.checked }))}
-                  />
-                  <label className="form-check-label" htmlFor="purchaseOk">
-                    ใช้งานซื้อ (Purchase)
-                  </label>
-                </div>
-                <div className="form-check form-switch">
-                  <input
-                    id="active"
-                    className="form-check-input"
-                    type="checkbox"
-                    checked={Boolean(formData.active)}
-                    onChange={(e) => setDraft((p) => ({ ...p, active: e.target.checked }))}
-                  />
-                  <label className="form-check-label" htmlFor="active">
-                    ใช้งาน (Active)
-                  </label>
-                </div>
-              </Card>
+            </div>
+          </Card>
 
-              <Card className="p-4">
+          <Card className="p-0 overflow-hidden">
+            <div className="px-4 py-3 border-bottom">
+              <div className="qf-section-title mb-0">สิทธิ์ / Metadata</div>
+            </div>
+            <div className="p-4">
                 <div className="small">
                   <div className="fw-semibold mb-1">โหมด Admin สำหรับสินค้า</div>
                   {productAdminMetaQuery.isLoading ? (
@@ -482,9 +494,8 @@ export function ProductFormPage() {
                     </div>
                   )}
                 </div>
-              </Card>
             </div>
-          </div>
+          </Card>
         </div>
       </Form>
     </div>
