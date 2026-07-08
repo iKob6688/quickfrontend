@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
+import { Tabs } from '@/components/ui/Tabs'
 import { toast } from '@/lib/toastStore'
 import {
   createProduct,
@@ -44,6 +45,7 @@ export function ProductFormPage() {
 
   const [errorText, setErrorText] = useState<string | null>(null)
   const [draft, setDraft] = useState<Partial<ProductUpsertPayload>>({})
+  const [activeTab, setActiveTab] = useState<'general' | 'pricing' | 'advanced'>('general')
 
   const productQuery = useQuery({
     queryKey: ['product', productId],
@@ -100,6 +102,14 @@ export function ProductFormPage() {
   const purchaseTaxOptions = purchaseTaxesQuery.data?.items ?? []
   const defaultSaleTaxId = useMemo(() => getDefaultVatTaxId(saleTaxOptions), [saleTaxOptions])
   const defaultPurchaseTaxId = useMemo(() => getDefaultVatTaxId(purchaseTaxOptions), [purchaseTaxOptions])
+  const productTabs = useMemo(
+    () => [
+      { key: 'general' as const, label: 'ข้อมูลทั่วไป' },
+      { key: 'pricing' as const, label: 'ราคา / ภาษี' },
+      { key: 'advanced' as const, label: 'ตั้งค่าขั้นสูง' },
+    ],
+    [],
+  )
 
   useEffect(() => {
     if (isEdit || saleVatDefaultAppliedRef.current || saleVatTouchedRef.current) return
@@ -192,215 +202,229 @@ export function ProductFormPage() {
       <Form id="product-form" onSubmit={onSubmit}>
         <div className="row g-4 align-items-start">
           <div className="col-lg-8">
-            <Card className="p-4 mb-4">
-              <div className="qf-section-title mb-3">ข้อมูลสินค้า</div>
-              <div className="row g-3">
-                {isEdit && productQuery.data ? (
-                  <div className="col-12 d-flex align-items-center gap-3 mb-1">
-                    <img
-                      src={productImageSrc({
-                        id: productId,
-                        image128: productQuery.data.image128 || null,
-                        imageUrl: productQuery.data.imageUrl || null,
-                      })}
-                      alt={productQuery.data.name || 'product'}
-                      width={72}
-                      height={72}
-                      style={{ borderRadius: 10, objectFit: 'cover', border: '1px solid #e2e8f0' }}
-                      onError={(e) => {
-                        ;(e.currentTarget as HTMLImageElement).src = '/vite.svg'
-                      }}
-                    />
-                    <div className="small text-muted">
-                      <div>รูปสินค้าดึงจาก Odoo</div>
-                      <div>
-                        คงเหลือ:{' '}
-                        {typeof productQuery.data.qtyAvailable === 'number'
-                          ? productQuery.data.qtyAvailable.toLocaleString('th-TH', { maximumFractionDigits: 2 })
-                          : '—'}
+            <div className="d-flex flex-column gap-3">
+              <Tabs items={productTabs} value={activeTab} onChange={setActiveTab} className="w-100" />
+
+              <Card className="p-4">
+                {activeTab === 'general' ? (
+                  <div className="row g-3">
+                    {isEdit && productQuery.data ? (
+                      <div className="col-12 d-flex align-items-center gap-3 mb-1">
+                        <img
+                          src={productImageSrc({
+                            id: productId,
+                            image128: productQuery.data.image128 || null,
+                            imageUrl: productQuery.data.imageUrl || null,
+                          })}
+                          alt={productQuery.data.name || 'product'}
+                          width={72}
+                          height={72}
+                          style={{ borderRadius: 10, objectFit: 'cover', border: '1px solid #e2e8f0' }}
+                          onError={(e) => {
+                            ;(e.currentTarget as HTMLImageElement).src = '/vite.svg'
+                          }}
+                        />
+                        <div className="small text-muted">
+                          <div>รูปสินค้าดึงจาก Odoo</div>
+                          <div>
+                            คงเหลือ:{' '}
+                            {typeof productQuery.data.qtyAvailable === 'number'
+                              ? productQuery.data.qtyAvailable.toLocaleString('th-TH', { maximumFractionDigits: 2 })
+                              : '—'}
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="col-12">
+                      <Label htmlFor="name" required>
+                        ชื่อสินค้า
+                      </Label>
+                      <Input id="name" value={formData.name} onChange={(e) => setDraft((p) => ({ ...p, name: e.target.value }))} />
+                    </div>
+
+                    <div className="col-md-6">
+                      <Label htmlFor="defaultCode">รหัสสินค้า</Label>
+                      <Input
+                        id="defaultCode"
+                        value={formData.defaultCode || ''}
+                        onChange={(e) => setDraft((p) => ({ ...p, defaultCode: e.target.value }))}
+                      />
+                    </div>
+
+                    <div className="col-md-6">
+                      <Label htmlFor="barcode">บาร์โค้ด</Label>
+                      <Input
+                        id="barcode"
+                        value={formData.barcode || ''}
+                        onChange={(e) => setDraft((p) => ({ ...p, barcode: e.target.value }))}
+                      />
+                    </div>
+
+                    <div className="col-12">
+                      <Label htmlFor="description">รายละเอียด</Label>
+                      <textarea
+                        id="description"
+                        className="form-control"
+                        rows={4}
+                        value={formData.description || ''}
+                        onChange={(e) => setDraft((p) => ({ ...p, description: e.target.value }))}
+                        placeholder="รายละเอียดสินค้า / บันทึกเพิ่มเติม"
+                      />
+                    </div>
+                  </div>
+                ) : null}
+
+                {activeTab === 'pricing' ? (
+                  <div className="row g-3">
+                    <div className="col-md-6">
+                      <Label htmlFor="listPrice">ราคาขาย</Label>
+                      <Input
+                        id="listPrice"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.listPrice ?? 0}
+                        onChange={(e) => setDraft((p) => ({ ...p, listPrice: Number(e.target.value || 0) }))}
+                      />
+                    </div>
+
+                    <div className="col-md-6">
+                      <Label htmlFor="saleTaxId">ภาษีขาย (VAT)</Label>
+                      <select
+                        id="saleTaxId"
+                        className="form-select"
+                        value={formData.saleTaxIds?.[0] ?? ''}
+                        onChange={(e) => {
+                          saleVatTouchedRef.current = true
+                          const taxId = e.target.value ? Number(e.target.value) : null
+                          setDraft((p) => ({ ...p, saleTaxIds: taxId ? [taxId] : [] }))
+                        }}
+                      >
+                        <option value="">— ไม่กำหนด —</option>
+                        {saleTaxOptions.map((t) => (
+                          <option key={`sale-tax-${t.id}`} value={t.id}>
+                            {t.name} ({t.amount}%)
+                          </option>
+                        ))}
+                      </select>
+                      <div className="small text-muted mt-1">
+                        {defaultSaleTaxId
+                          ? `ค่าเริ่มต้น: ${saleTaxOptions.find((t) => t.id === defaultSaleTaxId)?.name ?? 'VAT 7%'}`
+                          : saleTaxOptions.length > 0
+                            ? 'ไม่พบ VAT 7% ในรายการนี้ ระบบจะให้เลือกจากรายการที่มีอยู่'
+                            : 'ไม่พบรายการ VAT ฝั่งขายในระบบ'}
+                      </div>
+                    </div>
+
+                    <div className="col-md-6">
+                      <Label htmlFor="purchaseTaxId">ภาษีซื้อ (VAT)</Label>
+                      <select
+                        id="purchaseTaxId"
+                        className="form-select"
+                        value={formData.purchaseTaxIds?.[0] ?? ''}
+                        onChange={(e) => {
+                          purchaseVatTouchedRef.current = true
+                          const taxId = e.target.value ? Number(e.target.value) : null
+                          setDraft((p) => ({ ...p, purchaseTaxIds: taxId ? [taxId] : [] }))
+                        }}
+                      >
+                        <option value="">— ไม่กำหนด —</option>
+                        {purchaseTaxOptions.map((t) => (
+                          <option key={`purchase-tax-${t.id}`} value={t.id}>
+                            {t.name} ({t.amount}%)
+                          </option>
+                        ))}
+                      </select>
+                      <div className="small text-muted mt-1">
+                        {defaultPurchaseTaxId
+                          ? `ค่าเริ่มต้น: ${purchaseTaxOptions.find((t) => t.id === defaultPurchaseTaxId)?.name ?? 'VAT 7%'}`
+                          : purchaseTaxOptions.length > 0
+                            ? 'ไม่พบ VAT 7% ในรายการนี้ ระบบจะให้เลือกจากรายการที่มีอยู่'
+                            : 'ไม่พบรายการ VAT ฝั่งซื้อในระบบ'}
                       </div>
                     </div>
                   </div>
                 ) : null}
 
-                <div className="col-12">
-                  <Label htmlFor="name" required>
-                    ชื่อสินค้า
-                  </Label>
-                  <Input id="name" value={formData.name} onChange={(e) => setDraft((p) => ({ ...p, name: e.target.value }))} />
-                </div>
+                {activeTab === 'advanced' ? (
+                  canManageAdminFields ? (
+                    <div className="row g-3">
+                      <div className="col-md-4">
+                        <Label htmlFor="productType">ชนิดสินค้า</Label>
+                        <select
+                          id="productType"
+                          className="form-select"
+                          value={formData.productType || 'consu'}
+                          onChange={(e) => setDraft((p) => ({ ...p, productType: e.target.value as any }))}
+                        >
+                          {(productAdminMetaQuery.data?.productTypes || []).map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                <div className="col-md-6">
-                  <Label htmlFor="defaultCode">รหัสสินค้า</Label>
-                  <Input
-                    id="defaultCode"
-                    value={formData.defaultCode || ''}
-                    onChange={(e) => setDraft((p) => ({ ...p, defaultCode: e.target.value }))}
-                  />
-                </div>
+                      <div className="col-md-8">
+                        <Label htmlFor="categoryId">Category</Label>
+                        <select
+                          id="categoryId"
+                          className="form-select"
+                          value={formData.categoryId ?? ''}
+                          onChange={(e) => setDraft((p) => ({ ...p, categoryId: e.target.value ? Number(e.target.value) : null }))}
+                        >
+                          <option value="">— เลือก Category —</option>
+                          {(productAdminMetaQuery.data?.categories || []).map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                <div className="col-md-6">
-                  <Label htmlFor="barcode">บาร์โค้ด</Label>
-                  <Input
-                    id="barcode"
-                    value={formData.barcode || ''}
-                    onChange={(e) => setDraft((p) => ({ ...p, barcode: e.target.value }))}
-                  />
-                </div>
+                      <div className="col-md-6">
+                        <Label htmlFor="incomeAccountId">บัญชีรายได้ (Income Account)</Label>
+                        <select
+                          id="incomeAccountId"
+                          className="form-select"
+                          value={formData.incomeAccountId ?? ''}
+                          onChange={(e) => setDraft((p) => ({ ...p, incomeAccountId: e.target.value ? Number(e.target.value) : null }))}
+                        >
+                          <option value="">— ใช้ค่าจาก Category/Default —</option>
+                          {(productAdminMetaQuery.data?.accounts || []).map((a) => (
+                            <option key={`inc-${a.id}`} value={a.id}>
+                              [{a.code}] {a.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                <div className="col-md-6">
-                  <Label htmlFor="listPrice">ราคาขาย</Label>
-                  <Input
-                    id="listPrice"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.listPrice ?? 0}
-                    onChange={(e) => setDraft((p) => ({ ...p, listPrice: Number(e.target.value || 0) }))}
-                  />
-                </div>
-
-                <div className="col-md-6">
-                  <Label htmlFor="saleTaxId">ภาษีขาย (VAT)</Label>
-                  <select
-                    id="saleTaxId"
-                    className="form-select"
-                    value={formData.saleTaxIds?.[0] ?? ''}
-                    onChange={(e) => {
-                      saleVatTouchedRef.current = true
-                      const taxId = e.target.value ? Number(e.target.value) : null
-                      setDraft((p) => ({ ...p, saleTaxIds: taxId ? [taxId] : [] }))
-                    }}
-                  >
-                    <option value="">— ไม่กำหนด —</option>
-                    {saleTaxOptions.map((t) => (
-                      <option key={`sale-tax-${t.id}`} value={t.id}>
-                        {t.name} ({t.amount}%)
-                      </option>
-                    ))}
-                  </select>
-                  <div className="small text-muted mt-1">
-                    {defaultSaleTaxId
-                      ? `ค่าเริ่มต้น: ${saleTaxOptions.find((t) => t.id === defaultSaleTaxId)?.name ?? 'VAT 7%'}`
-                      : saleTaxOptions.length > 0
-                        ? 'ไม่พบ VAT 7% ในรายการนี้ ระบบจะให้เลือกจากรายการที่มีอยู่'
-                        : 'ไม่พบรายการ VAT ฝั่งขายในระบบ'}
-                  </div>
-                </div>
-
-                <div className="col-md-6">
-                  <Label htmlFor="purchaseTaxId">ภาษีซื้อ (VAT)</Label>
-                  <select
-                    id="purchaseTaxId"
-                    className="form-select"
-                    value={formData.purchaseTaxIds?.[0] ?? ''}
-                    onChange={(e) => {
-                      purchaseVatTouchedRef.current = true
-                      const taxId = e.target.value ? Number(e.target.value) : null
-                      setDraft((p) => ({ ...p, purchaseTaxIds: taxId ? [taxId] : [] }))
-                    }}
-                  >
-                    <option value="">— ไม่กำหนด —</option>
-                    {purchaseTaxOptions.map((t) => (
-                      <option key={`purchase-tax-${t.id}`} value={t.id}>
-                        {t.name} ({t.amount}%)
-                      </option>
-                    ))}
-                  </select>
-                  <div className="small text-muted mt-1">
-                    {defaultPurchaseTaxId
-                      ? `ค่าเริ่มต้น: ${purchaseTaxOptions.find((t) => t.id === defaultPurchaseTaxId)?.name ?? 'VAT 7%'}`
-                      : purchaseTaxOptions.length > 0
-                        ? 'ไม่พบ VAT 7% ในรายการนี้ ระบบจะให้เลือกจากรายการที่มีอยู่'
-                        : 'ไม่พบรายการ VAT ฝั่งซื้อในระบบ'}
-                  </div>
-                </div>
-
-                <div className="col-12">
-                  <Label htmlFor="description">รายละเอียด</Label>
-                  <Input
-                    id="description"
-                    value={formData.description || ''}
-                    onChange={(e) => setDraft((p) => ({ ...p, description: e.target.value }))}
-                    placeholder="รายละเอียดสินค้า / บันทึกเพิ่มเติม"
-                  />
-                </div>
-              </div>
-            </Card>
-
-            {canManageAdminFields ? (
-              <Card className="p-4">
-                <div className="qf-section-title mb-3">ตั้งค่าขั้นสูง</div>
-                <div className="row g-3">
-                  <div className="col-md-4">
-                    <Label htmlFor="productType">ชนิดสินค้า</Label>
-                    <select
-                      id="productType"
-                      className="form-select"
-                      value={formData.productType || 'consu'}
-                      onChange={(e) => setDraft((p) => ({ ...p, productType: e.target.value as any }))}
-                    >
-                      {(productAdminMetaQuery.data?.productTypes || []).map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="col-md-8">
-                    <Label htmlFor="categoryId">Category</Label>
-                    <select
-                      id="categoryId"
-                      className="form-select"
-                      value={formData.categoryId ?? ''}
-                      onChange={(e) => setDraft((p) => ({ ...p, categoryId: e.target.value ? Number(e.target.value) : null }))}
-                    >
-                      <option value="">— เลือก Category —</option>
-                      {(productAdminMetaQuery.data?.categories || []).map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="col-md-6">
-                    <Label htmlFor="incomeAccountId">บัญชีรายได้ (Income Account)</Label>
-                    <select
-                      id="incomeAccountId"
-                      className="form-select"
-                      value={formData.incomeAccountId ?? ''}
-                      onChange={(e) => setDraft((p) => ({ ...p, incomeAccountId: e.target.value ? Number(e.target.value) : null }))}
-                    >
-                      <option value="">— ใช้ค่าจาก Category/Default —</option>
-                      {(productAdminMetaQuery.data?.accounts || []).map((a) => (
-                        <option key={`inc-${a.id}`} value={a.id}>
-                          [{a.code}] {a.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="col-md-6">
-                    <Label htmlFor="expenseAccountId">บัญชีค่าใช้จ่าย (Expense Account)</Label>
-                    <select
-                      id="expenseAccountId"
-                      className="form-select"
-                      value={formData.expenseAccountId ?? ''}
-                      onChange={(e) => setDraft((p) => ({ ...p, expenseAccountId: e.target.value ? Number(e.target.value) : null }))}
-                    >
-                      <option value="">— ใช้ค่าจาก Category/Default —</option>
-                      {(productAdminMetaQuery.data?.accounts || []).map((a) => (
-                        <option key={`exp-${a.id}`} value={a.id}>
-                          [{a.code}] {a.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                      <div className="col-md-6">
+                        <Label htmlFor="expenseAccountId">บัญชีค่าใช้จ่าย (Expense Account)</Label>
+                        <select
+                          id="expenseAccountId"
+                          className="form-select"
+                          value={formData.expenseAccountId ?? ''}
+                          onChange={(e) => setDraft((p) => ({ ...p, expenseAccountId: e.target.value ? Number(e.target.value) : null }))}
+                        >
+                          <option value="">— ใช้ค่าจาก Category/Default —</option>
+                          {(productAdminMetaQuery.data?.accounts || []).map((a) => (
+                            <option key={`exp-${a.id}`} value={a.id}>
+                              [{a.code}] {a.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="small text-muted">
+                      ผู้ใช้ปัจจุบันไม่มีสิทธิ์จัดการ field ขั้นสูง (ชนิดสินค้า / category / ผูกบัญชี)
+                    </div>
+                  )
+                ) : null}
               </Card>
-            ) : null}
+            </div>
           </div>
 
           <div className="col-lg-4">
