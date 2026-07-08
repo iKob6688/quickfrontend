@@ -261,15 +261,6 @@ export function ProductFormPage() {
                 </div>
 
                 <div className="col-md-6">
-                  <Label htmlFor="description">รายละเอียด</Label>
-                  <Input
-                    id="description"
-                    value={formData.description || ''}
-                    onChange={(e) => setDraft((p) => ({ ...p, description: e.target.value }))}
-                  />
-                </div>
-
-                <div className="col-md-6">
                   <Label htmlFor="saleTaxId">ภาษีขาย (VAT)</Label>
                   <select
                     id="saleTaxId"
@@ -323,6 +314,16 @@ export function ProductFormPage() {
                         ? 'ไม่พบ VAT 7% ในรายการนี้ ระบบจะให้เลือกจากรายการที่มีอยู่'
                         : 'ไม่พบรายการ VAT ฝั่งซื้อในระบบ'}
                   </div>
+                </div>
+
+                <div className="col-12">
+                  <Label htmlFor="description">รายละเอียด</Label>
+                  <Input
+                    id="description"
+                    value={formData.description || ''}
+                    onChange={(e) => setDraft((p) => ({ ...p, description: e.target.value }))}
+                    placeholder="รายละเอียดสินค้า / บันทึกเพิ่มเติม"
+                  />
                 </div>
               </div>
             </Card>
