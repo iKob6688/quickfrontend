@@ -56,7 +56,7 @@ export function InvoiceDetailPage() {
   useEffect(() => {
     const rehydrate = () => {
       try {
-        void (useStudioSettingsStore as any).persist?.rehydrate?.()
+        void (useStudioSettingsStore as typeof useStudioSettingsStore & { persist?: { rehydrate?: () => Promise<void> | void } }).persist?.rehydrate?.()
       } catch {
         // ignore
       }
@@ -69,7 +69,7 @@ export function InvoiceDetailPage() {
   useEffect(() => {
     if (!printMenuOpen) return
     try {
-      void (useStudioSettingsStore as any).persist?.rehydrate?.()
+      void (useStudioSettingsStore as typeof useStudioSettingsStore & { persist?: { rehydrate?: () => Promise<void> | void } }).persist?.rehydrate?.()
     } catch {
       // ignore
     }

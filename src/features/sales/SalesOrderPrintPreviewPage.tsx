@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/Button'
 import { getSalesOrder } from '@/api/services/sales-orders.service'
 import { getPartner } from '@/api/services/partners.service'
 import { formatAppDate, formatAppDateTime } from '@/lib/dateFormat'
+import { calculateSalesOrderTotals } from '@/lib/salesOrderTotals'
+import { getSalesOrderCustomerContactText, getSalesOrderCustomerDisplayName } from '@/lib/salesOrderPresentation'
 import { useSettingsStore } from '@/app/core/storage/settingsStore'
 
 export function SalesOrderPrintPreviewPage() {
@@ -23,10 +25,21 @@ export function SalesOrderPrintPreviewPage() {
 
   const partnerQuery = useQuery({
     queryKey: ['partner', 'printPreview', query.data?.partnerId],
-    enabled: !!query.data?.partnerId,
-    queryFn: () => getPartner(query.data!.partnerId),
+    enabled: typeof query.data?.partnerId === 'number' && query.data.partnerId > 0,
+    queryFn: () => getPartner(query.data!.partnerId as number),
     staleTime: 60_000,
   })
+
+  const orderTotals = useMemo(
+    () =>
+      calculateSalesOrderTotals(query.data?.lines || [], {
+        vatEnabled: Boolean(query.data?.vatEnabled),
+        vatRate: query.data?.vatRate ?? 0,
+        withholdingTaxEnabled: Boolean(query.data?.withholdingTaxEnabled),
+        withholdingTaxRate: query.data?.withholdingTaxRate ?? 0,
+      }),
+    [query.data?.lines, query.data?.vatEnabled, query.data?.vatRate, query.data?.withholdingTaxEnabled, query.data?.withholdingTaxRate],
+  )
 
   if (!Number.isFinite(id) || id <= 0) {
     return <Alert variant="danger" className="m-3">URL ไม่ถูกต้อง</Alert>
@@ -64,8 +77,10 @@ export function SalesOrderPrintPreviewPage() {
   const partnerAddress = [partner?.street, partner?.street2, [partner?.city, partner?.zip].filter(Boolean).join(' '), partner?.countryName]
     .filter(Boolean)
     .join(' ')
-  const firstLineLabel = (order.lines || []).find((line) => line.description?.trim())?.description || '-'
-
+  const customerDisplayName = getSalesOrderCustomerDisplayName(order)
+  const customerAddress = order.customerAddressText || partnerAddress
+  const customerContact = getSalesOrderCustomerContactText(order)
+  const attachments = Array.isArray(order.attachments) ? order.attachments : []
   return (
     <div className="container py-4 qf-so-print">
       <div className="d-flex gap-2 justify-content-end mb-3 d-print-none">
@@ -100,23 +115,22 @@ export function SalesOrderPrintPreviewPage() {
         <div className="rounded border p-2 small mb-3 qf-so-print__meta">
           <div className="row g-2">
             <div className="col-md-4"><span className="text-muted">เลขที่เอกสาร:</span> <span className="font-monospace fw-semibold">{order.number || `#${order.id}`}</span></div>
-            <div className="col-md-4"><span className="text-muted">เลขที่ใบเสนอราคา:</span> <span className="font-monospace fw-semibold">{order.number || `#${order.id}`}</span></div>
-            <div className="col-md-4"><span className="text-muted">สินค้า/บริการ:</span> <span className="fw-semibold">{firstLineLabel}</span></div>
+            <div className="col-md-4"><span className="text-muted">ประเภทเอกสาร:</span> <span className="font-monospace fw-semibold">{documentLabel}</span></div>
+            <div className="col-md-4"><span className="text-muted">สินค้า/บริการ:</span> <span className="fw-semibold">{(order.lines || []).find((line) => line.description?.trim())?.description || '-'}</span></div>
           </div>
         </div>
 
         <div className="row g-3 mb-3">
           <div className="col-md-7">
             <div className="small text-muted">ลูกค้า</div>
-            <div className="fw-semibold">{order.partnerName || '-'}</div>
-            {partnerAddress ? <div className="small mt-1">{partnerAddress}</div> : null}
-            {(partner?.vat || partner?.taxId) ? (
-              <div className="small text-muted mt-1">Tax ID: {partner?.vat || partner?.taxId}</div>
+            <div className="fw-semibold">{customerDisplayName}</div>
+            {customerAddress ? <div className="small mt-1">{customerAddress}</div> : null}
+            {customerContact ? <div className="small text-muted mt-1">{customerContact}</div> : null}
+            {!customerContact && (partner?.phone || partner?.email) ? (
+              <div className="small text-muted mt-1">{[partner?.phone, partner?.email].filter(Boolean).join(' · ')}</div>
             ) : null}
-            {(partner?.phone || partner?.email) ? (
-              <div className="small text-muted mt-1">
-                {[partner?.phone, partner?.email].filter(Boolean).join(' · ')}
-              </div>
+            {(order.customerTaxIdText || partner?.vat || partner?.taxId) ? (
+              <div className="small text-muted mt-1">Tax ID: {order.customerTaxIdText || partner?.vat || partner?.taxId}</div>
             ) : null}
           </div>
           <div className="col-md-5">
@@ -139,14 +153,27 @@ export function SalesOrderPrintPreviewPage() {
             </tr>
           </thead>
           <tbody>
-            {(order.lines || []).map((line, idx) => (
-              <tr key={`${line.productId || 'item'}-${idx}`}>
-                <td>{line.description || '-'}</td>
-                <td className="text-end">{(line.quantity || 0).toLocaleString('th-TH')}</td>
-                <td className="text-end">{(line.unitPrice || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                <td className="text-end fw-semibold">{(line.total || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-              </tr>
-            ))}
+            {(order.lines || []).map((line, idx) =>
+              line.lineType === 'section' || line.lineType === 'note' ? (
+                <tr key={`${line.productId || 'item'}-${idx}`} className={line.lineType === 'section' ? 'table-primary' : 'table-light'}>
+                  <td colSpan={4}>
+                    <div className={line.lineType === 'section' ? 'fw-semibold' : 'text-muted'}>
+                      {line.lineType === 'section' ? 'หัวข้อ' : 'หมายเหตุ'}
+                    </div>
+                    <div className={line.lineType === 'section' ? 'fw-semibold' : 'small text-muted'}>
+                      {line.description || (line.lineType === 'section' ? 'หัวข้อ' : 'หมายเหตุ')}
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                <tr key={`${line.productId || 'item'}-${idx}`}>
+                  <td>{line.description || '-'}</td>
+                  <td className="text-end">{(line.quantity || 0).toLocaleString('th-TH')}</td>
+                  <td className="text-end">{(line.unitPrice || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  <td className="text-end fw-semibold">{(line.total || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                </tr>
+              ),
+            )}
             {(!order.lines || order.lines.length === 0) && (
               <tr>
                 <td colSpan={4} className="text-center text-muted">ไม่มีรายการสินค้า</td>
@@ -158,19 +185,46 @@ export function SalesOrderPrintPreviewPage() {
         <div className="d-flex justify-content-end mt-3 qf-so-print__summary">
           <div style={{ minWidth: 320 }}>
             <div className="d-flex justify-content-between py-1 border-bottom">
-              <span>ยอดก่อนภาษี</span>
-              <span className="font-monospace">{(order.amountUntaxed || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span>ยอดก่อนส่วนลด</span>
+              <span className="font-monospace">{orderTotals.grossSubtotal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             <div className="d-flex justify-content-between py-1 border-bottom">
-              <span>ภาษี</span>
-              <span className="font-monospace">{(order.totalTax || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span>ส่วนลด</span>
+              <span className="font-monospace">{orderTotals.discountAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+            <div className="d-flex justify-content-between py-1 border-bottom">
+              <span>หลังหักส่วนลด</span>
+              <span className="font-monospace">{orderTotals.afterDiscount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+            <div className="d-flex justify-content-between py-1 border-bottom">
+              <span>VAT</span>
+              <span className="font-monospace">{orderTotals.vatAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+            <div className="d-flex justify-content-between py-1 border-bottom">
+              <span>หัก ณ ที่จ่าย</span>
+              <span className="font-monospace">{orderTotals.withholdingAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             <div className="d-flex justify-content-between py-2 fw-bold">
               <span>ยอดรวมสุทธิ</span>
-              <span className="font-monospace">{(order.total || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="font-monospace">{orderTotals.grandTotal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
           </div>
         </div>
+
+        {(order.attachments?.length ?? 0) > 0 ? (
+          <div className="mt-4">
+            <div className="small text-muted mb-2">เอกสารแนบ</div>
+            <ul className="small mb-0">
+              {attachments.map((attachment, idx) => (
+                <li key={`${attachment.name || 'attachment'}-${idx}`}>
+                  {attachment.name || 'เอกสารแนบ'}
+                  {attachment.size ? ` (${Math.round(attachment.size / 1024)} KB)` : ''}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
         <div className="mt-4 pt-3 border-top small text-muted d-flex justify-content-between">
           <div>Ref: {order.number || `#${order.id}`}</div>
           <div>Printed: {formatPrintDateTime(new Date())}</div>

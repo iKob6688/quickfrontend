@@ -12,6 +12,7 @@ import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { listSalesOrders, type SalesOrderStatus } from '@/api/services/sales-orders.service'
 import { useAppDateFormatter } from '@/lib/dateFormat'
 import { useSettingsStore } from '@/app/core/storage/settingsStore'
+import { getSalesOrderCustomerDisplayName } from '@/lib/salesOrderPresentation'
 
 type StatusTab = 'all' | SalesOrderStatus
 
@@ -72,7 +73,8 @@ export function SalesOrdersListPage() {
     if (jobFilter === 'all') return orders
     return orders.filter((order) => {
       if (order.jobCategory && order.jobCategory === jobFilter) return true
-      const text = `${order.number} ${order.partnerName} ${order.notes ?? ''}`.toLowerCase()
+      const customerLabel = getSalesOrderCustomerDisplayName(order)
+      const text = `${order.number} ${customerLabel} ${order.notes ?? ''}`.toLowerCase()
       if (jobFilter === 'closing') return /ปิดงบ|financial statement|close company|fs\b/.test(text)
       if (jobFilter === 'registration') return /จดทะเบียน|registration|boi|fbl|visa|work permit|license/.test(text)
       if (jobFilter === 'accounting') return /บัญชี|account|bookkeep|outsourcing/.test(text)
@@ -86,7 +88,7 @@ export function SalesOrdersListPage() {
         id: order.id,
         number: order.number,
         orderType: order.orderType,
-        customer: order.partnerName,
+        customer: getSalesOrderCustomerDisplayName(order),
         date: formatDate(order.orderDate),
         total: order.total,
         status: order.status,
@@ -115,7 +117,7 @@ export function SalesOrdersListPage() {
       className: 'text-nowrap',
       cell: (r) => <Badge tone={r.orderType === 'sale' ? 'blue' : 'gray'}>{r.orderType === 'sale' ? 'Sale Order' : 'ใบเสนอราคา'}</Badge>,
     },
-    { key: 'customer', header: 'ลูกค้า', cell: (r) => <span>{r.customer}</span> },
+    { key: 'customer', header: 'ลูกค้า', cell: (r) => <span>{r.customer || 'ไม่ระบุลูกค้า'}</span> },
     { key: 'date', header: 'วันที่เอกสาร', className: 'text-nowrap', cell: (r) => <span>{r.date}</span> },
     {
       key: 'total',

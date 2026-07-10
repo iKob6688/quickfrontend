@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { closestCenter, DndContext, type DragEndEvent, useDroppable } from '@dnd-kit/core'
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import type { AnyBlock, TemplateV1 } from '@/app/core/types/template'
 import type { AnyDocumentDTO } from '@/app/core/types/dto'
 import type { Branding } from '@/app/core/types/branding'
@@ -19,11 +18,17 @@ type CanvasA4Props = {
 }
 
 function snapToGridModifier(grid: number) {
-  return ({ transform }: any) => {
+  return ({ transform }: { transform: { x: number; y: number } }) => {
     const x = Math.round(transform.x / grid) * grid
     const y = Math.round(transform.y / grid) * grid
-    return { ...transform, x, y }
+    return { ...transform, x, y, scaleX: 1, scaleY: 1 }
   }
+}
+
+function toTransformStyle(transform: { x: number; y: number; scaleX?: number; scaleY?: number } | null | undefined) {
+  if (!transform) return undefined
+  const { x, y, scaleX = 1, scaleY = 1 } = transform
+  return `translate3d(${x}px, ${y}px, 0) scaleX(${scaleX}) scaleY(${scaleY})`
 }
 
 function SortableBlock({
@@ -43,7 +48,7 @@ function SortableBlock({
   })
 
   const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
+    transform: toTransformStyle(transform),
     transition,
   }
 
@@ -194,5 +199,3 @@ export function CanvasA4(props: CanvasA4Props) {
     </DndContext>
   )
 }
-
-

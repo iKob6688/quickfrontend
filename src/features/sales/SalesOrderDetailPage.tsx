@@ -13,6 +13,7 @@ import { useSettingsStore as useStudioSettingsStore } from '@/app/core/storage/s
 import { useTemplateStore } from '@/app/core/storage/templateStore'
 import { toast } from '@/lib/toastStore'
 import { useAppDateFormatter } from '@/lib/dateFormat'
+import { getSalesOrderCustomerDisplayName } from '@/lib/salesOrderPresentation'
 
 export function SalesOrderDetailPage() {
   const navigate = useNavigate()
@@ -39,8 +40,8 @@ export function SalesOrderDetailPage() {
 
   const partnerDetailQuery = useQuery({
     queryKey: ['partner', query.data?.partnerId],
-    enabled: !!query.data?.partnerId,
-    queryFn: () => getPartner(query.data!.partnerId),
+    enabled: typeof query.data?.partnerId === 'number' && query.data.partnerId > 0,
+    queryFn: () => getPartner(query.data!.partnerId as number),
     staleTime: 60_000,
   })
 
@@ -76,7 +77,7 @@ export function SalesOrderDetailPage() {
   useEffect(() => {
     if (!printMenuOpen) return
     try {
-      void (useStudioSettingsStore as any).persist?.rehydrate?.()
+      void (useStudioSettingsStore as typeof useStudioSettingsStore & { persist?: { rehydrate?: () => Promise<void> | void } }).persist?.rehydrate?.()
     } catch {
       // ignore
     }
@@ -163,6 +164,7 @@ export function SalesOrderDetailPage() {
 
   const rowData = (query.data?.lines || []).map((line, idx) => ({
     id: idx,
+    lineType: line.lineType || 'normal',
     description: line.description,
     quantity: line.quantity,
     unitPrice: line.unitPrice,
@@ -170,19 +172,45 @@ export function SalesOrderDetailPage() {
   }))
 
   const columns: Column<(typeof rowData)[number]>[] = [
-    { key: 'description', header: 'รายละเอียด', cell: (r) => <span>{r.description || '—'}</span> },
-    { key: 'quantity', header: 'จำนวน', className: 'text-end', cell: (r) => <span>{r.quantity.toLocaleString('th-TH')}</span> },
+    {
+      key: 'description',
+      header: 'รายละเอียด',
+      cell: (r) =>
+        r.lineType === 'section' ? (
+          <div className="fw-semibold">{r.description || 'หัวข้อ'}</div>
+        ) : r.lineType === 'note' ? (
+          <div className="text-muted fst-italic">{r.description || 'หมายเหตุ'}</div>
+        ) : (
+          <span>{r.description || '—'}</span>
+        ),
+    },
+    {
+      key: 'quantity',
+      header: 'จำนวน',
+      className: 'text-end',
+      cell: (r) => <span>{r.lineType === 'normal' ? r.quantity.toLocaleString('th-TH') : '—'}</span>,
+    },
     {
       key: 'unitPrice',
       header: 'ราคาต่อหน่วย',
       className: 'text-end',
-      cell: (r) => <span className="font-monospace">{r.unitPrice.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>,
+      cell: (r) =>
+        r.lineType === 'normal' ? (
+          <span className="font-monospace">{r.unitPrice.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        ) : (
+          <span>—</span>
+        ),
     },
     {
       key: 'total',
       header: 'ยอดรวม',
       className: 'text-end',
-      cell: (r) => <span className="font-monospace fw-semibold">{r.total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>,
+      cell: (r) =>
+        r.lineType === 'normal' ? (
+          <span className="font-monospace fw-semibold">{r.total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        ) : (
+          <span>—</span>
+        ),
     },
   ]
 
@@ -329,7 +357,7 @@ export function SalesOrderDetailPage() {
               <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
                 <div>
                   <h2 className="h5 fw-semibold mb-2">{query.data.number || `#${query.data.id}`}</h2>
-                  <div className="small text-muted">ลูกค้า: {query.data.partnerName || '—'}</div>
+                  <div className="small text-muted">ลูกค้า: {getSalesOrderCustomerDisplayName(query.data)}</div>
                 </div>
                 <div className="d-flex align-items-center gap-2">
                   <Badge tone={query.data.orderType === 'sale' ? 'blue' : 'gray'}>
@@ -349,6 +377,36 @@ export function SalesOrderDetailPage() {
                 empty={<div className="text-center text-muted py-4">ไม่มีรายการ</div>}
               />
             </Card>
+
+            {(query.data.attachments?.length ?? 0) > 0 ? (
+              <Card className="p-4 mt-3">
+                <div className="small text-muted mb-2">เอกสารแนบ</div>
+                <div className="d-flex flex-column gap-2">
+                  {query.data.attachments?.map((attachment, idx) => (
+                    <div key={`${attachment.id || attachment.name || 'attachment'}-${idx}`} className="d-flex justify-content-between gap-3 align-items-center border rounded-3 p-2">
+                      <div>
+                        <div className="fw-semibold">{attachment.name || 'เอกสารแนบ'}</div>
+                        <div className="small text-muted">
+                          {[attachment.type || 'file', attachment.size ? `${Math.round(attachment.size / 1024)} KB` : null].filter(Boolean).join(' · ')}
+                        </div>
+                      </div>
+                      <div className="d-flex gap-1">
+                        {attachment.url ? (
+                          <a className="btn btn-sm btn-link" href={attachment.url} target="_blank" rel="noreferrer">
+                            ดู
+                          </a>
+                        ) : null}
+                        {attachment.url ? (
+                          <a className="btn btn-sm btn-link" href={attachment.url} download>
+                            ดาวน์โหลด
+                          </a>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            ) : null}
           </div>
 
           <div className="col-lg-4">
@@ -363,8 +421,36 @@ export function SalesOrderDetailPage() {
               <div className="h5 fw-bold font-monospace mb-0">
                 {query.data.total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
-              {query.data.orderType === 'sale' && (query.data.status === 'sale' || query.data.status === 'done') ? (
-                <div className="mt-3 d-grid gap-2">
+            </Card>
+
+            <Card className="p-4 mt-3">
+              <div className="small text-muted mb-2">ข้อมูลลูกค้าแบบกรอกเอง</div>
+              <div className="d-grid gap-2 small">
+                <div>
+                  <div className="text-muted">ชื่อ</div>
+                  <div className="fw-semibold">{query.data.customerNameText || query.data.partnerName || 'ไม่ระบุลูกค้า'}</div>
+                </div>
+                <div>
+                  <div className="text-muted">ที่อยู่</div>
+                  <div>{query.data.customerAddressText || partnerDetailQuery.data?.street || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-muted">ติดต่อ / Tax / Branch</div>
+                  <div>{getSalesOrderCustomerContactText(query.data) || '-'}</div>
+                </div>
+                {query.data.notes ? (
+                  <div>
+                    <div className="text-muted">หมายเหตุลูกค้า</div>
+                    <div style={{ whiteSpace: 'pre-line' }}>{query.data.notes}</div>
+                  </div>
+                ) : null}
+              </div>
+            </Card>
+
+            {query.data.orderType === 'sale' && (query.data.status === 'sale' || query.data.status === 'done') ? (
+              <Card className="p-4 mt-3">
+                <div className="small text-muted mb-2">การดำเนินการถัดไป</div>
+                <div className="d-grid gap-2">
                   <Button
                     size="sm"
                     variant="secondary"
@@ -386,8 +472,8 @@ export function SalesOrderDetailPage() {
                     </Button>
                   ) : null}
                 </div>
-              ) : null}
-            </Card>
+              </Card>
+            ) : null}
           </div>
         </div>
       )}

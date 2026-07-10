@@ -16,6 +16,7 @@ export type SalesOrderStatus = 'draft' | 'sent' | 'sale' | 'done' | 'cancel'
 export type SalesOrderType = 'quotation' | 'sale'
 
 export interface SalesOrderLine {
+  lineType?: 'normal' | 'section' | 'note'
   productId: number | null
   description: string
   quantity: number
@@ -27,14 +28,35 @@ export interface SalesOrderLine {
   total: number
 }
 
+export interface SalesOrderAttachment {
+  id?: number
+  name: string
+  url?: string
+  size?: number
+  type?: string
+}
+
 export interface SalesOrderPayload {
-  partnerId: number
+  partnerId?: number | null
   orderDate: string
   validityDate?: string
   currency: string
   orderType?: SalesOrderType
   lines: SalesOrderLine[]
   notes?: string
+  customerNameText?: string
+  customerAddressText?: string
+  customerPhoneText?: string
+  customerEmailText?: string
+  customerTaxIdText?: string
+  customerBranchText?: string
+  internalNotes?: string
+  paymentTermText?: string
+  vatEnabled?: boolean
+  vatRate?: number
+  withholdingTaxEnabled?: boolean
+  withholdingTaxRate?: number
+  attachments?: SalesOrderAttachment[]
 }
 
 export interface SalesOrder extends SalesOrderPayload {
@@ -56,6 +78,7 @@ export interface SalesOrderListItem {
   number: string
   partnerId: number
   partnerName: string
+  customerNameText?: string
   orderDate: string
   validityDate?: string
   total: number
@@ -106,6 +129,30 @@ interface BackendSalesOrder {
   amount_untaxed?: number | string
   amount_tax?: number | string
   notes?: string | null
+  customerNameText?: string | null
+  customer_name_text?: string | null
+  customerAddressText?: string | null
+  customer_address_text?: string | null
+  customerPhoneText?: string | null
+  customer_phone_text?: string | null
+  customerEmailText?: string | null
+  customer_email_text?: string | null
+  customerTaxIdText?: string | null
+  customer_tax_id_text?: string | null
+  customerBranchText?: string | null
+  customer_branch_text?: string | null
+  internalNotes?: string | null
+  internal_notes?: string | null
+  paymentTermText?: string | null
+  payment_term_text?: string | null
+  vatEnabled?: boolean | null
+  vat_enabled?: boolean | null
+  vatRate?: number | string | null
+  vat_rate?: number | string | null
+  withholdingTaxEnabled?: boolean | null
+  withholding_tax_enabled?: boolean | null
+  withholdingTaxRate?: number | string | null
+  withholding_tax_rate?: number | string | null
   lines?: Array<{
     product_id?: number | null
     productId?: number | null
@@ -122,15 +169,22 @@ interface BackendSalesOrder {
     price_tax?: number | string
     totalTax?: number | string
     price_total?: number | string
-    total?: number | string
+  total?: number | string
+    display_type?: 'line_section' | 'line_note' | string | null
   }>
   createdAt?: string
   updatedAt?: string
   create_date?: string
   write_date?: string
+  attachments?: Array<{ name?: string; url?: string; size?: number; type?: string }>
+  attachment_files?: Array<{ name?: string; url?: string; size?: number; type?: string }>
   deliveries?: Array<{ id: number; name?: string; state?: string; scheduled_date?: string | null }>
   invoices?: Array<{ id: number; name?: string; state?: string; amount_total?: number }>
   [key: string]: unknown
+}
+
+function isBackendSalesOrder(value: unknown): value is BackendSalesOrder {
+  return Boolean(value && typeof value === 'object' && 'id' in value)
 }
 
 function toNumber(v: unknown): number {
@@ -158,6 +212,10 @@ function parseOrderTypeFromNotes(notes?: string | null): SalesOrderType | null {
 
 function inferOrderTypeByStatus(status: SalesOrderStatus): SalesOrderType {
   return status === 'sale' || status === 'done' ? 'sale' : 'quotation'
+}
+
+function getBackendCustomerNameText(backend: BackendSalesOrder) {
+  return backend.customerNameText ?? backend.customer_name_text ?? undefined
 }
 
 function normalizeNotesWithOrderType(notes: string | undefined, orderType: SalesOrderType | undefined) {
@@ -189,14 +247,17 @@ function extractPartner(backend: BackendSalesOrder): { partnerId: number; partne
     const row = source as { id?: unknown; name?: unknown }
     return {
       partnerId: toNumber(row.id),
-      partnerName: typeof row.name === 'string' ? row.name : backend.partnerName || backend.customerName || '—',
+      partnerName:
+        typeof row.name === 'string'
+          ? row.name
+          : getBackendCustomerNameText(backend) || backend.partnerName || backend.customerName || 'ไม่ระบุลูกค้า',
     }
   }
 
   if (typeof source === 'number') {
     return {
       partnerId: source,
-      partnerName: backend.partnerName || backend.customerName || `Partner #${source}`,
+      partnerName: getBackendCustomerNameText(backend) || backend.partnerName || backend.customerName || `Partner #${source}`,
     }
   }
 
@@ -209,7 +270,7 @@ function extractPartner(backend: BackendSalesOrder): { partnerId: number; partne
 
   return {
     partnerId: toNumber(backend.partnerId ?? backend.customerId),
-    partnerName: backend.partnerName || backend.customerName || '—',
+    partnerName: getBackendCustomerNameText(backend) || backend.partnerName || backend.customerName || 'ไม่ระบุลูกค้า',
   }
 }
 
@@ -218,6 +279,7 @@ function mapBackendOrderToListItem(backend: BackendSalesOrder): SalesOrderListIt
   const orderType = mapOrderType(backend.orderType ?? backend.type, status)
   const partner = extractPartner(backend)
   const notes = typeof backend.notes === 'string' ? backend.notes : undefined
+  const customerNameText = getBackendCustomerNameText(backend)
   const text = `${notes ?? ''}`.toLowerCase()
   const jobCategory: SalesOrderListItem['jobCategory'] =
     /ปิดงบ|financial statement|close company|fs\b/.test(text)
@@ -233,6 +295,7 @@ function mapBackendOrderToListItem(backend: BackendSalesOrder): SalesOrderListIt
     number: String(backend.documentNumber ?? backend.name ?? ''),
     partnerId: partner.partnerId,
     partnerName: partner.partnerName,
+    customerNameText,
     orderDate: String(backend.orderDate ?? backend.date_order ?? ''),
     validityDate: backend.validityDate ? String(backend.validityDate) : backend.validity_date ? String(backend.validity_date) : undefined,
     total: toNumber(backend.amount_total),
@@ -246,17 +309,64 @@ function mapBackendOrderToListItem(backend: BackendSalesOrder): SalesOrderListIt
 
 function mapBackendOrderToDetail(backend: BackendSalesOrder): SalesOrder {
   const listItem = mapBackendOrderToListItem(backend)
-  const lines = (backend.lines ?? []).map((line) => ({
-    productId: line.productId ?? line.product_id ?? null,
-    description: String(line.description ?? line.name ?? ''),
-    quantity: toNumber(line.quantity),
-    unitPrice: toNumber(line.unitPrice ?? line.price_unit),
-    discount: toNumber(line.discount),
-    taxIds: Array.isArray(line.taxIds) ? line.taxIds : Array.isArray(line.tax_ids) ? line.tax_ids : [],
-    subtotal: toNumber(line.subtotal ?? line.price_subtotal),
-    totalTax: toNumber(line.totalTax ?? line.price_tax),
-    total: toNumber(line.total ?? line.price_total),
-  }))
+  const customerNameText = getBackendCustomerNameText(backend)
+  const customerAddressText = backend.customerAddressText ?? backend.customer_address_text ?? undefined
+  const customerPhoneText = backend.customerPhoneText ?? backend.customer_phone_text ?? undefined
+  const customerEmailText = backend.customerEmailText ?? backend.customer_email_text ?? undefined
+  const customerTaxIdText = backend.customerTaxIdText ?? backend.customer_tax_id_text ?? undefined
+  const customerBranchText = backend.customerBranchText ?? backend.customer_branch_text ?? undefined
+  const internalNotes = backend.internalNotes ?? backend.internal_notes ?? undefined
+  const paymentTermText = backend.paymentTermText ?? backend.payment_term_text ?? undefined
+  const vatEnabled =
+    typeof backend.vatEnabled === 'boolean'
+      ? backend.vatEnabled
+      : typeof backend.vat_enabled === 'boolean'
+        ? backend.vat_enabled
+        : undefined
+  const vatRate =
+    backend.vatRate == null
+      ? backend.vat_rate == null
+        ? undefined
+        : toNumber(backend.vat_rate)
+      : toNumber(backend.vatRate)
+  const withholdingTaxEnabled =
+    typeof backend.withholdingTaxEnabled === 'boolean'
+      ? backend.withholdingTaxEnabled
+      : typeof backend.withholding_tax_enabled === 'boolean'
+        ? backend.withholding_tax_enabled
+        : undefined
+  const withholdingTaxRate =
+    backend.withholdingTaxRate == null
+      ? backend.withholding_tax_rate == null
+        ? undefined
+        : toNumber(backend.withholding_tax_rate)
+      : toNumber(backend.withholdingTaxRate)
+  const attachments = Array.isArray(backend.attachments)
+    ? backend.attachments
+    : Array.isArray(backend.attachment_files)
+      ? backend.attachment_files
+      : []
+  const lines: SalesOrderLine[] = (backend.lines ?? []).map((line) => {
+    const lineType: SalesOrderLine['lineType'] =
+      line.display_type === 'line_section'
+        ? 'section'
+        : line.display_type === 'line_note'
+          ? 'note'
+          : 'normal'
+
+    return {
+      lineType,
+      productId: line.productId ?? line.product_id ?? null,
+      description: String(line.description ?? line.name ?? ''),
+      quantity: toNumber(line.quantity),
+      unitPrice: toNumber(line.unitPrice ?? line.price_unit),
+      discount: toNumber(line.discount),
+      taxIds: Array.isArray(line.taxIds) ? line.taxIds : Array.isArray(line.tax_ids) ? line.tax_ids : [],
+      subtotal: toNumber(line.subtotal ?? line.price_subtotal),
+      totalTax: toNumber(line.totalTax ?? line.price_tax),
+      total: toNumber(line.total ?? line.price_total),
+    }
+  })
 
   return {
     id: listItem.id,
@@ -270,6 +380,33 @@ function mapBackendOrderToDetail(backend: BackendSalesOrder): SalesOrder {
     status: listItem.status,
     lines,
     notes: backend.notes ?? undefined,
+    customerNameText,
+    customerAddressText,
+    customerPhoneText,
+    customerEmailText,
+    customerTaxIdText,
+    customerBranchText,
+    internalNotes,
+    paymentTermText,
+    vatEnabled,
+    vatRate,
+    withholdingTaxEnabled,
+    withholdingTaxRate,
+    attachments: attachments.length
+      ? attachments
+          .map((attachment) =>
+            attachment?.name
+              ? {
+                  id: typeof (attachment as { id?: unknown }).id === 'number' ? Number((attachment as { id?: unknown }).id) : undefined,
+                  name: String(attachment.name),
+                  url: attachment.url ? String(attachment.url) : undefined,
+                  size: typeof attachment.size === 'number' ? attachment.size : undefined,
+                  type: attachment.type ? String(attachment.type) : undefined,
+                }
+              : null,
+          )
+          .filter((attachment): attachment is NonNullable<typeof attachment> => Boolean(attachment))
+      : undefined,
     amountUntaxed: toNumber(backend.amount_untaxed),
     totalTax: toNumber(backend.amount_tax),
     total: toNumber(backend.amount_total),
@@ -280,23 +417,100 @@ function mapBackendOrderToDetail(backend: BackendSalesOrder): SalesOrder {
   }
 }
 
-function toBackendPayload(payload: SalesOrderPayload) {
-  return {
-    partner_id: payload.partnerId,
+function getCompatibleCustomerSummary(payload: SalesOrderPayload) {
+  const parts = [
+    payload.customerNameText ? `ชื่อ: ${payload.customerNameText}` : '',
+    payload.customerAddressText ? `ที่อยู่: ${payload.customerAddressText}` : '',
+    payload.customerPhoneText ? `โทรศัพท์: ${payload.customerPhoneText}` : '',
+    payload.customerEmailText ? `อีเมล: ${payload.customerEmailText}` : '',
+    payload.customerTaxIdText ? `เลขผู้เสียภาษี: ${payload.customerTaxIdText}` : '',
+    payload.customerBranchText ? `สาขา: ${payload.customerBranchText}` : '',
+    payload.paymentTermText ? `เงื่อนไขชำระเงิน: ${payload.paymentTermText}` : '',
+  ].filter(Boolean)
+  return parts.join('\n')
+}
+
+function getCompatibleNotes(payload: SalesOrderPayload, includeExtraInfo: boolean) {
+  const notes = String(payload.notes || '').trim()
+  const internalNotes = String(payload.internalNotes || '').trim()
+  if (!includeExtraInfo) {
+    return notes || undefined
+  }
+
+  const blocks = [notes ? `หมายเหตุลูกค้า:\n${notes}` : '', internalNotes ? `โน้ตภายในบริษัท:\n${internalNotes}` : '']
+    .filter(Boolean)
+    .join('\n\n')
+  const customerSummary = getCompatibleCustomerSummary(payload)
+  const attachmentSummary =
+    Array.isArray(payload.attachments) && payload.attachments.length > 0
+      ? `เอกสารแนบ:\n${payload.attachments.map((attachment) => `- ${attachment.name}`).join('\n')}`
+      : ''
+
+  return [blocks, customerSummary ? `ข้อมูลลูกค้าแบบกรอกเอง:\n${customerSummary}` : '', attachmentSummary]
+    .filter(Boolean)
+    .join('\n\n')
+    .trim() || undefined
+}
+
+function toBackendPayload(payload: SalesOrderPayload, mode: 'full' | 'legacy' = 'full') {
+  const isLegacy = mode === 'legacy'
+  const body: Record<string, unknown> = {
     order_date: payload.orderDate,
     ...(payload.validityDate ? { validity_date: payload.validityDate } : {}),
     currency: payload.currency,
     order_type: payload.orderType ?? 'quotation',
-    lines: payload.lines.map((line) => ({
+    lines: (payload.lines || []).map((line) => ({
+      ...(line.lineType && line.lineType !== 'normal' && !isLegacy
+        ? { display_type: line.lineType === 'section' ? 'line_section' : 'line_note' }
+        : {}),
       product_id: line.productId,
       description: line.description,
-      quantity: line.quantity,
-      unit_price: line.unitPrice,
-      ...(typeof line.discount === 'number' ? { discount: line.discount } : {}),
-      ...(Array.isArray(line.taxIds) ? { tax_ids: line.taxIds } : {}),
+      quantity: line.lineType && line.lineType !== 'normal' ? 0 : line.quantity,
+      unit_price: line.lineType && line.lineType !== 'normal' ? 0 : line.unitPrice,
+      ...(typeof line.discount === 'number' && (!line.lineType || line.lineType === 'normal') ? { discount: line.discount } : {}),
+      ...(Array.isArray(line.taxIds) && (!line.lineType || line.lineType === 'normal') ? { tax_ids: line.taxIds } : {}),
     })),
-    ...(payload.notes ? { notes: payload.notes } : {}),
+    ...(getCompatibleNotes(payload, isLegacy) ? { notes: getCompatibleNotes(payload, isLegacy) } : {}),
   }
+
+  if (typeof payload.partnerId === 'number' && payload.partnerId > 0) {
+    body.partner_id = payload.partnerId
+  }
+
+  if (!isLegacy) {
+    // Full mode keeps all customer-entered free-text fields available for backends that support them.
+    if (payload.customerNameText) body.customer_name_text = payload.customerNameText
+    if (payload.customerAddressText) body.customer_address_text = payload.customerAddressText
+    if (payload.customerPhoneText) body.customer_phone_text = payload.customerPhoneText
+    if (payload.customerEmailText) body.customer_email_text = payload.customerEmailText
+    if (payload.customerTaxIdText) body.customer_tax_id_text = payload.customerTaxIdText
+    if (payload.customerBranchText) body.customer_branch_text = payload.customerBranchText
+
+    if (payload.internalNotes) body.internal_notes = payload.internalNotes
+    if (payload.paymentTermText) body.payment_term_text = payload.paymentTermText
+    if (typeof payload.vatEnabled === 'boolean') body.vat_enabled = payload.vatEnabled
+    if (typeof payload.vatRate === 'number') body.vat_rate = payload.vatRate
+    if (typeof payload.withholdingTaxEnabled === 'boolean') body.withholding_tax_enabled = payload.withholdingTaxEnabled
+    if (typeof payload.withholdingTaxRate === 'number') body.withholding_tax_rate = payload.withholdingTaxRate
+    if (Array.isArray(payload.attachments) && payload.attachments.length > 0) {
+      body.attachments = payload.attachments.map((attachment) => ({
+        name: attachment.name,
+        url: attachment.url,
+        size: attachment.size,
+        type: attachment.type,
+      }))
+    }
+  }
+
+  return body
+}
+
+function toAttachmentFormData(fileList: File[]) {
+  const form = new FormData()
+  for (const file of fileList) {
+    form.append('ufile', file)
+  }
+  return form
 }
 
 function extractHttpStatus(err: unknown): number | null {
@@ -308,6 +522,13 @@ function extractHttpStatus(err: unknown): number | null {
 function shouldFallbackToInvoice(err: unknown): boolean {
   const status = extractHttpStatus(err)
   return status === 404 || status === 405 || status === 501
+}
+
+function isLegacyFallbackEligible(err: unknown): boolean {
+  const status = extractHttpStatus(err)
+  if (status !== 400 && status !== 422) return false
+  const message = err instanceof Error ? err.message : String((err as { message?: unknown } | null)?.message ?? '')
+  return /unknown|unexpected|invalid field|field .* does not exist|display_type|internal_notes|customer_.*text|attachment/i.test(message)
 }
 
 function mapInvoiceLineToSalesOrderLine(line: InvoiceLine): SalesOrderLine {
@@ -374,13 +595,16 @@ function mapSalesOrderStatusToInvoiceStatus(status?: SalesOrderStatus): 'draft' 
 }
 
 function toInvoicePayload(payload: SalesOrderPayload) {
+  if (!(typeof payload.partnerId === 'number' && payload.partnerId > 0)) {
+    throw new Error('ยังไม่สามารถบันทึกผ่านระบบสำรองได้ เพราะไม่มีลูกค้าที่ถูกเลือก กรุณาเปิด backend sales order ที่รองรับการกรอกชื่อลูกค้าเอง')
+  }
   return {
     customerId: payload.partnerId,
     invoiceDate: payload.orderDate,
     dueDate: payload.validityDate || payload.orderDate,
     currency: payload.currency,
     notes: normalizeNotesWithOrderType(payload.notes, payload.orderType),
-    lines: payload.lines.map((line) => ({
+    lines: (payload.lines || []).map((line) => ({
       productId: line.productId,
       description: line.description,
       quantity: line.quantity,
@@ -450,9 +674,23 @@ export async function createSalesOrder(payload: SalesOrderPayload) {
     const data = unwrapResponse<BackendSalesOrder>(response)
     return mapBackendOrderToDetail(data)
   } catch (err) {
+    // New schema fields may be rejected by older deployments; retry once with the legacy payload.
+    if (isLegacyFallbackEligible(err)) {
+      const legacyResponse = await apiClient.post(basePath, makeRpc(toBackendPayload(payload, 'legacy')))
+      const legacyData = unwrapResponse<BackendSalesOrder>(legacyResponse)
+      return mapBackendOrderToDetail(legacyData)
+    }
     if (shouldFallbackToInvoice(err)) {
-      const inv = await createInvoice(toInvoicePayload(payload))
-      return mapInvoiceToSalesOrderDetail(inv)
+      // Invoice fallback is only safe when a real customer exists; otherwise the backend could create a wrong record.
+      if (!(typeof payload.partnerId === 'number' && payload.partnerId > 0)) {
+        throw new Error('ระบบใบเสนอราคาใช้งานไม่ได้และไม่สามารถใช้ระบบสำรองได้ เพราะยังไม่มีลูกค้าที่ถูกเลือก กรุณาเปิด backend sales order ที่รองรับการกรอกชื่อลูกค้าเอง')
+      }
+      try {
+        const inv = await createInvoice(toInvoicePayload(payload))
+        return mapInvoiceToSalesOrderDetail(inv)
+      } catch {
+        throw new Error('ไม่สามารถบันทึกผ่านระบบสำรองได้ กรุณาลองอีกครั้งหรือเปิด backend sales order ที่รองรับการบันทึกใบเสนอราคาโดยตรง')
+      }
     }
     throw err
   }
@@ -464,12 +702,60 @@ export async function updateSalesOrder(id: number, payload: SalesOrderPayload) {
     const data = unwrapResponse<BackendSalesOrder>(response)
     return mapBackendOrderToDetail(data)
   } catch (err) {
+    // New schema fields may be rejected by older deployments; retry once with the legacy payload.
+    if (isLegacyFallbackEligible(err)) {
+      const legacyResponse = await apiClient.put(`${basePath}/${id}`, makeRpc({ id, ...toBackendPayload(payload, 'legacy') }))
+      const legacyData = unwrapResponse<BackendSalesOrder>(legacyResponse)
+      return mapBackendOrderToDetail(legacyData)
+    }
     if (shouldFallbackToInvoice(err)) {
-      const inv = await updateInvoice(id, toInvoicePayload(payload))
-      return mapInvoiceToSalesOrderDetail(inv)
+      // Invoice fallback is only safe when a real customer exists; otherwise the backend could create a wrong record.
+      if (!(typeof payload.partnerId === 'number' && payload.partnerId > 0)) {
+        throw new Error('ระบบใบเสนอราคาใช้งานไม่ได้และไม่สามารถใช้ระบบสำรองได้ เพราะยังไม่มีลูกค้าที่ถูกเลือก กรุณาเปิด backend sales order ที่รองรับการกรอกชื่อลูกค้าเอง')
+      }
+      try {
+        const inv = await updateInvoice(id, toInvoicePayload(payload))
+        return mapInvoiceToSalesOrderDetail(inv)
+      } catch {
+        throw new Error('ไม่สามารถบันทึกผ่านระบบสำรองได้ กรุณาลองอีกครั้งหรือเปิด backend sales order ที่รองรับการบันทึกใบเสนอราคาโดยตรง')
+      }
     }
     throw err
   }
+}
+
+export interface SalesOrderAttachmentUploadResult {
+  attachments: SalesOrderAttachment[]
+}
+
+export async function uploadSalesOrderAttachments(orderId: number, files: File[]) {
+  if (!Number.isFinite(orderId) || orderId <= 0 || !files.length) {
+    return []
+  }
+
+  const response = await apiClient.post(
+    `${basePath}/${orderId}/attachments/upload`,
+    toAttachmentFormData(files),
+    {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    },
+  )
+
+  const data = unwrapResponse<SalesOrderAttachmentUploadResult | SalesOrderAttachment[]>(response)
+  if (Array.isArray(data)) {
+    return data
+  }
+  return Array.isArray(data.attachments) ? data.attachments : []
+}
+
+export async function deleteSalesOrderAttachment(orderId: number, attachmentId: number) {
+  if (!Number.isFinite(orderId) || orderId <= 0 || !Number.isFinite(attachmentId) || attachmentId <= 0) {
+    return false
+  }
+
+  const response = await apiClient.delete(`${basePath}/${orderId}/attachments/${attachmentId}`)
+  const data = unwrapResponse<{ deleted?: boolean }>(response)
+  return data.deleted !== false
 }
 
 export async function confirmSalesOrder(id: number) {
@@ -495,9 +781,13 @@ export interface DeliverSalesOrderResponse {
 export async function deliverSalesOrder(id: number) {
   const response = await apiClient.post(`${basePath}/${id}/deliver`, makeRpc({ id }))
   const data = unwrapResponse<{ order?: BackendSalesOrder } & Record<string, unknown>>(response)
+  const orderData = isBackendSalesOrder(data.order) ? data.order : isBackendSalesOrder(data) ? data : undefined
+  if (!orderData) {
+    throw new Error('Invalid sales order deliver response')
+  }
   return {
     ...data,
-    order: mapBackendOrderToDetail((data as any).order ?? (data as any)),
+    order: mapBackendOrderToDetail(orderData),
   } as DeliverSalesOrderResponse
 }
 
