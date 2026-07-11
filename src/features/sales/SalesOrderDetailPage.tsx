@@ -1,19 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, Dropdown, Form, Modal, Spinner } from 'react-bootstrap'
+import { Alert, Form, Modal, Spinner } from 'react-bootstrap'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { confirmSalesOrder, createInvoiceFromSalesOrder, deliverSalesOrder, getSalesOrder, sendSalesOrderEmail } from '@/api/services/sales-orders.service'
-import { getPartner, listPartners } from '@/api/services/partners.service'
+import { getPartner, listPartners, type PartnerSummary } from '@/api/services/partners.service'
 import { useSettingsStore as useStudioSettingsStore } from '@/app/core/storage/settingsStore'
 import { useTemplateStore } from '@/app/core/storage/templateStore'
 import { toast } from '@/lib/toastStore'
 import { useAppDateFormatter } from '@/lib/dateFormat'
-import { getSalesOrderCustomerDisplayName } from '@/lib/salesOrderPresentation'
+import { getSalesOrderCustomerContactText, getSalesOrderCustomerDisplayName } from '@/lib/salesOrderPresentation'
+import { type SalesOrder, type SalesOrderAttachment, type SalesOrderLine } from '@/api/services/sales-orders.service'
 
 export function SalesOrderDetailPage() {
   const navigate = useNavigate()
@@ -31,10 +32,10 @@ export function SalesOrderDetailPage() {
   const studioSettings = useStudioSettingsStore((s) => s.settings)
   const templates = useTemplateStore((s) => s.templates)
 
-  const query = useQuery({
+  const query = useQuery<SalesOrder>({
     queryKey: ['salesOrder', id],
     enabled: Number.isFinite(id) && id > 0,
-    queryFn: () => getSalesOrder(id),
+    queryFn: (): Promise<SalesOrder> => getSalesOrder(id),
     staleTime: 30_000,
   })
 
@@ -45,16 +46,17 @@ export function SalesOrderDetailPage() {
     staleTime: 60_000,
   })
 
-  const contactsQuery = useQuery({
+  const contactsQuery = useQuery<PartnerSummary[]>({
     queryKey: ['partners', 'email-picker', query.data?.partnerId, emailSearch],
     enabled: emailModalOpen,
-    queryFn: async () => {
+    queryFn: async (): Promise<PartnerSummary[]> => {
       const q = emailSearch.trim() || query.data?.partnerName || ''
       const res = await listPartners({ q, active: true, limit: 20 })
-      return (res.items || []).filter((row) => !!row.email)
+      return (res.items || []).filter((row: PartnerSummary) => !!row.email)
     },
     staleTime: 30_000,
   })
+  const contactItems: PartnerSummary[] = contactsQuery.data ?? []
 
   useEffect(() => {
     if (!query.data) return
@@ -110,7 +112,7 @@ export function SalesOrderDetailPage() {
       toast.success('ส่งอีเมลสำเร็จ', `ส่งไปยัง ${emailTo}`)
       setEmailModalOpen(false)
     },
-    onError: (err) => {
+    onError: (err: unknown) => {
       const message = err instanceof Error ? err.message : 'ไม่สามารถส่งผ่าน backend ได้'
       const mailto = `mailto:${encodeURIComponent(emailTo)}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailMessage)}`
       window.open(mailto, '_self')
@@ -120,19 +122,19 @@ export function SalesOrderDetailPage() {
 
   const confirmMutation = useMutation({
     mutationFn: () => confirmSalesOrder(id),
-    onSuccess: async (so) => {
+    onSuccess: async (so: Awaited<ReturnType<typeof confirmSalesOrder>>) => {
       await queryClient.invalidateQueries({ queryKey: ['salesOrder', id] })
       await queryClient.invalidateQueries({ queryKey: ['salesOrders'] })
       toast.success('ยืนยันเอกสารสำเร็จ', so.orderType === 'sale' ? 'แปลงเป็น Sale Order แล้ว' : undefined)
     },
-    onError: (err) => {
+    onError: (err: unknown) => {
       toast.error('ยืนยันเอกสารไม่สำเร็จ', err instanceof Error ? err.message : undefined)
     },
   })
 
   const createInvoiceMutation = useMutation({
     mutationFn: () => createInvoiceFromSalesOrder(id),
-    onSuccess: async (res) => {
+    onSuccess: async (res: Awaited<ReturnType<typeof createInvoiceFromSalesOrder>>) => {
       await queryClient.invalidateQueries({ queryKey: ['salesOrder', id] })
       await queryClient.invalidateQueries({ queryKey: ['invoices'] })
       toast.success(
@@ -141,19 +143,19 @@ export function SalesOrderDetailPage() {
       )
       if (res.invoiceId) navigate(`/sales/invoices/${res.invoiceId}`)
     },
-    onError: (err) => {
+    onError: (err: unknown) => {
       toast.error('สร้างใบแจ้งหนี้ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
     },
   })
 
   const deliverMutation = useMutation({
     mutationFn: () => deliverSalesOrder(id),
-    onSuccess: async (res) => {
+    onSuccess: async (res: Awaited<ReturnType<typeof deliverSalesOrder>>) => {
       await queryClient.invalidateQueries({ queryKey: ['salesOrder', id] })
       await queryClient.invalidateQueries({ queryKey: ['salesOrders'] })
       toast.success(res.delivered ? 'จัดส่งสินค้า/บริการสำเร็จ' : 'ไม่มีรายการจัดส่งค้าง', res.message)
     },
-    onError: (err) => {
+    onError: (err: unknown) => {
       toast.error('จัดส่งไม่สำเร็จ', err instanceof Error ? err.message : undefined)
     },
   })
@@ -162,7 +164,11 @@ export function SalesOrderDetailPage() {
     return <Alert variant="danger" className="small mb-0">URL ไม่ถูกต้อง</Alert>
   }
 
-  const rowData = (query.data?.lines || []).map((line, idx) => ({
+  const order = query.data as SalesOrder
+  const orderLines: SalesOrderLine[] = Array.isArray(order.lines) ? order.lines : []
+  const orderAttachments: SalesOrderAttachment[] = Array.isArray(order.attachments) ? order.attachments : []
+
+  const rowData = orderLines.map((line: SalesOrderLine, idx: number) => ({
     id: idx,
     lineType: line.lineType || 'normal',
     description: line.description,
@@ -222,36 +228,57 @@ export function SalesOrderDetailPage() {
         breadcrumb="รายรับ · ใบเสนอราคา · รายละเอียด"
         actions={
           <div className="d-flex gap-2">
-            <Dropdown show={printMenuOpen} onToggle={(next) => setPrintMenuOpen(Boolean(next))}>
-              <Dropdown.Toggle as={Button} size="sm" variant="ghost" disabled={!query.data}>
+            <div className="position-relative">
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={!query.data}
+                onClick={() => setPrintMenuOpen((current) => !current)}
+                aria-expanded={printMenuOpen}
+                aria-haspopup="menu"
+              >
                 พิมพ์
-              </Dropdown.Toggle>
-              <Dropdown.Menu align="end">
-                <Dropdown.Header>Default company paper format</Dropdown.Header>
-                <Dropdown.Item onClick={() => navigate(`/sales/orders/${id}/print-preview`)}>
-                  เปิด Preview มาตรฐาน
-                </Dropdown.Item>
-                <Dropdown.Divider />
-                <Dropdown.Header>Reports Studio templates</Dropdown.Header>
-                {quotationTemplates.length ? (
-                  quotationTemplates.map((tpl) => (
-                    <Dropdown.Item
-                      key={tpl.id}
-                      onClick={() =>
-                        navigate(
-                          `/reports-studio/preview/${tpl.id}?recordId=${encodeURIComponent(String(id))}`,
-                        )
-                      }
-                    >
-                      {tpl.name}
-                      {tpl.id === defaultQuotationTemplateId ? ' (Default)' : ''}
-                    </Dropdown.Item>
-                  ))
-                ) : (
-                  <Dropdown.Item disabled>ไม่พบ template สำหรับ quotation</Dropdown.Item>
-                )}
-              </Dropdown.Menu>
-            </Dropdown>
+              </Button>
+              {printMenuOpen ? (
+                <div
+                  className="position-absolute end-0 mt-2 p-2 border rounded-3 bg-white shadow"
+                  style={{ minWidth: 280, zIndex: 20 }}
+                  role="menu"
+                >
+                  <div className="px-2 py-1 text-muted small">Default company paper format</div>
+                  <Button
+                    variant="ghost"
+                    className="w-100 justify-content-start"
+                    onClick={() => {
+                      setPrintMenuOpen(false)
+                      navigate(`/sales/orders/${id}/print-preview`)
+                    }}
+                  >
+                    เปิด Preview มาตรฐาน
+                  </Button>
+                  <div className="my-2 border-top" />
+                  <div className="px-2 py-1 text-muted small">Reports Studio templates</div>
+                  {quotationTemplates.length ? (
+                    quotationTemplates.map((tpl) => (
+                      <Button
+                        key={tpl.id}
+                        variant="ghost"
+                        className="w-100 justify-content-start"
+                        onClick={() => {
+                          setPrintMenuOpen(false)
+                          navigate(`/reports-studio/preview/${tpl.id}?recordId=${encodeURIComponent(String(id))}`)
+                        }}
+                      >
+                        {tpl.name}
+                        {tpl.id === defaultQuotationTemplateId ? ' (Default)' : ''}
+                      </Button>
+                    ))
+                  ) : (
+                    <div className="px-2 py-1 text-muted small">ไม่พบ template สำหรับ quotation</div>
+                  )}
+                </div>
+              ) : null}
+            </div>
             {query.data?.orderType === 'quotation' && ['draft', 'sent'].includes(query.data.status) ? (
               <Button
                 size="sm"
@@ -298,10 +325,10 @@ export function SalesOrderDetailPage() {
         <div className="row g-4">
           <div className="col-lg-8">
             {(() => {
-              const deliveries = query.data.deliveries || []
-              const invoices = query.data.invoices || []
+              const deliveries = (query.data.deliveries || []) as NonNullable<SalesOrder['deliveries']>
+              const invoices = (query.data.invoices || []) as NonNullable<SalesOrder['invoices']>
               const hasDelivery = deliveries.length > 0
-              const allDelivered = hasDelivery && deliveries.every((d) => d.state === 'done')
+              const allDelivered = hasDelivery && deliveries.every((d: NonNullable<SalesOrder['deliveries']>[number]) => d.state === 'done')
               const hasInvoice = invoices.length > 0
               return (
             <Card className="p-3 mb-3">
@@ -321,7 +348,7 @@ export function SalesOrderDetailPage() {
               {deliveries.length > 0 ? (
                 <div className="small text-muted mt-2 d-flex flex-wrap align-items-center gap-2">
                   <span>Delivery:</span>
-                  {deliveries.map((d) => (
+                  {deliveries.map((d: NonNullable<SalesOrder['deliveries']>[number]) => (
                     <button
                       key={d.id}
                       type="button"
@@ -338,7 +365,7 @@ export function SalesOrderDetailPage() {
               {invoices.length > 0 ? (
                 <div className="small text-muted mt-1 d-flex flex-wrap align-items-center gap-2">
                   <span>Invoice:</span>
-                  {invoices.map((i) => (
+                  {invoices.map((i: NonNullable<SalesOrder['invoices']>[number]) => (
                     <button
                       key={i.id}
                       type="button"
@@ -378,11 +405,11 @@ export function SalesOrderDetailPage() {
               />
             </Card>
 
-            {(query.data.attachments?.length ?? 0) > 0 ? (
+            {(orderAttachments.length ?? 0) > 0 ? (
               <Card className="p-4 mt-3">
                 <div className="small text-muted mb-2">เอกสารแนบ</div>
                 <div className="d-flex flex-column gap-2">
-                  {query.data.attachments?.map((attachment, idx) => (
+                  {orderAttachments.map((attachment: SalesOrderAttachment, idx: number) => (
                     <div key={`${attachment.id || attachment.name || 'attachment'}-${idx}`} className="d-flex justify-content-between gap-3 align-items-center border rounded-3 p-2">
                       <div>
                         <div className="fw-semibold">{attachment.name || 'เอกสารแนบ'}</div>
@@ -498,17 +525,17 @@ export function SalesOrderDetailPage() {
 
           <Form.Group className="mb-2">
             <Form.Label>เลือก Contact (มีอีเมล)</Form.Label>
-            <Form.Select
+              <Form.Select
               value={selectedContactId || ''}
               onChange={(e) => {
                 const contactId = Number(e.target.value || 0)
-                const row = (contactsQuery.data || []).find((c) => c.id === contactId)
+                const row = contactItems.find((c: PartnerSummary) => c.id === contactId)
                 setSelectedContactId(contactId || null)
                 if (row?.email) setEmailTo(row.email)
               }}
             >
               <option value="">-- ไม่เลือก / กรอกอีเมลเอง --</option>
-              {(contactsQuery.data || []).map((c) => (
+              {contactItems.map((c: PartnerSummary) => (
                 <option key={c.id} value={c.id}>
                   {c.name} ({c.email})
                 </option>

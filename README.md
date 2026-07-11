@@ -859,10 +859,29 @@ This section is for the Odoo/middleware team. It lists what the React app alread
   - Required endpoints:
     - Purchase Orders: `/api/th/v1/purchases/orders` (list, get, create, update, confirm, cancel)
     - Expenses: `/api/th/v1/expenses` (list, get, create, update, submit)
-    - Taxes & VAT: `/api/th/v1/taxes` (list, calculate, validate-vat)
+- Taxes & VAT: `/api/th/v1/taxes` (list, calculate, validate-vat)
   - All endpoints must:
     - Accept JSON-RPC 2.0 format (Odoo `type="json"` routes)
     - Return `ApiEnvelope<T>` with camelCase field names
     - Support pagination via `limit`/`offset`
     - Respect `X-Instance-ID` header for company scoping
     - Use standard error codes (`AUTH_REQUIRED`, `VALIDATION_ERROR`, `NOT_FOUND`, `CONFLICT`, etc.)
+
+## Quotation production notes
+
+The sales quotation frontend now has a dedicated production review trail in [`docs/quotation/`](./docs/quotation/).
+
+Use these docs when maintaining the module:
+
+- [`BASELINE_Q01.md`](./docs/quotation/BASELINE_Q01.md) for the live q01 backend baseline
+- [`API_CONTRACT.md`](./docs/quotation/API_CONTRACT.md) for verified request/response mapping
+- [`ACCOUNTING_RULES.md`](./docs/quotation/ACCOUNTING_RULES.md) for totals, VAT, and withholding logic
+- [`ATTACHMENT_ARCHITECTURE.md`](./docs/quotation/ATTACHMENT_ARCHITECTURE.md) for metadata-only attachment handling
+- [`PRODUCTION_READY_CHECKLIST.md`](./docs/quotation/PRODUCTION_READY_CHECKLIST.md) for release verification
+
+Current status:
+
+- Frontend quotation flows are aligned with the live q01 sales order controller contract.
+- Attachment drafts stay metadata-only in local storage.
+- Totals logic is centralized in `src/lib/salesOrderTotals.ts`.
+- Remaining work, if any, should happen in the backend Odoo controller layer rather than by reintroducing duplicate frontend logic.

@@ -1,4 +1,4 @@
-import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getInvoice, postInvoice, registerPayment, updatePayment, openInvoicePdf, amendInvoice, getInvoicePaymentMeta, type RegisterPaymentPayload, type PaymentRecord, type UpdatePaymentPayload } from '@/api/services/invoices.service'
 import { createSalesCreditNote, createSalesDebitNote } from '@/api/services/sales-notes.service'
@@ -14,7 +14,7 @@ import { AmendInvoiceModal } from '@/features/sales/AmendInvoiceModal'
 import { PromptPayQrModal } from '@/features/sales/PromptPayQrModal'
 import { CreateNoteModal } from '@/components/notes/CreateNoteModal'
 import { EtaxWorkflowCard } from '@/features/etax/EtaxWorkflowCard'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from '@/lib/toastStore'
 import { useSettingsStore as useStudioSettingsStore } from '@/app/core/storage/settingsStore'
 import { useAppDateFormatter } from '@/lib/dateFormat'
@@ -28,7 +28,6 @@ const FALLBACK_RS_TPL_INVOICE = 'invoice_default_v1'
 
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const location = useLocation()
   const queryClient = useQueryClient()
@@ -43,6 +42,7 @@ export function InvoiceDetailPage() {
   const user = useAuthStore((s) => s.user)
   const instancePublicId = useAuthStore((s) => s.instancePublicId)
   const formatDate = useAppDateFormatter()
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search])
 
   const invoiceId = id ? Number.parseInt(id, 10) : null
   const requestedAction = searchParams.get('action')
@@ -127,33 +127,20 @@ export function InvoiceDetailPage() {
       invoiceAmountDue > 0
     ) {
       setPaymentOpen(true)
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev)
-          next.delete('action')
-          return next
-        },
-        { replace: true },
-      )
+      navigate(location.pathname, { replace: true })
       return
     }
     if (requestedAction === 'receipt' && ((invoice.hasPaymentReceipt || invoice.hasFinalReceipt) || invoiceAmountPaid > 0)) {
       setPrintMenuOpen(true)
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev)
-          next.delete('action')
-          return next
-        },
-        { replace: true },
-      )
+      navigate(location.pathname, { replace: true })
     }
   }, [
     requestedAction,
     invoice,
     invoiceAmountDue,
     invoiceAmountPaid,
-    setSearchParams,
+    navigate,
+    location.pathname,
   ])
 
   const postMutation = useMutation({

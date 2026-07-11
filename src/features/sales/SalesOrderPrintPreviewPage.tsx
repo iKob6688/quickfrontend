@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Alert, Spinner } from 'react-bootstrap'
 import { Button } from '@/components/ui/Button'
-import { getSalesOrder } from '@/api/services/sales-orders.service'
+import { getSalesOrder, type SalesOrder, type SalesOrderAttachment, type SalesOrderLine } from '@/api/services/sales-orders.service'
 import { getPartner } from '@/api/services/partners.service'
 import { formatAppDate, formatAppDateTime } from '@/lib/dateFormat'
 import { calculateSalesOrderTotals } from '@/lib/salesOrderTotals'
@@ -67,7 +67,9 @@ export function SalesOrderPrintPreviewPage() {
     )
   }
 
-  const order = query.data
+  const order = query.data as SalesOrder
+  const orderLines: SalesOrderLine[] = Array.isArray(order.lines) ? order.lines : []
+  const attachments: SalesOrderAttachment[] = Array.isArray(order.attachments) ? order.attachments : []
   const documentLabel = order.orderType === 'sale' ? 'Sale Order' : 'ใบเสนอราคา'
   const formatPrintDate = (value?: string | Date | null, fallback = '-') =>
     formatAppDate(value, { ...settings, dateDisplayFormat: 'DD-MM-YYYY' }, fallback)
@@ -80,7 +82,6 @@ export function SalesOrderPrintPreviewPage() {
   const customerDisplayName = getSalesOrderCustomerDisplayName(order)
   const customerAddress = order.customerAddressText || partnerAddress
   const customerContact = getSalesOrderCustomerContactText(order)
-  const attachments = Array.isArray(order.attachments) ? order.attachments : []
   return (
     <div className="container py-4 qf-so-print">
       <div className="d-flex gap-2 justify-content-end mb-3 d-print-none">
@@ -116,7 +117,7 @@ export function SalesOrderPrintPreviewPage() {
           <div className="row g-2">
             <div className="col-md-4"><span className="text-muted">เลขที่เอกสาร:</span> <span className="font-monospace fw-semibold">{order.number || `#${order.id}`}</span></div>
             <div className="col-md-4"><span className="text-muted">ประเภทเอกสาร:</span> <span className="font-monospace fw-semibold">{documentLabel}</span></div>
-            <div className="col-md-4"><span className="text-muted">สินค้า/บริการ:</span> <span className="fw-semibold">{(order.lines || []).find((line) => line.description?.trim())?.description || '-'}</span></div>
+            <div className="col-md-4"><span className="text-muted">สินค้า/บริการ:</span> <span className="fw-semibold">{orderLines.find((line) => line.description?.trim())?.description || '-'}</span></div>
           </div>
         </div>
 
@@ -153,7 +154,7 @@ export function SalesOrderPrintPreviewPage() {
             </tr>
           </thead>
           <tbody>
-            {(order.lines || []).map((line, idx) =>
+            {orderLines.map((line: SalesOrderLine, idx: number) =>
               line.lineType === 'section' || line.lineType === 'note' ? (
                 <tr key={`${line.productId || 'item'}-${idx}`} className={line.lineType === 'section' ? 'table-primary' : 'table-light'}>
                   <td colSpan={4}>
@@ -174,7 +175,7 @@ export function SalesOrderPrintPreviewPage() {
                 </tr>
               ),
             )}
-            {(!order.lines || order.lines.length === 0) && (
+            {orderLines.length === 0 && (
               <tr>
                 <td colSpan={4} className="text-center text-muted">ไม่มีรายการสินค้า</td>
               </tr>

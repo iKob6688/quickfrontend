@@ -1,5 +1,5 @@
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useParams, useNavigate } from 'react-router-dom'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData, type QueryFunctionContext } from '@tanstack/react-query'
 import { getInvoice, createInvoice, updateInvoice, type InvoicePayload } from '@/api/services/invoices.service'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
@@ -11,7 +11,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { extractFieldErrors, type FieldErrors } from '@/lib/formErrors'
 import { clearDraft, loadDraft, loadRecentNotes, pushRecentNote, saveDraft } from '@/lib/formDrafts'
 import { toast } from '@/lib/toastStore'
-import { listPartners, getPartner } from '@/api/services/partners.service'
+import { listPartners, getPartner, type PartnerListResponse, type PartnerSummary } from '@/api/services/partners.service'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { Combobox, type ComboboxOption } from '@/components/ui/Combobox'
 import { ProductCombobox } from '@/features/sales/ProductCombobox'
@@ -42,11 +42,11 @@ function hasMeaningfulInvoiceDraft(data: InvoicePayload) {
 export function InvoiceFormPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
   const queryClient = useQueryClient()
   const isEdit = !!id
   const formatDateTime = useAppDateTimeFormatter()
   const invoiceId = id ? Number.parseInt(id, 10) : null
+  const searchParams = useMemo(() => new URLSearchParams(window.location.search), [])
   const customerIdFromQuery = searchParams.get('customerId')
   const partnerIdFromQuery = searchParams.get('partnerId')
   const customerIdPrefill = customerIdFromQuery
@@ -80,28 +80,28 @@ export function InvoiceFormPage() {
   const debouncedCustomerSearch = useDebouncedValue(customerSearch, 250)
   const customerLimit = 20
 
-  const customerOptionsQuery = useInfiniteQuery({
+  const customerOptionsQuery = useInfiniteQuery<PartnerListResponse, Error, InfiniteData<PartnerListResponse>, readonly unknown[], number>({
     queryKey: ['partner-selector', debouncedCustomerSearch],
     enabled: !isEdit && debouncedCustomerSearch.trim().length >= 0,
     initialPageParam: 0,
-    queryFn: ({ pageParam }) =>
+    queryFn: (context: QueryFunctionContext<readonly unknown[], number>) =>
       listPartners({
         q: debouncedCustomerSearch || undefined,
         active: true,
         limit: customerLimit,
-        offset: pageParam,
+        offset: Number(context.pageParam ?? 0),
       }),
-    getNextPageParam: (lastPage, allPages) => {
+    getNextPageParam: (lastPage: PartnerListResponse, allPages: PartnerListResponse[]) => {
       const loaded = allPages.reduce((acc, p) => acc + (p?.items?.length ?? 0), 0)
       if (loaded >= (lastPage?.total ?? 0)) return undefined
       if ((lastPage?.items?.length ?? 0) < customerLimit) return undefined
       return loaded
     },
     staleTime: 30_000,
-  })
+  } as any)
 
   const customerItems = useMemo(
-    () => customerOptionsQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    () => customerOptionsQuery.data?.pages.flatMap((p: PartnerListResponse) => p.items) ?? [],
     [customerOptionsQuery.data?.pages],
   )
   const customerTotal = customerOptionsQuery.data?.pages[0]?.total
@@ -139,7 +139,7 @@ export function InvoiceFormPage() {
 
   const createMutation = useMutation({
     mutationFn: (payload: InvoicePayload) => createInvoice(payload),
-    onSuccess: (data) => {
+    onSuccess: (data: Awaited<ReturnType<typeof createInvoice>>) => {
       clearDraft(INVOICE_DRAFT_KEY)
       if (formData.notes?.trim()) {
         pushRecentNote(INVOICE_RECENT_NOTES_KEY, formData.notes)
@@ -149,7 +149,7 @@ export function InvoiceFormPage() {
       toast.success('สร้างใบแจ้งหนี้สำเร็จ', data.number ? `เลขที่: ${data.number}` : undefined)
       navigate(`/sales/invoices/${data.id}`)
     },
-    onError: (err) => {
+    onError: (err: unknown) => {
       const fe = extractFieldErrors(err)
       if (fe) setFieldErrors(fe)
       toast.error('สร้างใบแจ้งหนี้ไม่สำเร็จ', err instanceof Error ? err.message : undefined)
@@ -168,7 +168,7 @@ export function InvoiceFormPage() {
       toast.success('บันทึกสำเร็จ')
       navigate(`/sales/invoices/${invoiceId}`)
     },
-    onError: (err) => {
+    onError: (err: unknown) => {
       const fe = extractFieldErrors(err)
       if (fe) setFieldErrors(fe)
       toast.error('บันทึกไม่สำเร็จ', err instanceof Error ? err.message : undefined)
@@ -328,7 +328,7 @@ export function InvoiceFormPage() {
                     onLoadMore={() => {
                       if (customerOptionsQuery.hasNextPage) customerOptionsQuery.fetchNextPage()
                     }}
-                    options={customerItems.map<ComboboxOption>((p) => ({
+                    options={customerItems.map<ComboboxOption>((p: PartnerSummary) => ({
                       id: p.id,
                       label: p.name,
                       meta: p.vat ? `เลขผู้เสียภาษี: ${p.vat}` : p.email ? p.email : `รหัส: ${p.id}`,

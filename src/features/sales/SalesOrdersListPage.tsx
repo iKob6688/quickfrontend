@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
+import { useInfiniteQuery, useQuery, type InfiniteData, type QueryFunctionContext } from '@tanstack/react-query'
 import { Spinner } from 'react-bootstrap'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
-import { listSalesOrders, type SalesOrderStatus } from '@/api/services/sales-orders.service'
+import { listSalesOrders, type SalesOrderListItem, type SalesOrderStatus } from '@/api/services/sales-orders.service'
 import { useAppDateFormatter } from '@/lib/dateFormat'
 import { useSettingsStore } from '@/app/core/storage/settingsStore'
 import { getSalesOrderCustomerDisplayName } from '@/lib/salesOrderPresentation'
@@ -20,7 +20,7 @@ export function SalesOrdersListPage() {
   const navigate = useNavigate()
   const formatDate = useAppDateFormatter()
   const scanSlipEnabled = useSettingsStore((state) => state.settings.scanSlipEnabled)
-  const [searchParams] = useSearchParams()
+  const searchParams = useMemo(() => new URLSearchParams(window.location.search), [])
   const typeParam = searchParams.get('type')
   const forcedOrderType = typeParam === 'sale' ? 'sale' : typeParam === 'quotation' ? 'quotation' : undefined
   const [tab, setTab] = useState<StatusTab>('all')
@@ -29,25 +29,25 @@ export function SalesOrdersListPage() {
   const qDebounced = useDebouncedValue(q, 300)
   const limit = 30
 
-  const query = useInfiniteQuery({
+  const query = useInfiniteQuery<SalesOrderListItem[], Error, InfiniteData<SalesOrderListItem[]>, readonly unknown[], number>({
     queryKey: ['salesOrders', tab, forcedOrderType, qDebounced, limit],
     initialPageParam: 0,
-    queryFn: ({ pageParam }) =>
+    queryFn: (context: QueryFunctionContext<readonly unknown[], number>) =>
       listSalesOrders({
         status: tab === 'all' ? undefined : tab,
         orderType: forcedOrderType,
         search: qDebounced || undefined,
         limit,
-        offset: pageParam,
+        offset: Number(context.pageParam ?? 0),
       }),
-    getNextPageParam: (lastPage, allPages) => {
+    getNextPageParam: (lastPage: SalesOrderListItem[], allPages: SalesOrderListItem[][]) => {
       if (!lastPage || lastPage.length < limit) return undefined
-      return allPages.reduce((acc, page) => acc + page.length, 0)
+      return allPages.reduce((acc: number, page: SalesOrderListItem[]) => acc + page.length, 0)
     },
     staleTime: 30_000,
-  })
+  } as any)
 
-  const orders = useMemo(() => query.data?.pages.flatMap((p) => p) ?? [], [query.data?.pages])
+  const orders: SalesOrderListItem[] = useMemo(() => query.data?.pages.flatMap((p: SalesOrderListItem[]) => p) ?? [], [query.data?.pages])
   const countsQuery = useQuery({
     queryKey: ['salesOrders-counts', forcedOrderType, qDebounced],
     queryFn: () =>
@@ -62,7 +62,7 @@ export function SalesOrdersListPage() {
 
   const statusCounts = useMemo(() => {
     const base = { all: 0, draft: 0, sent: 0, sale: 0, done: 0, cancel: 0 } as Record<StatusTab, number>
-    for (const row of countsQuery.data ?? []) {
+    for (const row of (countsQuery.data ?? []) as SalesOrderListItem[]) {
       base.all += 1
       base[row.status] += 1
     }
@@ -84,7 +84,7 @@ export function SalesOrdersListPage() {
 
   const rows = useMemo(
     () =>
-      filteredOrders.map((order) => ({
+      filteredOrders.map((order: SalesOrderListItem) => ({
         id: order.id,
         number: order.number,
         orderType: order.orderType,

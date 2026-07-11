@@ -22,6 +22,7 @@ export interface SalesOrderLine {
   quantity: number
   unitPrice: number
   discount?: number
+  discountPercent?: number
   taxIds?: number[]
   subtotal: number
   totalTax: number
@@ -162,6 +163,8 @@ interface BackendSalesOrder {
     price_unit?: number | string
     unitPrice?: number | string
     discount?: number | string
+    discount_percent?: number | string
+    discountPercent?: number | string
     tax_ids?: number[]
     taxIds?: number[]
     price_subtotal?: number | string
@@ -360,7 +363,8 @@ function mapBackendOrderToDetail(backend: BackendSalesOrder): SalesOrder {
       description: String(line.description ?? line.name ?? ''),
       quantity: toNumber(line.quantity),
       unitPrice: toNumber(line.unitPrice ?? line.price_unit),
-      discount: toNumber(line.discount),
+      discount: toNumber(line.discount ?? line.discount_percent ?? line.discountPercent),
+      discountPercent: toNumber(line.discount_percent ?? line.discountPercent ?? line.discount),
       taxIds: Array.isArray(line.taxIds) ? line.taxIds : Array.isArray(line.tax_ids) ? line.tax_ids : [],
       subtotal: toNumber(line.subtotal ?? line.price_subtotal),
       totalTax: toNumber(line.totalTax ?? line.price_tax),
@@ -432,14 +436,11 @@ function getCompatibleCustomerSummary(payload: SalesOrderPayload) {
 
 function getCompatibleNotes(payload: SalesOrderPayload, includeExtraInfo: boolean) {
   const notes = String(payload.notes || '').trim()
-  const internalNotes = String(payload.internalNotes || '').trim()
   if (!includeExtraInfo) {
     return notes || undefined
   }
 
-  const blocks = [notes ? `หมายเหตุลูกค้า:\n${notes}` : '', internalNotes ? `โน้ตภายในบริษัท:\n${internalNotes}` : '']
-    .filter(Boolean)
-    .join('\n\n')
+  const blocks = notes ? `หมายเหตุลูกค้า:\n${notes}` : ''
   const customerSummary = getCompatibleCustomerSummary(payload)
   const attachmentSummary =
     Array.isArray(payload.attachments) && payload.attachments.length > 0
@@ -467,7 +468,11 @@ function toBackendPayload(payload: SalesOrderPayload, mode: 'full' | 'legacy' = 
       description: line.description,
       quantity: line.lineType && line.lineType !== 'normal' ? 0 : line.quantity,
       unit_price: line.lineType && line.lineType !== 'normal' ? 0 : line.unitPrice,
-      ...(typeof line.discount === 'number' && (!line.lineType || line.lineType === 'normal') ? { discount: line.discount } : {}),
+      ...(typeof (line.discountPercent ?? line.discount) === 'number' && (!line.lineType || line.lineType === 'normal')
+        ? {
+            discount: typeof line.discountPercent === 'number' ? line.discountPercent : line.discount,
+          }
+        : {}),
       ...(Array.isArray(line.taxIds) && (!line.lineType || line.lineType === 'normal') ? { tax_ids: line.taxIds } : {}),
     })),
     ...(getCompatibleNotes(payload, isLegacy) ? { notes: getCompatibleNotes(payload, isLegacy) } : {}),
@@ -733,13 +738,7 @@ export async function uploadSalesOrderAttachments(orderId: number, files: File[]
     return []
   }
 
-  const response = await apiClient.post(
-    `${basePath}/${orderId}/attachments/upload`,
-    toAttachmentFormData(files),
-    {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    },
-  )
+  const response = await apiClient.post(`${basePath}/${orderId}/attachments/upload`, toAttachmentFormData(files))
 
   const data = unwrapResponse<SalesOrderAttachmentUploadResult | SalesOrderAttachment[]>(response)
   if (Array.isArray(data)) {

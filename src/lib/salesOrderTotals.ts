@@ -10,7 +10,11 @@ export type SalesOrderTaxLike = {
 export type SalesOrderTotalsLine = {
   line: SalesOrderLine
   gross: number
+  discountPercent: number
   discountAmount: number
+  untaxedAmount: number
+  taxAmount: number
+  totalIncludingTax: number
   subtotal: number
   totalTax: number
   total: number
@@ -20,9 +24,13 @@ export type SalesOrderTotals = {
   lineTotals: SalesOrderTotalsLine[]
   grossSubtotal: number
   discountAmount: number
+  untaxedAmount: number
+  taxAmount: number
+  totalIncludingTax: number
+  withholdingAmount: number
+  amountDue: number
   afterDiscount: number
   vatAmount: number
-  withholdingAmount: number
   grandTotal: number
 }
 
@@ -33,6 +41,14 @@ function toNumberLike(value: unknown, fallback = 0): number {
     return Number.isFinite(parsed) ? parsed : fallback
   }
   return fallback
+}
+
+function clampNumber(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
+}
+
+function roundMoney(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
 export function calculateSalesOrderTotals(
@@ -57,12 +73,17 @@ export function calculateSalesOrderTotals(
       return {
         line: {
           ...line,
+          discount: 0,
           subtotal: 0,
           totalTax: 0,
           total: 0,
         },
         gross: 0,
+        discountPercent: 0,
         discountAmount: 0,
+        untaxedAmount: 0,
+        taxAmount: 0,
+        totalIncludingTax: 0,
         subtotal: 0,
         totalTax: 0,
         total: 0,
@@ -71,59 +92,83 @@ export function calculateSalesOrderTotals(
 
     const quantity = toNumberLike(line.quantity, 0)
     const unitPrice = toNumberLike(line.unitPrice, 0)
-    const gross = quantity * unitPrice
-    const discountAmount = Math.max(0, toNumberLike(line.discount, 0))
-    const afterDiscount = Math.max(0, gross - discountAmount)
+    const gross = roundMoney(quantity * unitPrice)
+    const discountPercent = clampNumber(toNumberLike(line.discountPercent ?? line.discount, 0), 0, 100)
+    const discountAmount = roundMoney((gross * discountPercent) / 100)
+    const grossAfterDiscount = roundMoney(Math.max(0, gross - discountAmount))
 
-    let subtotal = afterDiscount
-    let totalTax = 0
+    let untaxedAmount = grossAfterDiscount
+    let taxAmount = 0
+    const taxIds = Array.isArray(line.taxIds) ? line.taxIds.filter((taxId) => Number.isFinite(Number(taxId)) && Number(taxId) > 0) : []
     if (vatEnabled) {
-      const firstTaxId = Array.isArray(line.taxIds) ? Number(line.taxIds[0] || 0) : 0
-      const firstTax = firstTaxId > 0 ? taxMap.get(firstTaxId) : undefined
-      if (firstTax && String(firstTax.amountType || firstTax.type || 'percent') === 'percent') {
-        const rate = Number(firstTax.amount || 0)
-        if (rate > 0) {
-          if (firstTax.priceInclude) {
-            subtotal = afterDiscount / (1 + rate / 100)
-            totalTax = afterDiscount - subtotal
+      const taxes = taxIds
+        .map((taxId) => ({ taxId, tax: taxMap.get(Number(taxId)) }))
+        .filter((entry): entry is { taxId: number; tax: SalesOrderTaxLike } => Boolean(entry.tax))
+
+      if (taxes.length > 0) {
+        let runningBase = grossAfterDiscount
+        for (const { tax } of taxes) {
+          const rate = clampNumber(toNumberLike(tax.amount, 0), 0, 100)
+          const amountType = String(tax.amountType || tax.type || 'percent')
+          if (amountType !== 'percent' || rate <= 0) {
+            continue
+          }
+
+          if (tax.priceInclude) {
+            const untaxedBefore = runningBase
+            runningBase = roundMoney(runningBase / (1 + rate / 100))
+            taxAmount = roundMoney(taxAmount + (untaxedBefore - runningBase))
           } else {
-            totalTax = subtotal * (rate / 100)
+            const taxForLine = roundMoney(runningBase * (rate / 100))
+            taxAmount = roundMoney(taxAmount + taxForLine)
           }
         }
+        untaxedAmount = roundMoney(runningBase)
       } else if (vatRate > 0) {
-        totalTax = subtotal * (vatRate / 100)
+        taxAmount = roundMoney(grossAfterDiscount * (vatRate / 100))
       }
     }
+
+    const totalIncludingTax = roundMoney(untaxedAmount + taxAmount)
 
     return {
       line: {
         ...line,
-        subtotal,
-        totalTax,
-        total: subtotal + totalTax,
+        subtotal: untaxedAmount,
+        totalTax: taxAmount,
+        total: totalIncludingTax,
       },
       gross,
+      discountPercent,
       discountAmount,
-      subtotal,
-      totalTax,
-      total: subtotal + totalTax,
+      untaxedAmount,
+      taxAmount,
+      totalIncludingTax,
+      subtotal: untaxedAmount,
+      totalTax: taxAmount,
+      total: totalIncludingTax,
     }
   })
 
   const grossSubtotal = lineTotals.reduce((sum, row) => sum + row.gross, 0)
   const discountAmount = lineTotals.reduce((sum, row) => sum + row.discountAmount, 0)
-  const afterDiscount = Math.max(0, grossSubtotal - discountAmount)
-  const vatAmount = vatEnabled ? lineTotals.reduce((sum, row) => sum + row.totalTax, 0) : 0
-  const withholdingAmount = withholdingTaxEnabled ? (afterDiscount * withholdingTaxRate) / 100 : 0
-  const grandTotal = afterDiscount + vatAmount - withholdingAmount
+  const untaxedAmount = lineTotals.reduce((sum, row) => sum + row.untaxedAmount, 0)
+  const taxAmount = vatEnabled ? lineTotals.reduce((sum, row) => sum + row.taxAmount, 0) : 0
+  const totalIncludingTax = roundMoney(untaxedAmount + taxAmount)
+  const withholdingAmount = withholdingTaxEnabled ? roundMoney((untaxedAmount * withholdingTaxRate) / 100) : 0
+  const amountDue = roundMoney(totalIncludingTax - withholdingAmount)
 
   return {
     lineTotals,
     grossSubtotal,
     discountAmount,
-    afterDiscount,
-    vatAmount,
+    untaxedAmount,
+    taxAmount,
+    totalIncludingTax,
     withholdingAmount,
-    grandTotal,
+    amountDue,
+    afterDiscount: untaxedAmount,
+    vatAmount: taxAmount,
+    grandTotal: amountDue,
   }
 }

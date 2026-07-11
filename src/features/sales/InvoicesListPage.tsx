@@ -5,14 +5,15 @@ import { Input } from '@/components/ui/Input'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Badge } from '@/components/ui/Badge'
 import { useMemo, useState } from 'react'
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery, useQueryClient, type InfiniteData, type QueryFunctionContext } from '@tanstack/react-query'
 import { listInvoices } from '@/api/services/invoices.service'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Spinner } from 'react-bootstrap'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { useAppDateFormatter } from '@/lib/dateFormat'
 import { submitInvoiceEtax } from '@/api/services/etax.service'
 import { toast } from '@/lib/toastStore'
+import { type InvoiceListItem } from '@/api/services/invoices.service'
 
 interface InvoicesListPageProps {
   mode?: 'invoices' | 'receipts'
@@ -22,7 +23,7 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const formatDate = useAppDateFormatter()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const searchParams = useMemo(() => new URLSearchParams(window.location.search), [])
   type StatusTab = 'all' | 'draft' | 'posted' | 'paid' | 'cancelled' | 'due'
   const [tab, setTab] = useState<StatusTab>(
     mode === 'receipts' ? 'paid' : searchParams.get('payment') === 'due' ? 'due' : 'all',
@@ -33,10 +34,11 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
   const isReceiptMode = mode === 'receipts'
   const [submittingEtaxId, setSubmittingEtaxId] = useState<number | null>(null)
 
-  const query = useInfiniteQuery({
+  const query = useInfiniteQuery<InvoiceListItem[], Error, InfiniteData<InvoiceListItem[]>, readonly unknown[], number>({
     queryKey: ['invoices', mode, tab, qDebounced, limit],
     initialPageParam: 0,
-    queryFn: async ({ pageParam }) => {
+    queryFn: async (context: QueryFunctionContext<readonly unknown[], number>) => {
+      const pageParam = Number(context.pageParam ?? 0)
       const status =
         isReceiptMode
           ? tab === 'all'
@@ -52,16 +54,16 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
         offset: pageParam,
       })
     },
-    getNextPageParam: (lastPage, allPages) => {
+    getNextPageParam: (lastPage: InvoiceListItem[], allPages: InvoiceListItem[][]) => {
       // backend doesn't return total; we stop when the page returns fewer items than `limit`
       if (!lastPage || lastPage.length < limit) return undefined
-      return allPages.reduce((acc, p) => acc + (p?.length ?? 0), 0)
+      return allPages.reduce((acc: number, p: InvoiceListItem[]) => acc + (p?.length ?? 0), 0)
     },
     staleTime: 30_000,
-  })
+  } as any)
 
   const invoices = useMemo(() => {
-    return query.data?.pages.flatMap((p) => p) ?? []
+    return query.data?.pages.flatMap((p: InvoiceListItem[]) => p) ?? []
   }, [query.data?.pages])
   const countsQuery = useQuery({
     queryKey: ['invoices-counts', mode, qDebounced],
@@ -76,7 +78,7 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
   })
   const statusCounts = useMemo(() => {
     const base = { all: 0, draft: 0, posted: 0, paid: 0, cancelled: 0, due: 0 } as Record<StatusTab, number>
-    for (const inv of countsQuery.data ?? []) {
+    for (const inv of (countsQuery.data ?? []) as InvoiceListItem[]) {
       if (isReceiptMode) {
         if (inv.status !== 'draft' && inv.status !== 'cancelled') base.all += 1
       } else {
@@ -93,14 +95,14 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
   // Transform API data to table rows
   const rows = useMemo(() => {
     return invoices
-      .filter((inv) => (isReceiptMode ? inv.status !== 'draft' && inv.status !== 'cancelled' : true))
-      .filter((inv) => {
+      .filter((inv: InvoiceListItem) => (isReceiptMode ? inv.status !== 'draft' && inv.status !== 'cancelled' : true))
+      .filter((inv: InvoiceListItem) => {
         if (isReceiptMode || tab !== 'due') return true
         const dueAmount = inv.amountDue ?? Math.max(0, (inv.total ?? 0) - (inv.amountPaid ?? 0))
         const isPaid = inv.status === 'paid' || inv.paymentState === 'paid' || dueAmount <= 0
         return !isPaid && inv.status !== 'draft' && inv.status !== 'cancelled'
       })
-      .map((inv) => ({
+      .map((inv: InvoiceListItem) => ({
       id: inv.id,
       number: inv.number,
       customer: inv.customerName,
@@ -371,12 +373,6 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
             const nextValue = next as StatusTab
             if (isReceiptMode && nextValue !== 'paid' && nextValue !== 'all') return
             setTab(nextValue)
-            if (!isReceiptMode) {
-              const q = new URLSearchParams(searchParams)
-              if (nextValue === 'due') q.set('payment', 'due')
-              else q.delete('payment')
-              setSearchParams(q, { replace: true })
-            }
           }}
           items={
             isReceiptMode
@@ -410,12 +406,7 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
               onClick={() => {
                 setQ('')
                 setTab(isReceiptMode ? 'paid' : 'all')
-                if (!isReceiptMode) {
-                  const next = new URLSearchParams(searchParams)
-                  next.delete('payment')
-                  setSearchParams(next, { replace: true })
-                }
-              }}
+            }}
             >
               ล้างตัวกรอง
             </Button>
@@ -492,7 +483,7 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
               </div>
             ) : (
               <div className="qf-invoice-mobile-list__items">
-                {rows.map((row) => (
+              {rows.map((row: InvoiceRow) => (
                   <article key={row.id} className="qf-invoice-mobile-card">
                     <div className="qf-invoice-mobile-card__top">
                       <button

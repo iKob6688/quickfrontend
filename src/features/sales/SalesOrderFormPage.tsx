@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData, type QueryFunctionContext } from '@tanstack/react-query'
 import { Alert, Modal, Spinner } from 'react-bootstrap'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -23,7 +23,7 @@ import {
   type SalesOrderAttachmentDraft,
 } from '@/lib/salesOrderDrafts'
 import { toast } from '@/lib/toastStore'
-import { createPartner, getPartner, listPartners, type PartnerUpsertPayload } from '@/api/services/partners.service'
+import { createPartner, getPartner, listPartners, type PartnerListResponse, type PartnerSummary, type PartnerUpsertPayload } from '@/api/services/partners.service'
 import { getDefaultVatTaxId, listVatTaxes, type TaxAdminListItem } from '@/api/services/taxes.service'
 import {
   createSalesOrder,
@@ -99,6 +99,7 @@ function createSalesLine(lineType: SalesOrderLineKind = 'normal'): SalesOrderLin
     quantity: lineType === 'normal' ? 1 : 0,
     unitPrice: 0,
     discount: 0,
+    discountPercent: 0,
     taxIds: [],
     subtotal: 0,
     totalTax: 0,
@@ -113,7 +114,8 @@ function normalizeSalesLine(line: Partial<SalesOrderLine>): SalesOrderLine {
     description: safeString(line.description),
     quantity: toNumberLike(line.quantity, 1),
     unitPrice: toNumberLike(line.unitPrice, 0),
-    discount: toNumberLike(line.discount, 0),
+    discount: toNumberLike(line.discountPercent ?? line.discount, 0),
+    discountPercent: toNumberLike(line.discountPercent ?? line.discount, 0),
     taxIds: Array.isArray(line.taxIds)
       ? line.taxIds.map((id) => Number(id)).filter((id) => Number.isFinite(id) && id > 0)
       : [],
@@ -299,7 +301,7 @@ function buildPrintHtml(params: {
   notes: string
   lines: Array<{ description: string; quantity: number; unitPrice: number; total: number; lineType?: SalesOrderLineKind }>
   grossSubtotal: number
-  discount: number
+  discountAmount: number
   afterDiscount: number
   vatAmount: number
   withholdingAmount: number
@@ -385,7 +387,7 @@ function buildPrintHtml(params: {
       </div>
       <div class="summary">
         <div class="summary-row"><span>ยอดก่อนส่วนลด</span><span>${asCurrency(params.grossSubtotal, params.currency)}</span></div>
-        <div class="summary-row"><span>ส่วนลด</span><span>${asCurrency(params.discount, params.currency)}</span></div>
+        <div class="summary-row"><span>ส่วนลด</span><span>${asCurrency(params.discountAmount, params.currency)}</span></div>
         <div class="summary-row"><span>หลังหักส่วนลด</span><span>${asCurrency(params.afterDiscount, params.currency)}</span></div>
         <div class="summary-row"><span>VAT</span><span>${asCurrency(params.vatAmount, params.currency)}</span></div>
         <div class="summary-row"><span>หัก ณ ที่จ่าย</span><span>${asCurrency(params.withholdingAmount, params.currency)}</span></div>
@@ -445,14 +447,28 @@ function buildSalesOrderPrintPayload(params: {
   documentNumber: string
   renderedLineTotals: ReturnType<typeof calculateSalesOrderTotals>['lineTotals']
   grossSubtotal: number
-  discount: number
+  discountAmount: number
   afterDiscount: number
   vatAmount: number
   withholdingAmount: number
   grandTotal: number
   attachmentItems: SalesOrderAttachmentDraft[]
 }) {
-  const { formData, selectedPartnerName, orderType, isEdit, documentNumber, renderedLineTotals, grossSubtotal, discount, afterDiscount, vatAmount, withholdingAmount, grandTotal, attachmentItems } = params
+  const {
+    formData,
+    selectedPartnerName,
+    orderType,
+    isEdit,
+    documentNumber,
+    renderedLineTotals,
+    grossSubtotal,
+    discountAmount,
+    afterDiscount,
+    vatAmount,
+    withholdingAmount,
+    grandTotal,
+    attachmentItems,
+  } = params
   return buildPrintHtml({
     title: getSalesOrderDocumentTitle(orderType, isEdit),
     documentNumber,
@@ -488,7 +504,7 @@ function buildSalesOrderPrintPayload(params: {
       }
     }),
     grossSubtotal,
-    discount,
+    discountAmount,
     afterDiscount,
     vatAmount,
     withholdingAmount,
@@ -502,10 +518,10 @@ export function SalesOrderFormPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const formatDateTime = useAppDateTimeFormatter()
-  const [searchParams] = useSearchParams()
 
   const isEdit = !!id
   const orderId = id ? Number.parseInt(id, 10) : null
+  const searchParams = useMemo(() => new URLSearchParams(window.location.search), [])
   const partnerIdRaw = searchParams.get('partnerId')
   const partnerIdPrefill = partnerIdRaw ? Number(partnerIdRaw) : null
   const orderTypeParam = searchParams.get('orderType')
@@ -572,7 +588,7 @@ export function SalesOrderFormPage() {
     staleTime: 60_000,
   })
 
-  const saleTaxOptions = useMemo(() => salesTaxesQuery.data?.items ?? [], [salesTaxesQuery.data])
+  const saleTaxOptions: TaxAdminListItem[] = useMemo(() => salesTaxesQuery.data?.items ?? [], [salesTaxesQuery.data])
   const saleTaxMap = useMemo(() => new Map<number, TaxAdminListItem>(saleTaxOptions.map((tax) => [tax.id, tax])), [saleTaxOptions])
   const defaultSaleTaxId = useMemo(() => getDefaultVatTaxId(saleTaxOptions), [saleTaxOptions])
   const defaultSaleTax = defaultSaleTaxId ? saleTaxMap.get(defaultSaleTaxId) : undefined
@@ -582,26 +598,29 @@ export function SalesOrderFormPage() {
     return Number.isFinite(amount) && amount > 0 ? amount : 7
   }, [defaultSaleTax])
 
-  const partnerOptionsQuery = useInfiniteQuery({
+  const partnerOptionsQuery = useInfiniteQuery<PartnerListResponse, Error, InfiniteData<PartnerListResponse>, readonly unknown[], number>({
     queryKey: ['partner-selector-sales-order', debouncedPartnerSearch],
     initialPageParam: 0,
-    queryFn: ({ pageParam }) =>
+    queryFn: (context: QueryFunctionContext<readonly unknown[], number>) =>
       listPartners({
         q: debouncedPartnerSearch || undefined,
         active: true,
         limit: partnerLimit,
-        offset: pageParam,
+        offset: Number(context.pageParam ?? 0),
       }),
-    getNextPageParam: (lastPage, allPages) => {
+    getNextPageParam: (lastPage: PartnerListResponse, allPages: PartnerListResponse[]) => {
       const loaded = allPages.reduce((acc, p) => acc + (p?.items?.length ?? 0), 0)
       if (loaded >= (lastPage?.total ?? 0)) return undefined
       if ((lastPage?.items?.length ?? 0) < partnerLimit) return undefined
       return loaded
     },
     staleTime: 30_000,
-  })
+  } as any)
 
-  const partnerItems = useMemo(() => partnerOptionsQuery.data?.pages.flatMap((p) => p.items) ?? [], [partnerOptionsQuery.data?.pages])
+  const partnerItems = useMemo(
+    () => partnerOptionsQuery.data?.pages.flatMap((p: PartnerListResponse) => p.items) ?? [],
+    [partnerOptionsQuery.data?.pages],
+  )
   const partnerTotal = partnerOptionsQuery.data?.pages[0]?.total
 
   const selectedPartnerQuery = useQuery({
@@ -672,7 +691,7 @@ export function SalesOrderFormPage() {
     if (!existingOrder) return
     const timer = window.setTimeout(() => {
       setFormData(normalizeOrderToFormState(existingOrder, initialPreferences))
-      setAttachmentItems((existingOrder.attachments || []).map((attachment) => toAttachmentDraft(attachment)))
+      setAttachmentItems((existingOrder.attachments || []).map((attachment: SalesOrderAttachment) => toAttachmentDraft(attachment)))
     }, 0)
     return () => window.clearTimeout(timer)
   }, [existingOrder, isEdit, initialPreferences])
@@ -732,7 +751,7 @@ export function SalesOrderFormPage() {
 
   const createMutation = useMutation({
     mutationFn: (payload: SalesOrderPayload) => createSalesOrder(payload),
-    onError: (err) => {
+    onError: (err: unknown) => {
       const fe = extractFieldErrors(err)
       if (fe) setFieldErrors(fe)
       toast.error('สร้างเอกสารขายไม่สำเร็จ', err instanceof Error ? err.message : undefined)
@@ -741,7 +760,7 @@ export function SalesOrderFormPage() {
 
   const updateMutation = useMutation({
     mutationFn: (payload: SalesOrderPayload) => updateSalesOrder(orderId!, payload),
-    onError: (err) => {
+    onError: (err: unknown) => {
       const fe = extractFieldErrors(err)
       if (fe) setFieldErrors(fe)
       toast.error('บันทึกเอกสารขายไม่สำเร็จ', err instanceof Error ? err.message : undefined)
@@ -901,7 +920,8 @@ export function SalesOrderFormPage() {
           description: computed.description || '',
           quantity: toNumberLike(computed.quantity),
           unitPrice: toNumberLike(computed.unitPrice),
-          discount: toNumberLike(computed.discount),
+          discount: toNumberLike(computed.discountPercent ?? computed.discount),
+          discountPercent: toNumberLike(computed.discountPercent ?? computed.discount),
           taxIds: Array.isArray(computed.taxIds)
             ? computed.taxIds.filter((taxId) => Number.isFinite(Number(taxId)) && Number(taxId) > 0)
             : [],
@@ -964,26 +984,49 @@ export function SalesOrderFormPage() {
     const pendingFiles = attachmentItems.filter((attachment): attachment is SalesOrderAttachmentDraft & { file: File } =>
       Boolean(attachment.file),
     )
-    if (!pendingFiles.length) return []
+    if (!pendingFiles.length) return { uploaded: [] as SalesOrderAttachment[], failedNames: [] as string[] }
 
-    try {
-      const uploaded = await uploadSalesOrderAttachments(
-        savedOrderId,
-        pendingFiles.map((attachment) => attachment.file),
-      )
-      if (uploaded.length > 0) {
-        setAttachmentItems((current) => [
-          ...current.filter((attachment) => !attachment.file),
-          ...uploaded.map((attachment) => toAttachmentDraft(attachment)),
-        ])
+    const uploadResults: Array<{ index: number; uploaded: SalesOrderAttachment[] }> = []
+    const failedNames: string[] = []
+
+    for (const attachment of pendingFiles) {
+      try {
+        const uploaded = await uploadSalesOrderAttachments(savedOrderId, [attachment.file])
+        if (uploaded.length > 0) {
+          const currentIndex = attachmentItems.findIndex((item) => item === attachment)
+          if (currentIndex >= 0) {
+            uploadResults.push({ index: currentIndex, uploaded })
+          }
+        } else {
+          failedNames.push(attachment.name)
+        }
+      } catch {
+        failedNames.push(attachment.name)
       }
-      return uploaded
-    } catch (err) {
-      toast.warning(
-        'ไฟล์แนบยังไม่ถูกอัปโหลดจริง จะเก็บเฉพาะชื่อไฟล์จนกว่า backend รองรับ',
-        err instanceof Error ? err.message : undefined,
-      )
-      return []
+    }
+
+    if (uploadResults.length > 0) {
+      setAttachmentItems((current) => {
+        const next: SalesOrderAttachmentDraft[] = []
+        current.forEach((item, itemIndex) => {
+          const match = uploadResults.find((result) => result.index === itemIndex)
+          if (match) {
+            next.push(...match.uploaded.map((attachment) => toAttachmentDraft(attachment)))
+            return
+          }
+          next.push(item)
+        })
+        return next
+      })
+    }
+
+    if (failedNames.length > 0) {
+      toast.info('ไฟล์แนบยังไม่ถูกอัปโหลดจริง จะเก็บเฉพาะชื่อไฟล์จนกว่า backend รองรับ')
+    }
+
+    return {
+      uploaded: uploadResults.flatMap((result) => result.uploaded),
+      failedNames,
     }
   }
 
@@ -997,14 +1040,13 @@ export function SalesOrderFormPage() {
       const payload = buildPayload()
       const savedOrder = isEdit ? await updateMutation.mutateAsync(payload) : await createMutation.mutateAsync(payload)
       persistSavedOrderState(savedOrder)
-      const uploadedAttachments = await uploadPendingAttachments(savedOrder.id)
-      if (uploadedAttachments.length > 0) {
-        queryClient.invalidateQueries({ queryKey: ['salesOrder', savedOrder.id] })
+      const uploadResult = await uploadPendingAttachments(savedOrder.id)
+      await queryClient.invalidateQueries({ queryKey: ['salesOrder', savedOrder.id] })
+      if (uploadResult.failedNames.length > 0) {
+        toast.info('บันทึกใบเสนอราคาแล้ว แต่ไฟล์บางรายการอัปโหลดไม่สำเร็จ', uploadResult.failedNames.join(', '))
+        return
       }
-      toast.success(
-        isEdit ? 'บันทึกเอกสารขายสำเร็จ' : 'สร้างเอกสารขายสำเร็จ',
-        savedOrder.number ? `เลขที่: ${savedOrder.number}` : undefined,
-      )
+      toast.success(isEdit ? 'บันทึกเอกสารขายสำเร็จ' : 'สร้างเอกสารขายสำเร็จ', savedOrder.number ? `เลขที่: ${savedOrder.number}` : undefined)
       navigate(`/sales/orders/${savedOrder.id}`)
     } catch {
       // Mutation-level errors are already surfaced via toast/onError.
@@ -1026,7 +1068,7 @@ export function SalesOrderFormPage() {
       documentNumber,
       renderedLineTotals,
       grossSubtotal: grossSubtotalAmount,
-      discount: discountAmount,
+      discountAmount,
       afterDiscount: afterDiscountAmount,
       vatAmount,
       withholdingAmount,
@@ -1054,7 +1096,7 @@ export function SalesOrderFormPage() {
       documentNumber,
       renderedLineTotals,
       grossSubtotal: grossSubtotalAmount,
-      discount: discountAmount,
+      discountAmount,
       afterDiscount: afterDiscountAmount,
       vatAmount,
       withholdingAmount,
@@ -1346,7 +1388,7 @@ export function SalesOrderFormPage() {
                   onLoadMore={() => {
                     if (partnerOptionsQuery.hasNextPage) partnerOptionsQuery.fetchNextPage()
                   }}
-                  options={partnerItems.map<ComboboxOption>((p) => ({
+                  options={partnerItems.map<ComboboxOption>((p: PartnerSummary) => ({
                     id: p.id,
                     label: p.name,
                     meta:
@@ -1361,7 +1403,7 @@ export function SalesOrderFormPage() {
                   total={partnerTotal}
                   emptyText="ไม่พบลูกค้า"
                   onPick={(opt) => {
-                    const selected = partnerItems.find((item) => item.id === Number(opt.id))
+                    const selected = partnerItems.find((item: PartnerSummary) => item.id === Number(opt.id))
                     setFormData((prev) => ({
                       ...prev,
                       partnerId: Number(opt.id),
@@ -1564,7 +1606,7 @@ export function SalesOrderFormPage() {
                     <th className="qf-so-col-desc">รายละเอียด</th>
                     <th className="qf-so-col-qty">จำนวน</th>
                     <th className="qf-so-col-price">ราคาต่อหน่วย</th>
-                    <th className="qf-so-col-discount">ส่วนลด</th>
+                    <th className="qf-so-col-discount">ส่วนลด (%)</th>
                     <th className="qf-so-col-tax">ภาษี</th>
                     <th className="qf-so-col-total">รวมเป็นเงิน</th>
                     <th className="qf-so-col-delete"></th>
@@ -1668,10 +1710,11 @@ export function SalesOrderFormPage() {
                           <Input
                             type="number"
                             className="text-end"
-                            value={toNumberLike(line.discount)}
+                            value={toNumberLike(line.discountPercent ?? line.discount)}
                             min="0"
-                            step="0.01"
-                            onChange={(e) => updateLine(idx, { discount: toNumberLike(e.target.value) })}
+                            max="100"
+                            step="0.1"
+                            onChange={(e) => updateLine(idx, { discount: toNumberLike(e.target.value), discountPercent: toNumberLike(e.target.value) })}
                           />
                         </td>
                         <td>
