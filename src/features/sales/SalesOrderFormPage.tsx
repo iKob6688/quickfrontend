@@ -55,6 +55,13 @@ import {
   getSalesOrderDocumentLabel,
   getSalesOrderDocumentTitle,
 } from '@/lib/salesOrderPresentation'
+import {
+  DocumentPageLayout,
+  DocumentSectionCard,
+  DocumentSummary,
+  DocumentToolbar,
+  useDocumentKeyboardShortcuts,
+} from '@/features/document'
 
 const SALES_ORDER_DRAFT_KEY = 'qf:draft:sales-order-form:create:v2'
 const SALES_ORDER_PREFERENCES_KEY = 'qf:prefs:sales-order-form:v1'
@@ -1276,29 +1283,22 @@ export function SalesOrderFormPage() {
   const canEmailOrShare = isEdit && !!orderId
   const statusLabel = formatSalesOrderStatus(isEdit ? existingOrder?.status : 'draft')
 
+  useDocumentKeyboardShortcuts({
+    onSave: () => document.querySelector<HTMLFormElement>('#sales-order-form')?.requestSubmit(),
+    onPrint: () => openPreviewWindow(),
+  })
+
   return (
-    <form onSubmit={handleSubmit} className="qf-so-page">
-      <header className="qf-so-hero">
-        <div className="qf-so-hero__body">
-          <div className="qf-so-hero__eyebrow">{isEdit ? 'แก้ไขใบเสนอราคา' : 'สร้างใบเสนอราคา'}</div>
-          <div className="qf-so-hero__title-row">
-            <div>
-              <h1 className="qf-so-hero__title">{documentNumber}</h1>
-              <div className="qf-so-hero__meta">
-                <span>วันที่ {formData.orderDate || '-'}</span>
-                <span>สกุลเงิน {formData.currency || '-'}</span>
-                <span>{formData.lines.length} รายการ</span>
-                <span>สถานะ {statusLabel}</span>
-                {!isEdit && draftSavedAt ? <span>autosaved {formatDateTime(draftSavedAt)}</span> : null}
-              </div>
-            </div>
-            <div className="qf-so-hero__total">
-              <div className="qf-so-hero__total-label">Grand Total</div>
-              <div className="qf-so-hero__total-value">{asCurrency(grandTotal, formData.currency)}</div>
-            </div>
-          </div>
-        </div>
-        <div className="qf-so-hero__actions">
+    <>
+    <DocumentPageLayout
+      title={isEdit ? 'แก้ไขใบเสนอราคา' : 'สร้างใบเสนอราคา'}
+      subtitle={`${documentNumber} · ${statusLabel} · ${formData.lines.length} รายการ${!isEdit && draftSavedAt ? ` · autosaved ${formatDateTime(draftSavedAt)}` : ''}`}
+      breadcrumb="รายรับ · ใบเสนอราคา"
+      actions={
+        <div className="d-flex flex-wrap align-items-center justify-content-end gap-2">
+          <span className="badge text-bg-light border">
+            {asCurrency(grandTotal, formData.currency)}
+          </span>
           <Button type="button" size="sm" variant="secondary" onClick={openPreviewWindow}>
             <i className="bi bi-printer me-1" />
             พิมพ์
@@ -1321,11 +1321,18 @@ export function SalesOrderFormPage() {
             <i className="bi bi-link-45deg me-1" />
             แชร์ลิงก์
           </Button>
-          <Button type="submit" size="sm" isLoading={createMutation.isPending || updateMutation.isPending}>
+          <Button
+            type="submit"
+            form="sales-order-form"
+            size="sm"
+            isLoading={createMutation.isPending || updateMutation.isPending}
+          >
             บันทึกข้อมูล
           </Button>
         </div>
-      </header>
+      }
+    >
+    <form id="sales-order-form" onSubmit={handleSubmit} className="qf-so-page">
 
       {!isEdit && draftPendingRestore ? (
         <Alert variant="warning" className="small qf-so-banner">
@@ -2035,6 +2042,9 @@ export function SalesOrderFormPage() {
         หาก backend ยังไม่พร้อมรับข้อมูลแนบ ไฟล์จะถูกเก็บเป็น metadata ใน draft และพิมพ์/ดาวน์โหลดได้ตามข้อมูลปัจจุบัน
       </div>
 
+      </form>
+    </DocumentPageLayout>
+
       <Modal show={quickPartnerOpen} onHide={() => setQuickPartnerOpen(false)} centered size="lg">
         <Modal.Header closeButton>
           <Modal.Title>สร้างรายชื่อติดต่อใหม่ (Quick Create)</Modal.Title>
@@ -2237,6 +2247,6 @@ export function SalesOrderFormPage() {
           </Button>
         </Modal.Footer>
       </Modal>
-    </form>
+    </>
   )
 }

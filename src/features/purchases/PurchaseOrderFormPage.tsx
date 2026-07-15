@@ -7,11 +7,10 @@ import {
   type PurchaseOrderPayload,
   type PurchaseOrderLine,
 } from '@/api/services/purchases.service'
-import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
-import { Alert, Modal, Spinner, Card as BootstrapCard } from 'react-bootstrap'
+import { Alert, Modal, Spinner } from 'react-bootstrap'
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { extractFieldErrors, type FieldErrors } from '@/lib/formErrors'
 import { clearDraft, loadDraft, loadRecentNotes, pushRecentNote, saveDraft } from '@/lib/formDrafts'
@@ -20,7 +19,7 @@ import { createPartner, listPartners, getPartner, type PartnerUpsertPayload } fr
 import { getDefaultVatTaxId, listVatTaxes, type TaxAdminListItem } from '@/api/services/taxes.service'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { Combobox, type ComboboxOption } from '@/components/ui/Combobox'
-import { DataTable, type Column } from '@/components/ui/DataTable'
+import type { Column } from '@/components/ui/DataTable'
 import { ProductCombobox } from '@/features/sales/ProductCombobox'
 import { CountrySelector } from '@/features/customers/CountrySelector'
 import { StateSelector } from '@/features/customers/StateSelector'
@@ -37,6 +36,14 @@ import {
 } from '@/api/services/thai-address.service'
 import { normalizeVatNumber, sanitizeVatNumber, thaiVatValidationMessage } from '@/lib/vat'
 import { useAppDateTimeFormatter } from '@/lib/dateFormat'
+import {
+  DocumentLineTable,
+  DocumentPageLayout,
+  DocumentSectionCard,
+  DocumentSummary,
+  DocumentToolbar,
+  useDocumentKeyboardShortcuts,
+} from '@/features/document'
 
 const PURCHASE_ORDER_DRAFT_KEY = 'qf:draft:purchase-order-form:create:v1'
 const PURCHASE_ORDER_RECENT_NOTES_KEY = 'qf:recent-notes:purchase-order:v1'
@@ -540,6 +547,11 @@ export function PurchaseOrderFormPage() {
     }
   }
 
+  useDocumentKeyboardShortcuts({
+    onSave: () => document.querySelector<HTMLFormElement>('#purchase-order-form')?.requestSubmit(),
+    onPrint: () => window.print(),
+  })
+
   const addLine = () => {
     setFormData((prev) => ({
       ...prev,
@@ -700,15 +712,34 @@ export function PurchaseOrderFormPage() {
       header: '',
       className: 'text-end qf-so-col-action',
       cell: (r) => (
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => removeLine(r.id)}
-          className="text-danger-emphasis"
-        >
-          <i className="bi bi-trash me-1"></i>
-          ลบ
-        </Button>
+        <div className="d-flex justify-content-end gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() =>
+              setFormData((prev) => {
+                const next = [...(prev.lines || [])]
+                next.splice(r.id + 1, 0, {
+                  ...next[r.id],
+                  description: next[r.id]?.description ? `${next[r.id].description} (สำเนา)` : '',
+                })
+                return { ...prev, lines: next }
+              })
+            }
+          >
+            <i className="bi bi-files me-1"></i>
+            สำเนา
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => removeLine(r.id)}
+            className="text-danger-emphasis"
+          >
+            <i className="bi bi-trash me-1"></i>
+            ลบ
+          </Button>
+        </div>
       ),
     },
   ]
@@ -731,323 +762,231 @@ export function PurchaseOrderFormPage() {
   }
 
   return (
-    <>
-    <form onSubmit={handleSubmit}>
-      <PageHeader
-        title={isEdit ? 'แก้ไขใบสั่งซื้อ' : 'สร้างใบสั่งซื้อ'}
-        subtitle={isEdit && existingOrder ? existingOrder.number || `ใบสั่งซื้อ #${existingOrder.id}` : ''}
-        breadcrumb="รายจ่าย · ใบสั่งซื้อ"
-        actions={
-          <div className="d-flex align-items-center gap-2">
-            {!isEdit && draftSavedAt ? (
-              <span className="small text-muted">
-                autosaved {formatDateTime(draftSavedAt)}
-              </span>
-            ) : null}
+    <DocumentPageLayout
+      title={isEdit ? 'แก้ไขใบสั่งซื้อ' : 'สร้างใบสั่งซื้อ'}
+      subtitle={isEdit && existingOrder ? existingOrder.number || `ใบสั่งซื้อ #${existingOrder.id}` : 'กรอกข้อมูลใบสั่งซื้อ'}
+      breadcrumb="รายจ่าย · ใบสั่งซื้อ"
+      actions={
+        <div className="d-flex align-items-center gap-2">
+          {!isEdit && draftSavedAt ? <span className="small text-muted">autosaved {formatDateTime(draftSavedAt)}</span> : null}
+          <Button size="sm" variant="secondary" type="button" onClick={() => navigate('/purchases/orders')}>
+            ยกเลิก
+          </Button>
+        </div>
+      }
+    >
+      <form id="purchase-order-form" onSubmit={handleSubmit} className="qf-document-form">
+        <div className="qf-document-form__stack">
+          {!isEdit && draftPendingRestore ? (
+            <div className="alert alert-warning small">
+              <div className="fw-semibold mb-1">พบ draft ใบสั่งซื้อที่บันทึกไว้</div>
+              <div className="mb-2">เวลา: {formatDateTime(draftUpdatedAt, 'ไม่ทราบเวลา')}</div>
+              <div className="d-flex gap-2">
+                <Button
+                  size="sm"
+                  type="button"
+                  onClick={() => {
+                    setFormData(draftPendingRestore)
+                    setDraftPendingRestore(null)
+                  }}
+                >
+                  กู้ draft
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  type="button"
+                  onClick={() => {
+                    clearDraft(PURCHASE_ORDER_DRAFT_KEY)
+                    setDraftPendingRestore(null)
+                  }}
+                >
+                  ลบ draft
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
+          <DocumentSectionCard title="ข้อมูลใบสั่งซื้อ">
+            <div className="row g-3">
+              <div className="col-md-6">
+                <Label htmlFor="vendorId" required>
+                  ผู้ขาย
+                </Label>
+                <Combobox
+                  id="vendorSearch"
+                  value={vendorSearch}
+                  onChange={setVendorSearch}
+                  placeholder="พิมพ์เพื่อค้นหาผู้ขาย (ชื่อ / VAT / อีเมล)"
+                  leftAdornment={<i className="bi bi-search"></i>}
+                  minChars={1}
+                  isLoading={vendorOptionsQuery.isFetching || selectedVendorQuery.isFetching}
+                  isLoadingMore={vendorOptionsQuery.isFetchingNextPage}
+                  onLoadMore={() => {
+                    if (vendorOptionsQuery.hasNextPage) vendorOptionsQuery.fetchNextPage()
+                  }}
+                  options={vendorItems
+                    .filter((p) => p && typeof p === 'object' && 'id' in p && 'name' in p)
+                    .map<ComboboxOption>((p) => ({
+                      id: p.id,
+                      label: p.name || `Partner #${p.id}`,
+                      meta:
+                        [p.vat ? `VAT: ${p.vat}` : '', p.stateName || '', !p.vat && !p.stateName ? p.email || `ID: ${p.id}` : '']
+                          .filter(Boolean)
+                          .join(' • '),
+                    }))}
+                  total={vendorTotal}
+                  emptyText="ไม่พบผู้ขาย (ลองพิมพ์คำอื่น)"
+                  onPick={(opt) => {
+                    setFormData((prev) => ({ ...prev, vendorId: Number(opt.id) }))
+                    setVendorSearch(opt.label)
+                  }}
+                />
+                <div className="small text-muted mt-2">
+                  Tip: พิมพ์อย่างน้อย 1 ตัวอักษรเพื่อค้นหา • ใช้ ↑/↓ และ Enter เพื่อเลือก • Esc เพื่อปิด
+                </div>
+                <div className="d-flex gap-2 mt-2">
+                  <Button size="sm" variant="ghost" type="button" onClick={() => setQuickVendorOpen(true)}>
+                    + สร้างผู้ขายใหม่
+                  </Button>
+                </div>
+                {selectedVendorQuery.data ? (
+                  <div className="small text-muted mt-2">
+                    เลือกแล้ว:{' '}
+                    <span className="fw-semibold">{selectedVendorQuery.data.displayName || selectedVendorQuery.data.name}</span>{' '}
+                    (ID: {formData.vendorId})
+                    <div className="d-flex gap-2 mt-2">
+                      <Button size="sm" variant="ghost" type="button" onClick={() => navigate(`/customers/${formData.vendorId}`)}>
+                        เปิดรายละเอียดผู้ขาย
+                      </Button>
+                      <Button size="sm" variant="ghost" type="button" onClick={() => navigate(`/customers/${formData.vendorId}/edit`)}>
+                        แก้ไขผู้ขาย
+                      </Button>
+                    </div>
+                  </div>
+                ) : isEdit && existingOrder?.vendorName ? (
+                  <div className="small text-muted mt-2">
+                    ผู้ขาย: <span className="fw-semibold">{existingOrder.vendorName}</span> (ID: {formData.vendorId})
+                  </div>
+                ) : null}
+                {vendorOptionsQuery.isError ? (
+                  <div className="small text-danger mt-2">
+                    {vendorOptionsQuery.error instanceof Error ? vendorOptionsQuery.error.message : 'โหลดรายชื่อผู้ขายไม่สำเร็จ'}
+                  </div>
+                ) : null}
+                {fieldErrors.vendorId ? <div className="text-danger small mt-1">{fieldErrors.vendorId}</div> : null}
+              </div>
+              <div className="col-md-3">
+                <Label htmlFor="orderDate" required>
+                  วันที่สั่งซื้อ
+                </Label>
+                <Input
+                  id="orderDate"
+                  type="date"
+                  value={formData.orderDate}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, orderDate: e.target.value }))}
+                  error={!!fieldErrors.orderDate}
+                />
+              </div>
+              <div className="col-md-3">
+                <Label htmlFor="expectedDate">วันที่ส่งมอบ</Label>
+                <Input
+                  id="expectedDate"
+                  type="date"
+                  value={formData.expectedDate || ''}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, expectedDate: e.target.value || undefined }))}
+                />
+              </div>
+              <div className="col-md-6">
+                <Label htmlFor="currency">สกุลเงิน</Label>
+                <Input
+                  id="currency"
+                  value={formData.currency}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, currency: e.target.value }))}
+                  placeholder="THB"
+                />
+              </div>
+              <div className="col-12">
+                <Label htmlFor="notes">หมายเหตุ</Label>
+                <textarea
+                  id="notes"
+                  className="form-control"
+                  rows={3}
+                  value={formData.notes || ''}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
+                  placeholder="หมายเหตุเพิ่มเติม..."
+                />
+                {recentNotes.length > 0 ? (
+                  <div className="mt-2">
+                    <div className="small text-muted mb-1">หมายเหตุล่าสุด</div>
+                    <div className="d-flex flex-wrap gap-2">
+                      {recentNotes.slice(0, 4).map((note, idx) => (
+                        <div key={`${idx}-${note}`} className="d-inline-flex align-items-center gap-1">
+                          <Button size="sm" variant="secondary" type="button" onClick={() => applyRecentNote(note)}>
+                            ใช้ล่าสุด
+                          </Button>
+                          <Button size="sm" variant="ghost" type="button" onClick={() => appendRecentNote(note)} title={note}>
+                            +
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </DocumentSectionCard>
+
+          <DocumentSectionCard title="รายการสินค้า" actions={<Button size="sm" variant="primary" type="button" onClick={addLine}><i className="bi bi-plus me-1"></i>เพิ่มรายการ</Button>}>
+            {(formData.lines || []).length === 0 ? (
+              <div className="text-center text-muted py-4">
+                <p>ยังไม่มีรายการสินค้า</p>
+                <Button size="sm" variant="secondary" onClick={addLine}>
+                  เพิ่มรายการแรก
+                </Button>
+              </div>
+            ) : (
+              <DocumentLineTable
+                title="รายการที่เพิ่มแล้ว"
+                description="ใช้สำเนาและลบเพื่อตรวจทานก่อนบันทึก"
+                rows={lineRows}
+                columns={lineColumns}
+                empty={<div className="alert alert-warning small mb-0">ยังไม่มีรายการสินค้า</div>}
+              />
+            )}
+          </DocumentSectionCard>
+
+          <DocumentSummary
+            rows={[
+              {
+                label: 'ก่อนภาษี',
+                value: `${totalUntaxed.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${formData.currency}`,
+              },
+              {
+                label: 'ภาษี',
+                value: `${totalTaxAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${formData.currency}`,
+              },
+            ]}
+            totalLabel="ยอดรวมทั้งสิ้น"
+            totalValue={`${totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${formData.currency}`}
+            note={purchaseTaxesQuery.isError ? 'โหลดรายการภาษีจาก backend ไม่สำเร็จ ระบบจะแสดงยอดประมาณการจากรายการปัจจุบันเท่านั้น' : 'ยอดสรุปนี้คำนวณจากรายการปัจจุบัน'}
+          />
+
+          <DocumentToolbar>
             <Button
-              size="sm"
-              variant="secondary"
-              type="button"
-              onClick={() => navigate('/purchases/orders')}
-            >
-              ยกเลิก
-            </Button>
-            <Button
-              size="sm"
               variant="primary"
               type="submit"
               disabled={createMutation.isPending || updateMutation.isPending}
+              isLoading={createMutation.isPending || updateMutation.isPending}
             >
-              {createMutation.isPending || updateMutation.isPending
-                ? 'กำลังบันทึก...'
-                : isEdit
-                  ? 'บันทึกการแก้ไข'
-                  : 'สร้างใบสั่งซื้อ'}
+              {createMutation.isPending || updateMutation.isPending ? 'กำลังบันทึก...' : isEdit ? 'บันทึกการแก้ไข' : 'สร้างใบสั่งซื้อ'}
             </Button>
-          </div>
-        }
-      />
-
-      {!isEdit && draftPendingRestore ? (
-        <div className="alert alert-warning small">
-          <div className="fw-semibold mb-1">พบ draft ใบสั่งซื้อที่บันทึกไว้</div>
-          <div className="mb-2">
-            เวลา: {formatDateTime(draftUpdatedAt, 'ไม่ทราบเวลา')}
-          </div>
-          <div className="d-flex gap-2">
-            <Button
-              size="sm"
-              type="button"
-              onClick={() => {
-                setFormData(draftPendingRestore)
-                setDraftPendingRestore(null)
-              }}
-            >
-              กู้ draft
+            <Button variant="secondary" type="button" onClick={() => navigate('/purchases/orders')}>
+              ยกเลิก
             </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              type="button"
-              onClick={() => {
-                clearDraft(PURCHASE_ORDER_DRAFT_KEY)
-                setDraftPendingRestore(null)
-              }}
-            >
-              ลบ draft
-            </Button>
-          </div>
+          </DocumentToolbar>
         </div>
-      ) : null}
-
-      <div className="row g-3 mb-4">
-        <div className="col-md-8">
-          <BootstrapCard>
-            <BootstrapCard.Header>
-              <h5 className="mb-0">ข้อมูลใบสั่งซื้อ</h5>
-            </BootstrapCard.Header>
-            <BootstrapCard.Body>
-              <div className="row g-3">
-                <div className="col-md-6">
-                  <Label htmlFor="vendorId" required>
-                    ผู้ขาย
-                  </Label>
-                  <Combobox
-                    id="vendorSearch"
-                    value={vendorSearch}
-                    onChange={setVendorSearch}
-                    placeholder="พิมพ์เพื่อค้นหาผู้ขาย (ชื่อ / VAT / อีเมล)"
-                    leftAdornment={<i className="bi bi-search"></i>}
-                    minChars={1}
-                    isLoading={vendorOptionsQuery.isFetching || selectedVendorQuery.isFetching}
-                    isLoadingMore={vendorOptionsQuery.isFetchingNextPage}
-                    onLoadMore={() => {
-                      if (vendorOptionsQuery.hasNextPage) vendorOptionsQuery.fetchNextPage()
-                    }}
-                    options={vendorItems
-                      .filter((p) => p && typeof p === 'object' && 'id' in p && 'name' in p)
-                      .map<ComboboxOption>((p) => ({
-                        id: p.id,
-                        label: p.name || `Partner #${p.id}`,
-                        meta:
-                          [
-                            p.vat ? `VAT: ${p.vat}` : '',
-                            p.stateName || '',
-                            !p.vat && !p.stateName ? p.email || `ID: ${p.id}` : '',
-                          ]
-                            .filter(Boolean)
-                            .join(' • '),
-                      }))}
-                    total={vendorTotal}
-                    emptyText="ไม่พบผู้ขาย (ลองพิมพ์คำอื่น)"
-                    onPick={(opt) => {
-                      setFormData((prev) => ({ ...prev, vendorId: Number(opt.id) }))
-                      setVendorSearch(opt.label)
-                    }}
-                  />
-                  <div className="small text-muted mt-2">
-                    Tip: พิมพ์อย่างน้อย 1 ตัวอักษรเพื่อค้นหา • ใช้ ↑/↓ และ Enter เพื่อเลือก • Esc เพื่อปิด
-                  </div>
-                  <div className="d-flex gap-2 mt-2">
-                    <Button size="sm" variant="ghost" type="button" onClick={() => setQuickVendorOpen(true)}>
-                      + สร้างผู้ขายใหม่
-                    </Button>
-                  </div>
-
-                  {selectedVendorQuery.data ? (
-                    <div className="small text-muted mt-2">
-                      เลือกแล้ว:{' '}
-                      <span className="fw-semibold">
-                        {selectedVendorQuery.data.displayName || selectedVendorQuery.data.name}
-                      </span>{' '}
-                      (ID: {formData.vendorId})
-                      <div className="d-flex gap-2 mt-2">
-                        <Button size="sm" variant="ghost" type="button" onClick={() => navigate(`/customers/${formData.vendorId}`)}>
-                          เปิดรายละเอียดผู้ขาย
-                        </Button>
-                        <Button size="sm" variant="ghost" type="button" onClick={() => navigate(`/customers/${formData.vendorId}/edit`)}>
-                          แก้ไขผู้ขาย
-                        </Button>
-                      </div>
-                    </div>
-                  ) : isEdit && existingOrder?.vendorName ? (
-                    <div className="small text-muted mt-2">
-                      ผู้ขาย:{' '}
-                      <span className="fw-semibold">
-                        {existingOrder.vendorName}
-                      </span>{' '}
-                      (ID: {formData.vendorId})
-                    </div>
-                  ) : null}
-
-                  {vendorOptionsQuery.isError ? (
-                    <div className="small text-danger mt-2">
-                      {vendorOptionsQuery.error instanceof Error
-                        ? vendorOptionsQuery.error.message
-                        : 'โหลดรายชื่อผู้ขายไม่สำเร็จ'}
-                    </div>
-                  ) : null}
-                  {fieldErrors.vendorId && (
-                    <div className="text-danger small mt-1">{fieldErrors.vendorId}</div>
-                  )}
-                </div>
-                <div className="col-md-3">
-                  <Label htmlFor="orderDate" required>
-                    วันที่สั่งซื้อ
-                  </Label>
-                  <Input
-                    id="orderDate"
-                    type="date"
-                    value={formData.orderDate}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, orderDate: e.target.value }))}
-                    error={!!fieldErrors.orderDate}
-                  />
-                </div>
-                <div className="col-md-3">
-                  <Label htmlFor="expectedDate">วันที่ส่งมอบ</Label>
-                  <Input
-                    id="expectedDate"
-                    type="date"
-                    value={formData.expectedDate || ''}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, expectedDate: e.target.value || undefined }))
-                    }
-                  />
-                </div>
-                <div className="col-md-6">
-                  <Label htmlFor="currency">สกุลเงิน</Label>
-                  <Input
-                    id="currency"
-                    value={formData.currency}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, currency: e.target.value }))}
-                    placeholder="THB"
-                  />
-                </div>
-                <div className="col-12">
-                  <Label htmlFor="notes">หมายเหตุ</Label>
-                  <textarea
-                    id="notes"
-                    className="form-control"
-                    rows={3}
-                    value={formData.notes || ''}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
-                    placeholder="หมายเหตุเพิ่มเติม..."
-                  />
-                  {recentNotes.length > 0 ? (
-                    <div className="mt-2">
-                      <div className="small text-muted mb-1">หมายเหตุล่าสุด</div>
-                      <div className="d-flex flex-wrap gap-2">
-                        {recentNotes.slice(0, 4).map((note, idx) => (
-                          <div key={`${idx}-${note}`} className="d-inline-flex align-items-center gap-1">
-                            <Button size="sm" variant="secondary" type="button" onClick={() => applyRecentNote(note)}>
-                              ใช้ล่าสุด
-                            </Button>
-                            <Button size="sm" variant="ghost" type="button" onClick={() => appendRecentNote(note)} title={note}>
-                              +
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            </BootstrapCard.Body>
-          </BootstrapCard>
-
-          <BootstrapCard className="mt-3">
-            <BootstrapCard.Header className="d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">รายการสินค้า</h5>
-              <Button size="sm" variant="primary" type="button" onClick={addLine}>
-                <i className="bi bi-plus me-1"></i>
-                เพิ่มรายการ
-              </Button>
-            </BootstrapCard.Header>
-            <BootstrapCard.Body>
-              {(formData.lines || []).length === 0 ? (
-                <div className="text-center text-muted py-4">
-                  <p>ยังไม่มีรายการสินค้า</p>
-                  <Button size="sm" variant="secondary" onClick={addLine}>
-                    เพิ่มรายการแรก
-                  </Button>
-                </div>
-              ) : (
-                <DataTable allowMenuOverflow columns={lineColumns} rows={lineRows} />
-              )}
-            </BootstrapCard.Body>
-          </BootstrapCard>
-        </div>
-
-        <div className="col-md-4">
-          <BootstrapCard>
-            <BootstrapCard.Header>
-              <h5 className="mb-0">สรุปยอด</h5>
-            </BootstrapCard.Header>
-            <BootstrapCard.Body>
-              {purchaseTaxesQuery.isError ? (
-                <div className="alert alert-warning small py-2">
-                  โหลดรายการภาษีจาก backend ไม่สำเร็จ ระบบจะแสดงยอดประมาณการจากรายการปัจจุบันเท่านั้น
-                </div>
-              ) : null}
-              <div className="d-flex justify-content-between">
-                <span className="text-muted">ก่อนภาษี</span>
-                <span className="font-monospace">
-                  {totalUntaxed.toLocaleString('th-TH', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}{' '}
-                  {formData.currency}
-                </span>
-              </div>
-              <div className="d-flex justify-content-between mt-2">
-                <span className="text-muted">ภาษี</span>
-                <span className="font-monospace">
-                  {totalTaxAmount.toLocaleString('th-TH', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}{' '}
-                  {formData.currency}
-                </span>
-              </div>
-              <hr />
-              <div className="d-flex justify-content-between">
-                <span className="fw-semibold">ยอดรวมทั้งสิ้น</span>
-                <span className="fw-semibold font-monospace">
-                  {totalAmount.toLocaleString('th-TH', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}{' '}
-                  {formData.currency}
-                </span>
-              </div>
-            </BootstrapCard.Body>
-          </BootstrapCard>
-
-          <BootstrapCard className="mt-3">
-            <BootstrapCard.Body className="d-grid gap-2">
-              <Button
-                variant="primary"
-                type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending}
-              >
-                {createMutation.isPending || updateMutation.isPending
-                  ? 'กำลังบันทึก...'
-                  : isEdit
-                    ? 'บันทึกการแก้ไข'
-                    : 'สร้างใบสั่งซื้อ'}
-              </Button>
-              <Button
-                variant="secondary"
-                type="button"
-                onClick={() => navigate('/purchases/orders')}
-              >
-                ยกเลิก
-              </Button>
-            </BootstrapCard.Body>
-          </BootstrapCard>
-        </div>
-      </div>
-    </form>
+      </form>
     <Modal show={quickVendorOpen} onHide={() => setQuickVendorOpen(false)} centered>
       <Modal.Header closeButton>
         <Modal.Title>สร้างผู้ขายใหม่ (Quick Create)</Modal.Title>
@@ -1237,6 +1176,6 @@ export function PurchaseOrderFormPage() {
         </Button>
       </Modal.Footer>
     </Modal>
-    </>
+    </DocumentPageLayout>
   )
 }

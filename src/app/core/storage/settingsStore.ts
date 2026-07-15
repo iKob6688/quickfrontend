@@ -43,6 +43,34 @@ const settingsSchema = z.object({
 
 export type StudioSettings = z.output<typeof settingsSchema>
 
+const TEMPLATE_ID_REMAP: Record<string, string> = {
+  invoice_chonlatee_billing_v1: 'invoice_default_v1',
+  receipt_full_chonlatee_tax_invoice_v1: 'receipt_full_default_v1',
+}
+
+function remapTemplateId(value: string) {
+  return TEMPLATE_ID_REMAP[value] || value
+}
+
+function sanitizeSettings(next: StudioSettings): StudioSettings {
+  return {
+    ...next,
+    defaultTemplateIdByDocType: {
+      ...next.defaultTemplateIdByDocType,
+      invoice: remapTemplateId(next.defaultTemplateIdByDocType.invoice),
+      receipt_full: remapTemplateId(next.defaultTemplateIdByDocType.receipt_full),
+    },
+    companyTemplateIdByCompanyKey: Object.fromEntries(
+      Object.entries(next.companyTemplateIdByCompanyKey || {}).map(([companyKey, docTypeMap]) => [
+        companyKey,
+        Object.fromEntries(
+          Object.entries(docTypeMap).map(([docType, templateId]) => [docType, remapTemplateId(templateId)]),
+        ),
+      ]),
+    ),
+  }
+}
+
 type SettingsState = {
   settings: StudioSettings
   setSettings: (next: StudioSettings) => void
@@ -69,7 +97,7 @@ export const useSettingsStore = create<SettingsState>()(
       merge: (persisted, current) => {
         const maybe = (persisted as any)?.settings
         const parsed = settingsSchema.safeParse(maybe)
-        return { ...current, settings: parsed.success ? parsed.data : current.settings }
+        return { ...current, settings: parsed.success ? sanitizeSettings(parsed.data) : current.settings }
       },
     },
   ),

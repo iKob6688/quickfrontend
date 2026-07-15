@@ -39,10 +39,15 @@ export function SalesOrderDetailPage() {
     staleTime: 30_000,
   })
 
+  const partnerId = typeof query.data?.partnerId === 'number' && query.data.partnerId > 0 ? query.data.partnerId : null
+
   const partnerDetailQuery = useQuery({
-    queryKey: ['partner', query.data?.partnerId],
-    enabled: typeof query.data?.partnerId === 'number' && query.data.partnerId > 0,
-    queryFn: () => getPartner(query.data!.partnerId as number),
+    queryKey: ['partner', partnerId],
+    enabled: partnerId != null,
+    queryFn: () => {
+      if (partnerId == null) throw new Error('Missing partner id')
+      return getPartner(partnerId)
+    },
     staleTime: 60_000,
   })
 
@@ -164,7 +169,28 @@ export function SalesOrderDetailPage() {
     return <Alert variant="danger" className="small mb-0">URL ไม่ถูกต้อง</Alert>
   }
 
-  const order = query.data as SalesOrder
+  if (query.isLoading) {
+    return (
+      <div className="d-flex align-items-center gap-2 py-4">
+        <Spinner animation="border" size="sm" />
+        <span className="small text-muted">กำลังโหลด...</span>
+      </div>
+    )
+  }
+
+  if (query.isError) {
+    return (
+      <Alert variant="danger" className="small">
+        {query.error instanceof Error ? query.error.message : 'โหลดข้อมูลไม่สำเร็จ'}
+      </Alert>
+    )
+  }
+
+  if (!query.data) {
+    return <Alert variant="warning" className="small">ไม่พบข้อมูลเอกสาร</Alert>
+  }
+
+  const order = query.data
   const orderLines: SalesOrderLine[] = Array.isArray(order.lines) ? order.lines : []
   const orderAttachments: SalesOrderAttachment[] = Array.isArray(order.attachments) ? order.attachments : []
 

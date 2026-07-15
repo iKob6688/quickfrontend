@@ -83,7 +83,6 @@ async function tryListPath(path: string, params: ListEmployeeUsersParams) {
 
 export async function listEmployeeUsers(params: ListEmployeeUsersParams = {}) {
   const candidates = [
-    '/th/v1/chonlatee-billing/employees/list',
     '/th/v1/system/users/list',
     '/th/v1/users/list',
     '/th/v1/employees/list',

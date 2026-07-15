@@ -356,7 +356,7 @@ export function PurchaseRequestFormPage() {
     setDraft((prev) => ({ ...prev, notes: (formData.notes || '').trim() ? `${formData.notes}\n${note}` : note }))
 
   return (
-    <form onSubmit={onSubmit}>
+    <form onSubmit={onSubmit} className="qf-pr-page">
       <PageHeader
         title={isEdit ? 'แก้ไขคำขอซื้อ' : 'สร้างคำขอซื้อ'}
         subtitle="จัดการคำขอซื้อให้พร้อมส่งอนุมัติ"
@@ -445,8 +445,8 @@ export function PurchaseRequestFormPage() {
         </Alert>
       ) : null}
 
-      <div className="row g-4">
-        <div className="col-lg-8">
+      <div className="qf-pr-layout">
+        <div className="qf-pr-main">
           <Card className="p-4">
             <div className="qf-section-title mb-3">ข้อมูลหลัก</div>
             <div className="row g-3">
@@ -644,7 +644,7 @@ export function PurchaseRequestFormPage() {
             </div>
           </Card>
         </div>
-        <div className="col-lg-4">
+        <div className="qf-pr-summary">
           <Card className="p-4 qf-pr-summary-card">
             <div className="qf-section-title mb-3">สรุปคำขอซื้อ</div>
             <div className="qf-pr-summary-list">

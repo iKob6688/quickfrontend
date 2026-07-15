@@ -338,13 +338,6 @@ export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
                 >
                   + สร้างใบแจ้งหนี้
                 </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => navigate('/sales/invoices/chonlatee/new')}
-                >
-                  + Chonlatee Billing
-                </Button>
               </>
             ) : (
               <Button

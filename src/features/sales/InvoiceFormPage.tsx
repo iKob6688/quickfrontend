@@ -1,9 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData, type QueryFunctionContext } from '@tanstack/react-query'
 import { getInvoice, createInvoice, updateInvoice, type InvoicePayload } from '@/api/services/invoices.service'
-import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Spinner, Alert } from 'react-bootstrap'
@@ -16,6 +14,14 @@ import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { Combobox, type ComboboxOption } from '@/components/ui/Combobox'
 import { ProductCombobox } from '@/features/sales/ProductCombobox'
 import { useAppDateTimeFormatter } from '@/lib/dateFormat'
+import {
+  DocumentLineTable,
+  DocumentPageLayout,
+  DocumentSectionCard,
+  DocumentSummary,
+  DocumentToolbar,
+  useDocumentKeyboardShortcuts,
+} from '@/features/document'
 
 function normalizeNotesForTextarea(raw?: string | null): string {
   if (!raw) return ''
@@ -224,6 +230,176 @@ export function InvoiceFormPage() {
   const appendRecentNote = (note: string) =>
     setFormData((prev) => ({ ...prev, notes: prev.notes?.trim() ? `${prev.notes}\n${note}` : note }))
 
+  const totalAmount = useMemo(
+    () =>
+      (formData.lines || []).reduce(
+        (sum, line) => sum + (Number(line.quantity || 0) * Number(line.unitPrice || 0)),
+        0,
+      ),
+    [formData.lines],
+  )
+
+  const lineRows = useMemo(
+    () => (formData.lines || []).map((line, idx) => ({ id: idx, ...line })),
+    [formData.lines],
+  )
+
+  const lineColumns = useMemo(
+    () => [
+      {
+        key: 'product',
+        header: 'สินค้า/บริการ',
+        className: 'qf-document-line__product',
+        cell: (r: (typeof lineRows)[number]) => (
+          <ProductCombobox
+            valueId={r.productId ?? null}
+            onPick={(p) => {
+              const next = [...formData.lines]
+              const prev = next[r.id]
+              const pickedTaxRate = Array.isArray(p.taxes) && p.taxes.length
+                ? Number(p.taxes[0]?.amount || 0)
+                : prev.taxRate ?? 0
+              next[r.id] = {
+                ...prev,
+                productId: p.id,
+                description: (prev.description || '').trim() ? prev.description : p.name,
+                taxRate: Number.isFinite(pickedTaxRate) ? pickedTaxRate : 0,
+              }
+              setFormData({ ...formData, lines: next })
+            }}
+          />
+        ),
+      },
+      {
+        key: 'description',
+        header: 'รายละเอียด',
+        className: 'qf-document-line__description',
+        cell: (r: (typeof lineRows)[number]) => (
+          <input
+            className="form-control form-control-sm"
+            value={r.description || ''}
+            onChange={(e) => {
+              const next = [...formData.lines]
+              next[r.id] = { ...next[r.id], description: e.target.value }
+              setFormData({ ...formData, lines: next })
+            }}
+            placeholder="ชื่อสินค้า / รายละเอียด"
+          />
+        ),
+      },
+      {
+        key: 'quantity',
+        header: 'จำนวน',
+        className: 'text-end qf-document-line__qty',
+        cell: (r: (typeof lineRows)[number]) => (
+          <input
+            className="form-control form-control-sm text-end"
+            type="number"
+            value={r.quantity ?? 1}
+            onChange={(e) => {
+              const next = [...formData.lines]
+              next[r.id] = { ...next[r.id], quantity: Number.parseFloat(e.target.value || '0') }
+              setFormData({ ...formData, lines: next })
+            }}
+            min={0}
+            step="0.01"
+          />
+        ),
+      },
+      {
+        key: 'unitPrice',
+        header: 'ราคาต่อหน่วย',
+        className: 'text-end qf-document-line__price',
+        cell: (r: (typeof lineRows)[number]) => (
+          <input
+            className="form-control form-control-sm text-end"
+            type="number"
+            value={r.unitPrice ?? 0}
+            onChange={(e) => {
+              const next = [...formData.lines]
+              next[r.id] = { ...next[r.id], unitPrice: Number.parseFloat(e.target.value || '0') }
+              setFormData({ ...formData, lines: next })
+            }}
+            min={0}
+            step="0.01"
+          />
+        ),
+      },
+      {
+        key: 'taxRate',
+        header: 'VAT%',
+        className: 'text-end qf-document-line__tax',
+        cell: (r: (typeof lineRows)[number]) => (
+          <input
+            className="form-control form-control-sm text-end"
+            type="number"
+            value={r.taxRate ?? 0}
+            onChange={(e) => {
+              const next = [...formData.lines]
+              next[r.id] = { ...next[r.id], taxRate: Number.parseFloat(e.target.value || '0') }
+              setFormData({ ...formData, lines: next })
+            }}
+            min={0}
+            step="0.01"
+          />
+        ),
+      },
+      {
+        key: 'actions',
+        header: '',
+        className: 'text-end qf-document-line__action',
+        cell: (r: (typeof lineRows)[number]) => (
+          <div className="d-flex justify-content-end gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                const next = [...formData.lines]
+                const current = next[r.id]
+                next.splice(r.id + 1, 0, {
+                  ...current,
+                  description: current.description ? `${current.description} (สำเนา)` : '',
+                })
+                setFormData({ ...formData, lines: next })
+              }}
+            >
+              <i className="bi bi-files me-1"></i>
+              สำเนา
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                const ok = window.confirm('ยืนยันการลบรายการนี้?')
+                if (!ok) return
+                const next = [...formData.lines]
+                next.splice(r.id, 1)
+                setFormData({ ...formData, lines: next })
+              }}
+            >
+              <i className="bi bi-trash me-1"></i>
+              ลบ
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [formData, lineRows],
+  )
+
+  const summaryRows = useMemo(
+    () => [
+      { label: 'จำนวนรายการ', value: `${formData.lines.length}` },
+      {
+        label: 'สกุลเงิน',
+        value: formData.currency || 'THB',
+      },
+    ],
+    [formData.currency, formData.lines.length],
+  )
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setFieldErrors(null)
@@ -233,6 +409,11 @@ export function InvoiceFormPage() {
       createMutation.mutate(formData)
     }
   }
+
+  useDocumentKeyboardShortcuts({
+    onSave: () => document.querySelector<HTMLFormElement>('#invoice-form')?.requestSubmit(),
+    onPrint: () => window.print(),
+  })
 
   if (isEdit && isLoadingInvoice) {
     return (
@@ -244,439 +425,253 @@ export function InvoiceFormPage() {
   }
 
   return (
-    <div>
-      <PageHeader
-        title={isEdit ? 'แก้ไขใบแจ้งหนี้' : 'สร้างใบแจ้งหนี้ใหม่'}
-        subtitle={isEdit ? `แก้ไข ${existingInvoice?.number || `#${invoiceId}`}` : 'กรอกข้อมูลใบแจ้งหนี้'}
-        breadcrumb="รายรับ · ใบแจ้งหนี้"
-        actions={
-          <div className="d-flex align-items-center gap-2">
-            {!isEdit && draftSavedAt ? (
-              <span className="small text-muted">
-                บันทึกแบบร่างอัตโนมัติ {formatDateTime(draftSavedAt)}
-              </span>
-            ) : null}
+    <DocumentPageLayout
+      title={isEdit ? 'แก้ไขใบแจ้งหนี้' : 'สร้างใบแจ้งหนี้ใหม่'}
+      subtitle={isEdit ? `แก้ไข ${existingInvoice?.number || `#${invoiceId}`}` : 'กรอกข้อมูลใบแจ้งหนี้'}
+      breadcrumb="รายรับ · ใบแจ้งหนี้"
+      actions={
+        <div className="d-flex align-items-center gap-2">
+          {!isEdit && draftSavedAt ? (
+            <span className="small text-muted">
+              บันทึกแบบร่างอัตโนมัติ {formatDateTime(draftSavedAt)}
+            </span>
+          ) : null}
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => navigate(isEdit ? `/sales/invoices/${invoiceId}` : '/sales/invoices')}
+          >
+            ยกเลิก
+          </Button>
+        </div>
+      }
+    >
+      <form id="invoice-form" onSubmit={handleSubmit} className="qf-document-form">
+        <div className="qf-document-form__stack">
+          {!isEdit && draftPendingRestore ? (
+            <Alert variant="warning" className="small">
+              <div className="fw-semibold mb-1">พบแบบร่างที่บันทึกไว้</div>
+              <div className="mb-2">เวลา: {formatDateTime(draftUpdatedAt, 'ไม่ทราบเวลา')}</div>
+              <div className="d-flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    clearDraft(INVOICE_DRAFT_KEY)
+                    setFormData(draftPendingRestore)
+                    setDraftPendingRestore(null)
+                    setDraftUpdatedAt(null)
+                    setDraftSavedAt(null)
+                    toast.info('กู้แบบร่างสำเร็จ')
+                  }}
+                >
+                  กู้แบบร่าง
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    skipNextDraftSaveRef.current = true
+                    clearDraft(INVOICE_DRAFT_KEY)
+                    setDraftPendingRestore(null)
+                    setDraftUpdatedAt(null)
+                    setDraftSavedAt(null)
+                    toast.success('ลบแบบร่างแล้ว')
+                  }}
+                >
+                  ลบแบบร่าง
+                </Button>
+              </div>
+            </Alert>
+          ) : null}
+
+          {createMutation.error || updateMutation.error ? (
+            <Alert variant="danger" className="small">
+              {createMutation.error instanceof Error
+                ? createMutation.error.message
+                : updateMutation.error instanceof Error
+                  ? updateMutation.error.message
+                  : 'เกิดข้อผิดพลาด'}
+            </Alert>
+          ) : null}
+
+          <DocumentSectionCard title="ข้อมูลหลัก">
+            <div className="row g-3">
+              <div className="col-md-6">
+                <Label htmlFor="customerId" required>
+                  ลูกค้า
+                </Label>
+                <Combobox
+                  id="customerSearch"
+                  value={customerSearch}
+                  onChange={setCustomerSearch}
+                  placeholder="พิมพ์เพื่อค้นหาลูกค้า (ชื่อ / VAT / อีเมล)"
+                  leftAdornment={<i className="bi bi-search"></i>}
+                  minChars={1}
+                  isLoading={customerOptionsQuery.isFetching || selectedCustomerQuery.isFetching}
+                  isLoadingMore={customerOptionsQuery.isFetchingNextPage}
+                  onLoadMore={() => {
+                    if (customerOptionsQuery.hasNextPage) customerOptionsQuery.fetchNextPage()
+                  }}
+                  options={customerItems.map<ComboboxOption>((p: PartnerSummary) => ({
+                    id: p.id,
+                    label: p.name,
+                    meta: p.vat ? `เลขผู้เสียภาษี: ${p.vat}` : p.email ? p.email : `รหัส: ${p.id}`,
+                  }))}
+                  total={customerTotal}
+                  emptyText="ไม่พบลูกค้า (ลองพิมพ์คำอื่น)"
+                  onPick={(opt) => {
+                    setFormData((prev) => ({ ...prev, customerId: Number(opt.id) }))
+                    setCustomerSearch(opt.label)
+                  }}
+                />
+                <div className="small text-muted mt-2">
+                  พิมพ์อย่างน้อย 1 ตัวอักษรเพื่อค้นหา • ใช้ ↑/↓ และ Enter เพื่อเลือก • Esc เพื่อปิด
+                </div>
+                {selectedCustomerQuery.data ? (
+                  <div className="small text-muted mt-2">
+                    เลือกแล้ว: <span className="fw-semibold">{selectedCustomerQuery.data.displayName}</span> (รหัส:{' '}
+                    {formData.customerId})
+                  </div>
+                ) : null}
+                {customerOptionsQuery.isError ? (
+                  <div className="small text-danger mt-2">
+                    {customerOptionsQuery.error instanceof Error ? customerOptionsQuery.error.message : 'โหลดรายชื่อลูกค้าไม่สำเร็จ'}
+                  </div>
+                ) : null}
+                {fieldErrors?.customerId ? <small className="text-danger">{fieldErrors.customerId}</small> : null}
+              </div>
+              <div className="col-md-6">
+                <Label htmlFor="currency" required>
+                  สกุลเงิน
+                </Label>
+                <Input
+                  id="currency"
+                  value={formData.currency}
+                  onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                  placeholder="THB"
+                  required
+                />
+                {fieldErrors?.currency ? <small className="text-danger">{fieldErrors.currency}</small> : null}
+              </div>
+              <div className="col-md-6">
+                <Label htmlFor="invoiceDate" required>
+                  วันที่เอกสาร
+                </Label>
+                <Input
+                  id="invoiceDate"
+                  type="date"
+                  value={formData.invoiceDate}
+                  onChange={(e) => setFormData({ ...formData, invoiceDate: e.target.value })}
+                  required
+                />
+                {fieldErrors?.invoiceDate ? <small className="text-danger">{fieldErrors.invoiceDate}</small> : null}
+              </div>
+              <div className="col-md-6">
+                <Label htmlFor="dueDate" required>
+                  วันครบกำหนด
+                </Label>
+                <Input
+                  id="dueDate"
+                  type="date"
+                  value={formData.dueDate}
+                  onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                  required
+                />
+                {fieldErrors?.dueDate ? <small className="text-danger">{fieldErrors.dueDate}</small> : null}
+              </div>
+              <div className="col-12">
+                <Label htmlFor="notes">หมายเหตุ</Label>
+                <textarea
+                  id="notes"
+                  className="form-control"
+                  rows={3}
+                  value={formData.notes || ''}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)"
+                />
+                {recentNotes.length > 0 ? (
+                  <div className="mt-2">
+                    <div className="small text-muted mb-1">หมายเหตุที่ใช้ล่าสุด</div>
+                    <div className="d-flex flex-wrap gap-2">
+                      {recentNotes.slice(0, 4).map((note, idx) => (
+                        <div key={`${idx}-${note.slice(0, 12)}`} className="d-flex gap-1">
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-secondary"
+                            onClick={() => applyRecentNote(note)}
+                            title={note}
+                          >
+                            ใช้ล่าสุด {idx + 1}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-secondary"
+                            onClick={() => appendRecentNote(note)}
+                            title={note}
+                          >
+                            +
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </DocumentSectionCard>
+
+          <DocumentSectionCard>
+            <DocumentLineTable
+              title="รายการสินค้า/บริการ"
+              description="Odoo จะคำนวณยอด/ภาษี/รวมทั้งหมดหลังบันทึก (Quickfront แสดงผลเท่านั้น)"
+              rows={lineRows}
+              columns={lineColumns as any}
+              empty={<div className="alert alert-warning small mb-0">กรุณาเพิ่มอย่างน้อย 1 รายการ</div>}
+              addLabel={
+                <>
+                  <i className="bi bi-plus-lg me-1" />
+                  เพิ่มรายการ
+                </>
+              }
+              onAdd={() =>
+                setFormData({
+                  ...formData,
+                  lines: [
+                    ...formData.lines,
+                    { productId: null, description: '', quantity: 1, unitPrice: 0, taxRate: 0, subtotal: 0 },
+                  ],
+                })
+              }
+            />
+          </DocumentSectionCard>
+
+          <DocumentSummary
+            rows={summaryRows}
+            totalLabel="ยอดรวมโดยประมาณ"
+            totalValue={`${totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${formData.currency}`}
+            note="สรุปนี้แสดงยอดประมาณการก่อนยืนยันบันทึก"
+          />
+
+          <DocumentToolbar>
             <Button
-              size="sm"
+              type="submit"
+              isLoading={createMutation.isPending || updateMutation.isPending}
+              disabled={!canSubmit || createMutation.isPending || updateMutation.isPending}
+            >
+              {isEdit ? 'บันทึกการแก้ไข' : 'สร้างใบแจ้งหนี้'}
+            </Button>
+            <Button
+              type="button"
               variant="secondary"
               onClick={() => navigate(isEdit ? `/sales/invoices/${invoiceId}` : '/sales/invoices')}
             >
               ยกเลิก
             </Button>
-          </div>
-        }
-      />
-
-      <form onSubmit={handleSubmit}>
-        <div className="row g-4">
-          <div className="col-lg-8">
-            {!isEdit && draftPendingRestore ? (
-              <Alert variant="warning" className="small">
-                <div className="fw-semibold mb-1">พบแบบร่างที่บันทึกไว้</div>
-                <div className="mb-2">
-                  เวลา: {formatDateTime(draftUpdatedAt, 'ไม่ทราบเวลา')}
-                </div>
-                <div className="d-flex gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => {
-                      clearDraft(INVOICE_DRAFT_KEY)
-                      setFormData(draftPendingRestore)
-                      setDraftPendingRestore(null)
-                      setDraftUpdatedAt(null)
-                      setDraftSavedAt(null)
-                      toast.info('กู้แบบร่างสำเร็จ')
-                    }}
-                  >
-                    กู้แบบร่าง
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => {
-                      skipNextDraftSaveRef.current = true
-                      clearDraft(INVOICE_DRAFT_KEY)
-                      setDraftPendingRestore(null)
-                      setDraftUpdatedAt(null)
-                      setDraftSavedAt(null)
-                      toast.success('ลบแบบร่างแล้ว')
-                    }}
-                  >
-                    ลบแบบร่าง
-                  </Button>
-                </div>
-              </Alert>
-            ) : null}
-            <Card>
-              <h5 className="h6 fw-semibold mb-3">ข้อมูลหลัก</h5>
-              <div className="row g-3">
-                <div className="col-md-6">
-                  <Label htmlFor="customerId" required>
-                    ลูกค้า
-                  </Label>
-                  <Combobox
-                    id="customerSearch"
-                    value={customerSearch}
-                    onChange={setCustomerSearch}
-                    placeholder="พิมพ์เพื่อค้นหาลูกค้า (ชื่อ / VAT / อีเมล)"
-                    leftAdornment={<i className="bi bi-search"></i>}
-                    minChars={1}
-                    isLoading={customerOptionsQuery.isFetching || selectedCustomerQuery.isFetching}
-                    isLoadingMore={customerOptionsQuery.isFetchingNextPage}
-                    onLoadMore={() => {
-                      if (customerOptionsQuery.hasNextPage) customerOptionsQuery.fetchNextPage()
-                    }}
-                    options={customerItems.map<ComboboxOption>((p: PartnerSummary) => ({
-                      id: p.id,
-                      label: p.name,
-                      meta: p.vat ? `เลขผู้เสียภาษี: ${p.vat}` : p.email ? p.email : `รหัส: ${p.id}`,
-                    }))}
-                    total={customerTotal}
-                    emptyText="ไม่พบลูกค้า (ลองพิมพ์คำอื่น)"
-                    onPick={(opt) => {
-                      setFormData((prev) => ({ ...prev, customerId: Number(opt.id) }))
-                      setCustomerSearch(opt.label)
-                    }}
-                  />
-                  <div className="small text-muted mt-2">
-                    พิมพ์อย่างน้อย 1 ตัวอักษรเพื่อค้นหา • ใช้ ↑/↓ และ Enter เพื่อเลือก • Esc เพื่อปิด
-                  </div>
-
-                  {selectedCustomerQuery.data ? (
-                    <div className="small text-muted mt-2">
-                      เลือกแล้ว:{' '}
-                      <span className="fw-semibold">
-                        {selectedCustomerQuery.data.displayName}
-                      </span>{' '}
-                      (รหัส: {formData.customerId})
-                      <div className="d-flex gap-2 mt-2">
-                        <Button size="sm" variant="ghost" type="button" onClick={() => navigate(`/customers/${formData.customerId}`)}>
-                          เปิดรายละเอียดลูกค้า
-                        </Button>
-                        <Button size="sm" variant="ghost" type="button" onClick={() => navigate(`/customers/${formData.customerId}/edit`)}>
-                          แก้ไขลูกค้า
-                        </Button>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {customerOptionsQuery.isError ? (
-                    <div className="small text-danger mt-2">
-                      {customerOptionsQuery.error instanceof Error
-                        ? customerOptionsQuery.error.message
-                        : 'โหลดรายชื่อลูกค้าไม่สำเร็จ'}
-                    </div>
-                  ) : null}
-
-                  {fieldErrors?.customerId ? (
-                    <small className="text-danger">{fieldErrors.customerId}</small>
-                  ) : null}
-                </div>
-                <div className="col-md-6">
-                  <Label htmlFor="currency" required>
-                    สกุลเงิน
-                  </Label>
-                  <Input
-                    id="currency"
-                    value={formData.currency}
-                    onChange={(e) =>
-                      setFormData({ ...formData, currency: e.target.value })
-                    }
-                    placeholder="THB"
-                    required
-                  />
-                  {fieldErrors?.currency ? (
-                    <small className="text-danger">{fieldErrors.currency}</small>
-                  ) : null}
-                </div>
-                <div className="col-md-6">
-                  <Label htmlFor="invoiceDate" required>
-                    วันที่เอกสาร
-                  </Label>
-                  <Input
-                    id="invoiceDate"
-                    type="date"
-                    value={formData.invoiceDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, invoiceDate: e.target.value })
-                    }
-                    required
-                  />
-                  {fieldErrors?.invoiceDate ? (
-                    <small className="text-danger">{fieldErrors.invoiceDate}</small>
-                  ) : null}
-                </div>
-                <div className="col-md-6">
-                  <Label htmlFor="dueDate" required>
-                    วันครบกำหนด
-                  </Label>
-                  <Input
-                    id="dueDate"
-                    type="date"
-                    value={formData.dueDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, dueDate: e.target.value })
-                    }
-                    required
-                  />
-                  {fieldErrors?.dueDate ? (
-                    <small className="text-danger">{fieldErrors.dueDate}</small>
-                  ) : null}
-                </div>
-                <div className="col-12">
-                  <Label htmlFor="notes">หมายเหตุ</Label>
-                  <textarea
-                    id="notes"
-                    className="form-control"
-                    rows={3}
-                    value={formData.notes || ''}
-                    onChange={(e) =>
-                      setFormData({ ...formData, notes: e.target.value })
-                    }
-                    placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)"
-                  />
-                  {recentNotes.length > 0 ? (
-                    <div className="mt-2">
-                      <div className="small text-muted mb-1">หมายเหตุที่ใช้ล่าสุด</div>
-                      <div className="d-flex flex-wrap gap-2">
-                        {recentNotes.slice(0, 4).map((note, idx) => (
-                          <div key={`${idx}-${note.slice(0, 12)}`} className="d-flex gap-1">
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-secondary"
-                              onClick={() => applyRecentNote(note)}
-                              title={note}
-                            >
-                              ใช้ล่าสุด {idx + 1}
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-secondary"
-                              onClick={() => appendRecentNote(note)}
-                              title={note}
-                            >
-                              +
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            </Card>
-
-            <Card className="mt-4">
-              <div className="d-flex align-items-center justify-content-between gap-3 mb-2">
-                <div>
-                  <h5 className="h6 fw-semibold mb-0">รายการสินค้า/บริการ</h5>
-                  <div className="small text-muted">
-                    Odoo จะคำนวณยอด/ภาษี/รวมทั้งหมดหลังบันทึก (Quickfront แสดงผลเท่านั้น)
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  variant="primary"
-                  type="button"
-                  onClick={() =>
-                    setFormData({
-                      ...formData,
-                      lines: [
-                        ...formData.lines,
-                        {
-                          productId: null,
-                          description: '',
-                          quantity: 1,
-                          unitPrice: 0,
-                          taxRate: 0,
-                          subtotal: 0,
-                        },
-                      ],
-                    })
-                  }
-                >
-                  <i className="bi bi-plus-lg me-1" />
-                  เพิ่มรายการ
-                </Button>
-              </div>
-              <div className="d-flex justify-content-between align-items-center mb-2">
-                <div />
-              </div>
-
-              {formData.lines.length === 0 ? (
-                <div className="alert alert-warning small mb-0">
-                  กรุณาเพิ่มอย่างน้อย 1 รายการ
-                </div>
-              ) : (
-                <div className="table-responsive">
-                  <table
-                    className="table table-sm table-hover align-middle mb-0"
-                    style={{ tableLayout: 'fixed', minWidth: 1040 }}
-                  >
-                    <thead className="table-light">
-                      <tr className="text-muted small fw-semibold">
-                        <th style={{ width: 260, whiteSpace: 'nowrap' }}>สินค้า/บริการ</th>
-                        <th style={{ width: 260, whiteSpace: 'nowrap' }}>รายละเอียด</th>
-                        <th style={{ width: 110 }} className="text-end">
-                          จำนวน
-                        </th>
-                        <th style={{ width: 140 }} className="text-end">
-                          ราคาต่อหน่วย
-                        </th>
-                        <th style={{ width: 110 }} className="text-end">
-                          VAT%
-                        </th>
-                        <th style={{ width: 60 }}></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {formData.lines.map((line, idx) => (
-                        <tr key={idx}>
-                          <td>
-                            <ProductCombobox
-                              valueId={line.productId ?? null}
-                              onPick={(p) => {
-                                const next = [...formData.lines]
-                                const prev = next[idx]
-                                const pickedTaxRate = Array.isArray(p.taxes) && p.taxes.length
-                                  ? Number(p.taxes[0]?.amount || 0)
-                                  : prev.taxRate ?? 0
-                                next[idx] = {
-                                  ...prev,
-                                  productId: p.id,
-                                  // If description is empty, auto-fill with product name
-                                  description: (prev.description || '').trim() ? prev.description : p.name,
-                                  taxRate: Number.isFinite(pickedTaxRate) ? pickedTaxRate : 0,
-                                }
-                                setFormData({ ...formData, lines: next })
-                              }}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              className="form-control form-control-sm"
-                              value={line.description || ''}
-                              onChange={(e) => {
-                                const next = [...formData.lines]
-                                next[idx] = { ...next[idx], description: e.target.value }
-                                setFormData({ ...formData, lines: next })
-                              }}
-                              placeholder="เช่น ค่าบริการ / สินค้า"
-                            />
-                          </td>
-                          <td className="text-end">
-                            <input
-                              className="form-control form-control-sm text-end"
-                              type="number"
-                              value={line.quantity ?? 1}
-                              onChange={(e) => {
-                                const next = [...formData.lines]
-                                next[idx] = {
-                                  ...next[idx],
-                                  quantity: Number.parseFloat(e.target.value || '0'),
-                                }
-                                setFormData({ ...formData, lines: next })
-                              }}
-                              min={0}
-                              step="0.01"
-                            />
-                          </td>
-                          <td className="text-end">
-                            <input
-                              className="form-control form-control-sm text-end"
-                              type="number"
-                              value={line.unitPrice ?? 0}
-                              onChange={(e) => {
-                                const next = [...formData.lines]
-                                next[idx] = {
-                                  ...next[idx],
-                                  unitPrice: Number.parseFloat(e.target.value || '0'),
-                                }
-                                setFormData({ ...formData, lines: next })
-                              }}
-                              min={0}
-                              step="0.01"
-                            />
-                          </td>
-                          <td className="text-end">
-                            <input
-                              className="form-control form-control-sm text-end"
-                              type="number"
-                              value={line.taxRate ?? 0}
-                              onChange={(e) => {
-                                const next = [...formData.lines]
-                                next[idx] = {
-                                  ...next[idx],
-                                  taxRate: Number.parseFloat(e.target.value || '0'),
-                                }
-                                setFormData({ ...formData, lines: next })
-                              }}
-                              min={0}
-                              step="0.01"
-                            />
-                          </td>
-                          <td className="text-end">
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-danger"
-                              onClick={() => {
-                                const ok = window.confirm('ยืนยันการลบรายการนี้?')
-                                if (!ok) return
-                                const next = [...formData.lines]
-                                next.splice(idx, 1)
-                                setFormData({ ...formData, lines: next })
-                              }}
-                              title="ลบรายการ"
-                            >
-                              <i className="bi bi-trash me-1"></i>
-                              ลบ
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </Card>
-          </div>
-
-          <div className="col-lg-4">
-            <Card>
-              <h5 className="h6 fw-semibold mb-3">การดำเนินการ</h5>
-              {(createMutation.error || updateMutation.error) && (
-                <Alert variant="danger" className="small mb-3">
-                  {createMutation.error instanceof Error
-                    ? createMutation.error.message
-                    : updateMutation.error instanceof Error
-                      ? updateMutation.error.message
-                      : 'เกิดข้อผิดพลาด'}
-                </Alert>
-              )}
-              <div className="d-grid gap-2">
-                <Button
-                  type="submit"
-                  isLoading={createMutation.isPending || updateMutation.isPending}
-                  disabled={!canSubmit || createMutation.isPending || updateMutation.isPending}
-                >
-                  {isEdit ? 'บันทึกการแก้ไข' : 'สร้างใบแจ้งหนี้'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() =>
-                    navigate(isEdit ? `/sales/invoices/${invoiceId}` : '/sales/invoices')
-                  }
-                >
-                  ยกเลิก
-                </Button>
-              </div>
-            </Card>
-          </div>
+          </DocumentToolbar>
         </div>
       </form>
-    </div>
+    </DocumentPageLayout>
   )
 }

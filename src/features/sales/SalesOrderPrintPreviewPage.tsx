@@ -23,10 +23,15 @@ export function SalesOrderPrintPreviewPage() {
     staleTime: 30_000,
   })
 
+  const partnerId = typeof query.data?.partnerId === 'number' && query.data.partnerId > 0 ? query.data.partnerId : null
+
   const partnerQuery = useQuery({
-    queryKey: ['partner', 'printPreview', query.data?.partnerId],
-    enabled: typeof query.data?.partnerId === 'number' && query.data.partnerId > 0,
-    queryFn: () => getPartner(query.data!.partnerId as number),
+    queryKey: ['partner', 'printPreview', partnerId],
+    enabled: partnerId != null,
+    queryFn: () => {
+      if (partnerId == null) throw new Error('Missing partner id')
+      return getPartner(partnerId)
+    },
     staleTime: 60_000,
   })
 
@@ -67,7 +72,7 @@ export function SalesOrderPrintPreviewPage() {
     )
   }
 
-  const order = query.data as SalesOrder
+  const order = query.data
   const orderLines: SalesOrderLine[] = Array.isArray(order.lines) ? order.lines : []
   const attachments: SalesOrderAttachment[] = Array.isArray(order.attachments) ? order.attachments : []
   const documentLabel = order.orderType === 'sale' ? 'Sale Order' : 'ใบเสนอราคา'
