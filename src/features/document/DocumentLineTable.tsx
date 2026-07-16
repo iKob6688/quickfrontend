@@ -8,7 +8,7 @@ export type DocumentLineTableProps<T> = {
   rows: T[]
   columns: Column<T>[]
   empty?: ReactNode
-  addLabel?: string
+  addLabel?: ReactNode
   onAdd?: () => void
   footer?: ReactNode
   className?: string

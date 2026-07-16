@@ -38,6 +38,7 @@ export function SalesOrderDetailPage() {
     queryFn: (): Promise<SalesOrder> => getSalesOrder(id),
     staleTime: 30_000,
   })
+  const queryError = query.error as unknown
 
   const partnerId = typeof query.data?.partnerId === 'number' && query.data.partnerId > 0 ? query.data.partnerId : null
 
@@ -181,7 +182,7 @@ export function SalesOrderDetailPage() {
   if (query.isError) {
     return (
       <Alert variant="danger" className="small">
-        {query.error instanceof Error ? query.error.message : 'โหลดข้อมูลไม่สำเร็จ'}
+        {queryError instanceof Error ? queryError.message : 'โหลดข้อมูลไม่สำเร็จ'}
       </Alert>
     )
   }
@@ -338,17 +339,7 @@ export function SalesOrderDetailPage() {
         }
       />
 
-      {query.isLoading ? (
-        <div className="d-flex align-items-center gap-2 py-4">
-          <Spinner animation="border" size="sm" />
-          <span className="small text-muted">กำลังโหลด...</span>
-        </div>
-      ) : query.isError ? (
-        <Alert variant="danger" className="small">
-          {query.error instanceof Error ? query.error.message : 'โหลดข้อมูลไม่สำเร็จ'}
-        </Alert>
-      ) : !query.data ? null : (
-        <div className="row g-4">
+      <div className="row g-4">
           <div className="col-lg-8">
             {(() => {
               const deliveries = (query.data.deliveries || []) as NonNullable<SalesOrder['deliveries']>
@@ -529,7 +520,6 @@ export function SalesOrderDetailPage() {
             ) : null}
           </div>
         </div>
-      )}
 
       <Modal show={emailModalOpen} onHide={() => setEmailModalOpen(false)} centered>
         <Modal.Header closeButton>
