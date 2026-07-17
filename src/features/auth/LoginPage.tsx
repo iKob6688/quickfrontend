@@ -67,7 +67,7 @@ export function LoginPage() {
                   display: 'inline-block',
                 }}
               />
-              <h1 className="h4 fw-bold text-dark mb-2">ยินดีต้อนรับสู่ CHONLATEE PRO</h1>
+              <h1 className="h4 fw-bold text-dark mb-2">Login เพื่อเข้าสู่ระบบ</h1>
               <p className="text-muted small mb-0">
                 ระบบงานบัญชีออนไลน์และเอกสารสำหรับธุรกิจไทยระดับ enterprise
               </p>
