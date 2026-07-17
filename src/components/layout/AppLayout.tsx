@@ -304,10 +304,10 @@ export function AppLayout() {
                 </button>
                 <div className="d-none d-sm-block">
                   <p className="small fw-bold mb-0 text-truncate" style={{ maxWidth: '200px', color: 'var(--qf-text-strong)' }}>
-                    {user?.companyName ?? 'Odoo 18'}
+                    {user?.companyName ?? 'CHONLATEE PRO'}
                   </p>
                   <p className="small mb-0 text-truncate" style={{ maxWidth: '200px', fontSize: '0.6875rem', color: 'var(--qf-text-muted)' }}>
-                    ระบบงานบัญชีสำหรับธุรกิจไทย
+                    CHONLATEE PRO · ระบบงานบัญชีสำหรับธุรกิจไทย
                   </p>
                 </div>
                 {canSwitchCompany ? (

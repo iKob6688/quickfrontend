@@ -15,7 +15,7 @@ export function Topbar() {
   const tpl = useMemo(() => templates.find((t) => t.id === templateId), [templates, templateId])
   const [dupResult, setDupResult] = useState<string | undefined>()
 
-  const title = tpl ? `${tpl.name}` : 'Reports Studio'
+  const title = tpl ? `${tpl.name}` : 'CHONLATEE PRO Reports Studio'
   const sub = tpl ? `${tpl.docType}${tpl.published ? ' • Published' : ''}` : location.pathname
 
   return (
@@ -76,5 +76,4 @@ export function Topbar() {
     </div>
   )
 }
-
 

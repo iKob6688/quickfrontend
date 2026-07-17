@@ -6,7 +6,7 @@ export function ExcelImportPage() {
     <div>
       <PageHeader
         title="นำเข้าข้อมูลจาก Excel"
-        subtitle="อัปโหลดไฟล์ .xlsx เพื่อสร้างลูกค้า สินค้า รายจ่าย หรือใบแจ้งหนี้ใน Odoo 18"
+        subtitle="อัปโหลดไฟล์ .xlsx เพื่อสร้างลูกค้า สินค้า รายจ่าย หรือใบแจ้งหนี้ใน CHONLATEE PRO"
         breadcrumb="Tools · Excel Import"
       />
       <div className="grid gap-4 lg:grid-cols-2">
@@ -16,5 +16,4 @@ export function ExcelImportPage() {
     </div>
   )
 }
-
 

@@ -14,7 +14,7 @@ export function Sidebar() {
   return (
     <div className="flex h-full flex-col p-3">
       <div className="px-2 pb-3">
-        <div className="text-sm font-semibold text-slate-900">erpth Reports Studio</div>
+        <div className="text-sm font-semibold text-slate-900">CHONLATEE PRO Reports Studio</div>
         <div className="text-xs text-slate-500">Drag & drop documents</div>
       </div>
 
@@ -42,5 +42,4 @@ export function Sidebar() {
     </div>
   )
 }
-
 

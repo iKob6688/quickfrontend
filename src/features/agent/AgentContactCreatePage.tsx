@@ -11,6 +11,8 @@ import { agentCreateContact, agentOcr, fileToBase64, type ContactCreateResponse,
 import { toApiError } from '@/api/response'
 import { toast } from '@/lib/toastStore'
 
+const DEFAULT_CONTACT_TAG = 'Partner'
+
 export function AgentContactCreatePage() {
   const navigate = useNavigate()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -69,6 +71,7 @@ export function AgentContactCreatePage() {
 
   const contactMutation = useMutation({
     mutationFn: async () => {
+      const resolvedTags = tags.length > 0 ? tags : [DEFAULT_CONTACT_TAG]
       const payload: any = {
         contact_data: {
           name: name.trim(),
@@ -78,9 +81,9 @@ export function AgentContactCreatePage() {
           vat: vat.trim() || undefined,
           website: website.trim() || undefined,
           street: address.trim() || undefined,
-          tags: tags.length > 0 ? tags : undefined,
+          tags: resolvedTags,
         },
-        tags: tags.length > 0 ? tags : undefined,
+        tags: resolvedTags,
       }
 
       if (selectedFile) {

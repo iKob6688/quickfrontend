@@ -71,7 +71,7 @@ export function BackendConnectionPage() {
     <div className="qf-admin-setup-page">
       <PageHeader
         title="ตั้งค่าการเชื่อมต่อระบบ"
-        subtitle="สำหรับผู้ดูแลระบบ ใช้สร้างบริษัทใหม่และตั้งค่าการเชื่อมต่อกับ Odoo 18"
+        subtitle="สำหรับผู้ดูแลระบบ ใช้สร้างบริษัทใหม่และตั้งค่าการเชื่อมต่อกับ CHONLATEE PRO"
         breadcrumb="ตั้งค่าระบบ · การเชื่อมต่อ"
       />
 

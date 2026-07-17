@@ -271,7 +271,7 @@ export function EtaxSettingsPage() {
                           <Label htmlFor="etax-email-name">Sender Name</Label>
                           <Input
                             id="etax-email-name"
-                            placeholder="e.g. Chonlatee Innovation"
+                            placeholder="e.g. CHONLATEE PRO"
                             value={draft.emailSenderName ?? ''}
                             onChange={(e) => setDraft((prev) => (prev ? { ...prev, emailSenderName: e.target.value } : prev))}
                           />

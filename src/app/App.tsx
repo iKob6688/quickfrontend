@@ -7,11 +7,10 @@ export default function ReportsStudioApp() {
   const ensureDefaults = useTemplateStore((s) => s.ensureDefaults)
 
   useEffect(() => {
-    document.title = 'erpth Reports Studio'
+    document.title = 'CHONLATEE PRO Reports Studio'
     ensureDefaults(DEFAULT_TEMPLATES)
   }, [ensureDefaults])
 
   return <StudioRoutes />
 }
-
 

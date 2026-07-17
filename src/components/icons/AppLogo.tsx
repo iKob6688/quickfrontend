@@ -25,7 +25,7 @@ export function AppLogo({ size = 'md', tone = 'dark' }: AppLogoProps) {
     >
       <img
         src="/chonlatee-logo.png"
-        alt="Chonlatee Innovation"
+        alt="CHONLATEE PRO"
         style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain' }}
       />
     </span>
