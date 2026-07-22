@@ -909,9 +909,14 @@ export function SalesOrderFormPage() {
     }
   }
 
-  const buildPayload = (): SalesOrderPayload => {
+  const buildPayload = (partnerIdOverride?: number | null): SalesOrderPayload => {
     const payload: SalesOrderPayload = {
-      partnerId: formData.partnerId && formData.partnerId > 0 ? formData.partnerId : null,
+      partnerId:
+        typeof partnerIdOverride === 'number' && partnerIdOverride > 0
+          ? partnerIdOverride
+          : formData.partnerId && formData.partnerId > 0
+            ? formData.partnerId
+            : null,
       orderDate: formData.orderDate,
       validityDate: formData.validityDate,
       currency: formData.currency,
@@ -951,6 +956,38 @@ export function SalesOrderFormPage() {
       attachments: sanitizeSalesOrderAttachments(attachmentItems),
     }
     return payload
+  }
+
+  const ensureSalesOrderPartner = async () => {
+    if (formData.partnerId && formData.partnerId > 0) {
+      return formData.partnerId
+    }
+
+    const partnerName = formData.customerNameText.trim() || partnerSearch.trim()
+    if (!partnerName) {
+      throw new Error('กรุณาเลือกลูกค้าหรือกรอกชื่อลูกค้าก่อนบันทึก')
+    }
+
+    const created = await createPartner({
+      company_type: 'company',
+      name: partnerName,
+      email: formData.customerEmailText.trim() || undefined,
+      phone: formData.customerPhoneText.trim() || undefined,
+      vat: formData.customerTaxIdText.trim() || undefined,
+      branchCode: formData.customerBranchText.trim() || undefined,
+      street: formData.customerAddressText.trim() || undefined,
+    })
+
+    await queryClient.invalidateQueries({ queryKey: ['partners'] })
+    await queryClient.invalidateQueries({ queryKey: ['partner', created.id] })
+    setFormData((prev) => ({
+      ...prev,
+      partnerId: created.id,
+      customerNameText: created.displayName || created.name || partnerName,
+    }))
+    setPartnerSearch(created.displayName || created.name || partnerName)
+
+    return created.id
   }
 
   const persistSavedOrderState = (savedOrder: Awaited<ReturnType<typeof createSalesOrder>>) => {
@@ -1041,7 +1078,8 @@ export function SalesOrderFormPage() {
         return
       }
 
-      const payload = buildPayload()
+      const resolvedPartnerId = await ensureSalesOrderPartner()
+      const payload = buildPayload(resolvedPartnerId)
       const savedOrder = isEdit ? await updateMutation.mutateAsync(payload) : await createMutation.mutateAsync(payload)
       persistSavedOrderState(savedOrder)
       const uploadResult = await uploadPendingAttachments(savedOrder.id)
@@ -1089,33 +1127,6 @@ export function SalesOrderFormPage() {
     preview.document.close()
     preview.focus()
     setTimeout(() => preview.print(), 250)
-  }
-
-  const handleDownload = () => {
-    const html = buildSalesOrderPrintPayload({
-      formData,
-      selectedPartnerName: selectedPartnerQuery.data?.displayName || selectedPartnerQuery.data?.name || '',
-      orderType: formData.orderType,
-      isEdit,
-      documentNumber,
-      renderedLineTotals,
-      grossSubtotal: grossSubtotalAmount,
-      discountAmount,
-      afterDiscount: afterDiscountAmount,
-      vatAmount,
-      withholdingAmount,
-      grandTotal,
-      attachmentItems,
-    })
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const link = window.document.createElement('a')
-    link.href = url
-    link.download = `${documentNumber.replace(/[^a-zA-Z0-9ก-๙_-]+/g, '_') || 'sales-order'}.html`
-    window.document.body.appendChild(link)
-    link.click()
-    link.remove()
-    setTimeout(() => URL.revokeObjectURL(url), 10_000)
   }
 
   const handleDownloadPdf = async () => {
@@ -1299,10 +1310,6 @@ export function SalesOrderFormPage() {
           <Button type="button" size="sm" variant="secondary" onClick={openPreviewWindow}>
             <i className="bi bi-printer me-1" />
             พิมพ์
-          </Button>
-          <Button type="button" size="sm" variant="secondary" onClick={handleDownload}>
-            <i className="bi bi-download me-1" />
-            ดาวน์โหลด HTML
           </Button>
           {isEdit ? (
             <Button type="button" size="sm" variant="secondary" onClick={handleDownloadPdf}>
