@@ -884,4 +884,5 @@ Current status:
 - Frontend quotation flows are aligned with the live q01 sales order controller contract.
 - Attachment drafts stay metadata-only in local storage.
 - Totals logic is centralized in `src/lib/salesOrderTotals.ts`.
+- Destructive actions now use in-app confirmation modals instead of browser confirm dialogs.
 - Remaining work, if any, should happen in the backend Odoo controller layer rather than by reintroducing duplicate frontend logic.

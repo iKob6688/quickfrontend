@@ -27,6 +27,7 @@ import { createPartner, getPartner, listPartners, type PartnerListResponse, type
 import { getDefaultVatTaxId, listVatTaxes, type TaxAdminListItem } from '@/api/services/taxes.service'
 import {
   createSalesOrder,
+  deleteSalesOrder,
   deleteSalesOrderAttachment,
   getSalesOrder,
   fetchSalesOrderPdf,
@@ -599,6 +600,7 @@ export function SalesOrderFormPage() {
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
   const [attachmentPickerKey, setAttachmentPickerKey] = useState(0)
   const [attachmentItems, setAttachmentItems] = useState<SalesOrderAttachmentDraft[]>([])
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
 
   const salesTaxesQuery = useQuery({
     queryKey: ['tax-admin', 'sales-order-form', 'sale'],
@@ -782,6 +784,24 @@ export function SalesOrderFormPage() {
       const fe = extractFieldErrors(err)
       if (fe) setFieldErrors(fe)
       toast.error('บันทึกเอกสารขายไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!isEdit || !orderId) {
+        throw new Error('ไม่พบเอกสารที่ต้องการลบ')
+      }
+      return deleteSalesOrder(orderId)
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['salesOrders'] })
+      await queryClient.invalidateQueries({ queryKey: ['salesOrder', orderId] })
+      toast.success('ลบเอกสารสำเร็จ')
+      navigate('/sales/orders')
+    },
+    onError: (err: unknown) => {
+      toast.error('ลบเอกสารไม่สำเร็จ', err instanceof Error ? err.message : undefined)
     },
   })
 
@@ -1160,6 +1180,12 @@ export function SalesOrderFormPage() {
     }
   }
 
+  const handleDelete = async () => {
+    if (!isEdit || !orderId) return
+    await deleteMutation.mutateAsync()
+    setDeleteConfirmOpen(false)
+  }
+
   const handleShareLink = async () => {
     if (!isEdit || !orderId) {
       toast.error('ต้องบันทึกเอกสารก่อนจึงจะแชร์ลิงก์ได้')
@@ -1347,6 +1373,16 @@ export function SalesOrderFormPage() {
           >
             บันทึกข้อมูล
           </Button>
+          {isEdit ? (
+            <button
+              type="button"
+              className="btn btn-outline-danger btn-sm"
+              onClick={() => setDeleteConfirmOpen(true)}
+              disabled={deleteMutation.isPending}
+            >
+              ลบเอกสาร
+            </button>
+          ) : null}
         </div>
       }
     >
@@ -2074,6 +2110,63 @@ export function SalesOrderFormPage() {
 
       </form>
     </DocumentPageLayout>
+
+      <Modal show={deleteConfirmOpen} onHide={() => setDeleteConfirmOpen(false)} centered>
+        <Modal.Header closeButton className="border-0 pb-0">
+          <Modal.Title className="h5 fw-semibold mb-0 text-danger">ยืนยันการลบเอกสาร</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="d-flex align-items-start gap-3">
+            <div
+              className="flex-shrink-0 rounded-circle bg-danger-subtle text-danger d-inline-flex align-items-center justify-content-center"
+              style={{ width: 44, height: 44 }}
+            >
+              <i className="bi bi-trash3 fs-5" />
+            </div>
+            <div className="flex-grow-1">
+              <div className="fw-semibold mb-1">คุณกำลังจะลบ {documentNumber}</div>
+              <div className="text-muted small">
+                การลบเอกสารจะลบ record นี้ออกจากระบบและไม่สามารถกู้คืนได้จากหน้านี้
+              </div>
+              <div className="mt-3 rounded-3 border bg-light p-3">
+                <div className="small text-muted mb-1">รายละเอียด</div>
+                <div className="small d-grid gap-1">
+                  <div>
+                    <span className="text-muted">ลูกค้า: </span>
+                    <span className="fw-semibold">
+                      {getSalesOrderCustomerDisplayName({
+                        customerNameText: formData.customerNameText,
+                        partnerName: selectedPartnerQuery.data?.displayName || selectedPartnerQuery.data?.name || '',
+                      })}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted">สถานะ: </span>
+                    <span className="fw-semibold">{statusLabel}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted">รายการ: </span>
+                    <span className="fw-semibold">{formData.lines.length} รายการ</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer className="border-0 pt-0">
+          <Button variant="ghost" onClick={() => setDeleteConfirmOpen(false)} disabled={deleteMutation.isPending}>
+            ยกเลิก
+          </Button>
+          <button
+            type="button"
+            className="btn btn-danger"
+            onClick={() => void handleDelete()}
+            disabled={deleteMutation.isPending}
+          >
+            {deleteMutation.isPending ? 'กำลังลบ...' : 'ลบเอกสาร'}
+          </button>
+        </Modal.Footer>
+      </Modal>
 
       <Modal show={quickPartnerOpen} onHide={() => setQuickPartnerOpen(false)} centered size="lg">
         <Modal.Header closeButton>

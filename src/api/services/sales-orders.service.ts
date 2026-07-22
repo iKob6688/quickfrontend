@@ -733,6 +733,30 @@ export async function updateSalesOrder(id: number, payload: SalesOrderPayload) {
   }
 }
 
+export async function deleteSalesOrder(id: number) {
+  if (!Number.isFinite(id) || id <= 0) {
+    return false
+  }
+
+  try {
+    const response = await apiClient.delete(`${basePath}/${id}`)
+    if (response.status === 204 || response.data == null || response.data === '') {
+      return true
+    }
+    const data = unwrapResponse<{ deleted?: boolean }>(response)
+    if (data?.deleted === false) {
+      throw new Error('ลบเอกสารไม่สำเร็จ')
+    }
+    return true
+  } catch (err) {
+    const status = extractHttpStatus(err)
+    if (status === 404 || status === 405 || status === 501) {
+      throw new Error('ระบบ backend ยังไม่รองรับการลบใบเสนอราคา/คำสั่งขาย')
+    }
+    throw err
+  }
+}
+
 export interface SalesOrderAttachmentUploadResult {
   attachments: SalesOrderAttachment[]
 }

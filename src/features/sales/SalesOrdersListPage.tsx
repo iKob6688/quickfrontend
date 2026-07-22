@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useInfiniteQuery, useQuery, type InfiniteData, type QueryFunctionContext } from '@tanstack/react-query'
-import { Spinner } from 'react-bootstrap'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData, type QueryFunctionContext } from '@tanstack/react-query'
+import { Modal, Spinner } from 'react-bootstrap'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Tabs } from '@/components/ui/Tabs'
@@ -9,15 +9,17 @@ import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
-import { listSalesOrders, type SalesOrderListItem, type SalesOrderStatus } from '@/api/services/sales-orders.service'
+import { deleteSalesOrder, listSalesOrders, type SalesOrderListItem, type SalesOrderStatus } from '@/api/services/sales-orders.service'
 import { useAppDateFormatter } from '@/lib/dateFormat'
 import { useSettingsStore } from '@/app/core/storage/settingsStore'
 import { getSalesOrderCustomerDisplayName } from '@/lib/salesOrderPresentation'
+import { toast } from '@/lib/toastStore'
 
 type StatusTab = 'all' | SalesOrderStatus
 
 export function SalesOrdersListPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const formatDate = useAppDateFormatter()
   const scanSlipEnabled = useSettingsStore((state) => state.settings.scanSlipEnabled)
   const searchParams = useMemo(() => new URLSearchParams(window.location.search), [])
@@ -26,6 +28,9 @@ export function SalesOrdersListPage() {
   const [tab, setTab] = useState<StatusTab>('all')
   const [jobFilter, setJobFilter] = useState<'all' | 'accounting' | 'closing' | 'registration' | 'other'>('all')
   const [q, setQ] = useState('')
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const headerSelectAllRef = useRef<HTMLInputElement | null>(null)
   const qDebounced = useDebouncedValue(q, 300)
   const limit = 30
 
@@ -82,6 +87,91 @@ export function SalesOrdersListPage() {
     })
   }, [orders, jobFilter])
 
+  const visibleOrderIds = useMemo(() => filteredOrders.map((order) => order.id), [filteredOrders])
+  const visibleOrderIdSet = useMemo(() => new Set(visibleOrderIds), [visibleOrderIds])
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds])
+  const selectedVisibleCount = useMemo(
+    () => visibleOrderIds.filter((id) => selectedIdSet.has(id)).length,
+    [selectedIdSet, visibleOrderIds],
+  )
+  const allVisibleSelected = visibleOrderIds.length > 0 && selectedVisibleCount === visibleOrderIds.length
+  const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected
+
+  useEffect(() => {
+    if (headerSelectAllRef.current) {
+      headerSelectAllRef.current.indeterminate = someVisibleSelected
+    }
+  }, [someVisibleSelected])
+
+  useEffect(() => {
+    setSelectedIds((current) => current.filter((id) => visibleOrderIdSet.has(id)))
+  }, [visibleOrderIdSet])
+
+  const toggleVisibleSelection = (checked: boolean) => {
+    setSelectedIds((current) => {
+      if (checked) {
+        return Array.from(new Set([...current, ...visibleOrderIds]))
+      }
+      const next = new Set(current)
+      visibleOrderIds.forEach((id) => next.delete(id))
+      return Array.from(next)
+    })
+  }
+
+  const toggleRowSelection = (orderId: number, checked: boolean) => {
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      if (checked) next.add(orderId)
+      else next.delete(orderId)
+      return Array.from(next)
+    })
+  }
+
+  const deleteMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      const uniqueIds = Array.from(new Set(ids)).filter((value) => Number.isFinite(value) && value > 0)
+      let deletedCount = 0
+      const failedIds: number[] = []
+
+      for (const orderId of uniqueIds) {
+        try {
+          const deleted = await deleteSalesOrder(orderId)
+          if (deleted) deletedCount += 1
+          else failedIds.push(orderId)
+        } catch {
+          failedIds.push(orderId)
+        }
+      }
+
+      return { deletedCount, failedIds, total: uniqueIds.length }
+    },
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ['salesOrders'] })
+      await queryClient.invalidateQueries({ queryKey: ['salesOrders-counts'] })
+      setSelectedIds([])
+      if (result.deletedCount > 0) {
+        toast.success('ลบรายการสำเร็จ', `ลบแล้ว ${result.deletedCount} รายการ`)
+      }
+      if (result.failedIds.length > 0) {
+        toast.info(
+          'บางรายการลบไม่สำเร็จ',
+          result.failedIds.length === result.total
+            ? 'ระบบ backend ยังไม่รองรับการลบใบเสนอราคา/คำสั่งขาย'
+            : `ลบไม่สำเร็จ ${result.failedIds.length} รายการ`,
+        )
+      }
+    },
+    onError: (err: unknown) => {
+      toast.error('ลบรายการไม่สำเร็จ', err instanceof Error ? err.message : undefined)
+    },
+  })
+
+  const handleBulkDelete = async () => {
+    if (!selectedIds.length) return
+    await deleteMutation.mutateAsync(selectedIds)
+    setDeleteConfirmOpen(false)
+  }
+
   const rows = useMemo(
     () =>
       filteredOrders.map((order: SalesOrderListItem) => ({
@@ -97,6 +187,31 @@ export function SalesOrdersListPage() {
   )
 
   const columns: Column<(typeof rows)[number]>[] = [
+    {
+      key: 'select',
+      header: (
+        <input
+          ref={headerSelectAllRef}
+          type="checkbox"
+          className="form-check-input"
+          checked={allVisibleSelected}
+          onChange={(e) => toggleVisibleSelection(e.target.checked)}
+          aria-label="เลือกทั้งหมด"
+        />
+      ),
+      className: 'text-center qf-so-col-select',
+      cell: (r) => (
+        <div className="d-flex justify-content-center">
+          <input
+            type="checkbox"
+            className="form-check-input"
+            checked={selectedIdSet.has(r.id)}
+            onChange={(e) => toggleRowSelection(r.id, e.target.checked)}
+            aria-label={`เลือกเอกสาร ${r.number}`}
+          />
+        </div>
+      ),
+    },
     {
       key: 'number',
       header: 'เลขที่เอกสาร',
@@ -248,6 +363,22 @@ export function SalesOrdersListPage() {
         </div>
       ) : (
         <div className="d-flex flex-column gap-3">
+          <div className="d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div className="d-flex align-items-center gap-2 small text-muted">
+              <input type="checkbox" className="form-check-input" checked={allVisibleSelected} onChange={(e) => toggleVisibleSelection(e.target.checked)} aria-label="เลือกทั้งหมดในรายการที่แสดง" />
+              <span>
+                เลือกที่แสดง {selectedVisibleCount}/{visibleOrderIds.length} รายการ
+              </span>
+            </div>
+            <button
+              type="button"
+              className="btn btn-outline-danger btn-sm"
+              disabled={!selectedIds.length || deleteMutation.isPending}
+              onClick={() => setDeleteConfirmOpen(true)}
+            >
+              {deleteMutation.isPending ? 'กำลังลบ...' : `ลบที่เลือก (${selectedIds.length})`}
+            </button>
+          </div>
           <DataTable
             title="รายการใบเสนอราคา / Sale Order"
             right={
@@ -259,6 +390,7 @@ export function SalesOrdersListPage() {
             columns={columns}
             rows={rows}
             rowKey={(row) => row.id}
+            rowClassName={(row) => (selectedIdSet.has(row.id) ? 'qf-so-order-row--selected' : undefined)}
             empty={
               <div>
                 <p className="h6 fw-semibold mb-2">ยังไม่มีข้อมูล</p>
@@ -302,6 +434,39 @@ export function SalesOrdersListPage() {
           </div>
         </div>
       )}
+
+      <Modal show={deleteConfirmOpen} onHide={() => setDeleteConfirmOpen(false)} centered>
+        <Modal.Header closeButton className="border-0 pb-0">
+          <Modal.Title className="h5 fw-semibold mb-0 text-danger">ยืนยันการลบรายการ</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="d-flex align-items-start gap-3">
+            <div className="flex-shrink-0 rounded-circle bg-danger-subtle text-danger d-inline-flex align-items-center justify-content-center" style={{ width: 44, height: 44 }}>
+              <i className="bi bi-trash3 fs-5" />
+            </div>
+            <div className="flex-grow-1">
+              <div className="fw-semibold mb-1">คุณกำลังจะลบ {selectedIds.length} รายการ</div>
+              <div className="text-muted small">
+                รายการที่ถูกลบจะหายจากระบบทันทีและไม่สามารถกู้คืนได้จากหน้านี้
+              </div>
+              <div className="mt-3 rounded-3 border bg-light p-3">
+                <div className="small text-muted mb-1">คำเตือน</div>
+                <div className="small">
+                  ตรวจสอบให้แน่ใจว่าไม่ได้เลือกเอกสารผิด โดยเฉพาะเอกสารที่ถูกใช้งานต่อในขั้นตอน Invoice หรือ Delivery แล้ว
+                </div>
+              </div>
+            </div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer className="border-0 pt-0">
+          <Button variant="ghost" onClick={() => setDeleteConfirmOpen(false)} disabled={deleteMutation.isPending}>
+            ยกเลิก
+          </Button>
+          <button type="button" className="btn btn-danger" onClick={() => void handleBulkDelete()} disabled={deleteMutation.isPending}>
+            ลบรายการที่เลือก
+          </button>
+        </Modal.Footer>
+      </Modal>
     </div>
   )
 }

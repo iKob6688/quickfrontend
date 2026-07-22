@@ -2944,6 +2944,10 @@ body {
   border-radius: 999px;
 }
 
+.qf-app .qf-so-page .qf-so-col-select {
+  width: 56px;
+}
+
 .qf-app .qf-so-page .qf-so-col-icon {
   width: 44px;
 }
@@ -2977,6 +2981,14 @@ body {
 
 .qf-app .qf-so-page .qf-so-col-delete {
   width: 52px;
+}
+
+.qf-app .qf-so-page .qf-so-order-row--selected > td {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.qf-app .qf-so-page .qf-so-order-row--selected:hover > td {
+  background: rgba(37, 99, 235, 0.12);
 }
 
 .qf-app .qf-so-page .qf-so-summary__row {
