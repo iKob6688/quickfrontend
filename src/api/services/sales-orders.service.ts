@@ -18,6 +18,7 @@ export type SalesOrderType = 'quotation' | 'sale'
 export interface SalesOrderLine {
   lineType?: 'normal' | 'section' | 'note'
   productId: number | null
+  productCode?: string
   description: string
   quantity: number
   unitPrice: number
@@ -157,6 +158,8 @@ interface BackendSalesOrder {
   lines?: Array<{
     product_id?: number | null
     productId?: number | null
+    product_code?: string | null
+    productCode?: string | null
     description?: string
     name?: string
     quantity?: number | string
@@ -360,6 +363,7 @@ function mapBackendOrderToDetail(backend: BackendSalesOrder): SalesOrder {
     return {
       lineType,
       productId: line.productId ?? line.product_id ?? null,
+      productCode: String(line.productCode ?? line.product_code ?? '').trim() || undefined,
       description: String(line.description ?? line.name ?? ''),
       quantity: toNumber(line.quantity),
       unitPrice: toNumber(line.unitPrice ?? line.price_unit),

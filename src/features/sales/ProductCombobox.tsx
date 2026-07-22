@@ -16,6 +16,18 @@ interface Props {
   compact?: boolean
 }
 
+function stripLeadingProductCode(name: string, defaultCode?: string) {
+  const rawName = name.trim()
+  const code = String(defaultCode || '').trim()
+  if (!rawName) return ''
+  if (!code) return rawName
+
+  const escapedCode = code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const pattern = new RegExp(`^\\[?${escapedCode}\\]?\\s*[-–—:]?\\s*`, 'i')
+  const stripped = rawName.replace(pattern, '').trim()
+  return stripped || rawName
+}
+
 export function ProductCombobox({ id, valueId, onPick, disabled, compact = false }: Props) {
   const queryClient = useQueryClient()
   const [input, setInput] = useState('')
@@ -36,7 +48,9 @@ export function ProductCombobox({ id, valueId, onPick, disabled, compact = false
 
   useEffect(() => {
     // keep input synced with selected value (unless user is actively searching)
-    if (!qTrim && selectedQuery.data?.name) setInput(selectedQuery.data.name)
+    if (!qTrim && selectedQuery.data?.name) {
+      setInput(stripLeadingProductCode(selectedQuery.data.name, selectedQuery.data.defaultCode))
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [valueId, selectedQuery.data?.name])
 
@@ -67,7 +81,7 @@ export function ProductCombobox({ id, valueId, onPick, disabled, compact = false
   const options = useMemo(() => {
     return items.map<ComboboxOption>((p) => ({
       id: p.id,
-      label: p.name,
+      label: stripLeadingProductCode(p.name, p.defaultCode),
       meta:
         [
           p.defaultCode ? `[${p.defaultCode}]` : null,
@@ -128,7 +142,7 @@ export function ProductCombobox({ id, valueId, onPick, disabled, compact = false
         onPick={(opt) => {
           const picked = items.find((x) => x.id === Number(opt.id))
           if (picked) {
-            setInput(picked.name)
+            setInput(stripLeadingProductCode(picked.name, picked.defaultCode))
             onPick(picked)
           }
         }}

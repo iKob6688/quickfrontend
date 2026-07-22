@@ -2916,11 +2916,18 @@ body {
 .qf-app .qf-so-page .qf-so-order-line-table textarea,
 .qf-app .qf-so-page .qf-so-textarea {
   resize: vertical;
-  min-height: 72px;
+  min-height: var(--qf-input-height);
 }
 
 .qf-app .qf-so-page .qf-so-line-desc {
-  min-height: 74px;
+  min-height: var(--qf-input-height);
+}
+
+.qf-app .qf-so-page .qf-so-line-code-input {
+  width: 100%;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+  text-transform: uppercase;
 }
 
 .qf-app .qf-so-page .qf-so-order-line-actions {
@@ -2943,6 +2950,10 @@ body {
 
 .qf-app .qf-so-page .qf-so-col-index {
   width: 52px;
+}
+
+.qf-app .qf-so-page .qf-so-col-code {
+  width: 140px;
 }
 
 .qf-app .qf-so-page .qf-so-col-product {
@@ -3056,6 +3067,6 @@ body {
   }
 
   .qf-app .qf-so-page .qf-so-order-line-table {
-    min-width: 1320px;
+    min-width: 1460px;
   }
 }

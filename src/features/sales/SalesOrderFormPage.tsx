@@ -83,6 +83,18 @@ function safeString(value: unknown) {
   return typeof value === 'string' ? value : ''
 }
 
+function stripLeadingProductCode(name: string, defaultCode?: string) {
+  const rawName = name.trim()
+  const code = String(defaultCode || '').trim()
+  if (!rawName) return ''
+  if (!code) return rawName
+
+  const escapedCode = code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const pattern = new RegExp(`^\\[?${escapedCode}\\]?\\s*[-–—:]?\\s*`, 'i')
+  const stripped = rawName.replace(pattern, '').trim()
+  return stripped || rawName
+}
+
 function toAttachmentDraft(attachment: SalesOrderAttachment, file?: File): SalesOrderAttachmentDraft {
   return {
     id: attachment.id,
@@ -99,6 +111,7 @@ function createSalesLine(lineType: SalesOrderLineKind = 'normal'): SalesOrderLin
   return {
     lineType,
     productId: null,
+    productCode: '',
     description: '',
     quantity: lineType === 'normal' ? 1 : 0,
     unitPrice: 0,
@@ -115,6 +128,7 @@ function normalizeSalesLine(line: Partial<SalesOrderLine>): SalesOrderLine {
   return {
     lineType: line.lineType === 'section' || line.lineType === 'note' ? line.lineType : 'normal',
     productId: line.productId ?? null,
+    productCode: String(line.productCode || '').trim(),
     description: safeString(line.description),
     quantity: toNumberLike(line.quantity, 1),
     unitPrice: toNumberLike(line.unitPrice, 0),
@@ -1613,6 +1627,7 @@ export function SalesOrderFormPage() {
                   <tr>
                     <th className="qf-so-col-icon"></th>
                     <th className="qf-so-col-index">#</th>
+                    <th className="qf-so-col-code">รหัสสินค้า</th>
                     <th className="qf-so-col-product">สินค้า</th>
                     <th className="qf-so-col-desc">รายละเอียด</th>
                     <th className="qf-so-col-qty">จำนวน</th>
@@ -1626,7 +1641,7 @@ export function SalesOrderFormPage() {
                 <tbody>
                   {formData.lines.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="text-center text-muted py-4">
+                      <td colSpan={11} className="text-center text-muted py-4">
                         ยังไม่มีรายการสินค้า กด <strong>เพิ่มรายการ</strong> เพื่อเริ่มกรอก
                       </td>
                     </tr>
@@ -1641,7 +1656,7 @@ export function SalesOrderFormPage() {
                             <i className={`bi ${lineType === 'section' ? 'bi-folder2-open' : 'bi-sticky'} text-muted`} />
                           </td>
                           <td className="text-center fw-semibold">{idx + 1}</td>
-                          <td colSpan={7}>
+                          <td colSpan={8}>
                             <Input
                               value={line.description}
                               onChange={(e) => updateLine(idx, { description: e.target.value })}
@@ -1670,6 +1685,15 @@ export function SalesOrderFormPage() {
                         </td>
                         <td className="text-center fw-semibold">{idx + 1}</td>
                         <td>
+                          <Input
+                            value={line.productCode || ''}
+                            onChange={(e) => updateLine(idx, { productCode: e.target.value })}
+                            placeholder="รหัสสินค้า"
+                            className="qf-so-line-code-input"
+                            readOnly
+                          />
+                        </td>
+                        <td>
                           <ProductCombobox
                             id={`so-product-${idx}`}
                             valueId={line.productId ?? null}
@@ -1678,10 +1702,12 @@ export function SalesOrderFormPage() {
                               const productTaxIds = Array.isArray(product.taxes)
                                 ? product.taxes.map((t) => Number(t.id)).filter((n) => Number.isFinite(n) && n > 0)
                                 : []
+                              const productName = stripLeadingProductCode(product.name, product.defaultCode)
                               updateLine(idx, {
                                 lineType: 'normal',
                                 productId: product.id,
-                                description: line.description.trim() ? line.description : product.name,
+                                productCode: product.defaultCode || '',
+                                description: line.description.trim() ? line.description : productName,
                                 unitPrice: typeof product.listPrice === 'number' ? product.listPrice : line.unitPrice,
                                 taxIds: productTaxIds.length > 0 ? productTaxIds : [],
                               })
@@ -1693,7 +1719,7 @@ export function SalesOrderFormPage() {
                             className="form-control qf-so-textarea qf-so-line-desc"
                             value={line.description}
                             onChange={(e) => updateLine(idx, { description: e.target.value })}
-                            rows={2}
+                            rows={1}
                             placeholder="รายละเอียดสินค้า/บริการ"
                           />
                         </td>
