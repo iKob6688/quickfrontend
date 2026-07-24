@@ -751,7 +751,32 @@ export async function deleteSalesOrder(id: number) {
   } catch (err) {
     const status = extractHttpStatus(err)
     if (status === 404 || status === 405 || status === 501) {
-      throw new Error('ระบบ backend ยังไม่รองรับการลบใบเสนอราคา/คำสั่งขาย')
+      try {
+        const response = await apiClient.post(
+          '/web/dataset/call_kw/sale.order/unlink',
+          makeRpc({
+            model: 'sale.order',
+            method: 'unlink',
+            args: [[id]],
+            kwargs: {},
+          }),
+          { baseURL: '' },
+        )
+        const data = unwrapResponse<unknown>(response)
+        if (typeof data === 'boolean') {
+          return data
+        }
+        if (data && typeof data === 'object' && 'deleted' in data) {
+          return (data as { deleted?: boolean }).deleted !== false
+        }
+        return Boolean(data)
+      } catch (webErr) {
+        const webStatus = extractHttpStatus(webErr)
+        if (webStatus === 401 || webStatus === 403) {
+          throw new Error('ไม่สามารถลบเอกสารได้ เพราะยังไม่ได้เข้าสู่ระบบ Odoo session หรือไม่มีสิทธิ์ลบ')
+        }
+        throw new Error('ไม่สามารถลบใบเสนอราคา/คำสั่งขายได้ กรุณาตรวจสอบสิทธิ์หรือ backend route สำหรับการลบ')
+      }
     }
     throw err
   }
