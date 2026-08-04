@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/Badge'
 import { useMemo, useState } from 'react'
 import { useInfiniteQuery, useQuery, useQueryClient, type InfiniteData, type QueryFunctionContext } from '@tanstack/react-query'
 import { listInvoices } from '@/api/services/invoices.service'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Spinner } from 'react-bootstrap'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { useAppDateFormatter } from '@/lib/dateFormat'
@@ -21,9 +21,10 @@ interface InvoicesListPageProps {
 
 export function InvoicesListPage({ mode = 'invoices' }: InvoicesListPageProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const queryClient = useQueryClient()
   const formatDate = useAppDateFormatter()
-  const searchParams = useMemo(() => new URLSearchParams(window.location.search), [])
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search])
   type StatusTab = 'all' | 'draft' | 'posted' | 'paid' | 'cancelled' | 'due'
   const [tab, setTab] = useState<StatusTab>(
     mode === 'receipts' ? 'paid' : searchParams.get('payment') === 'due' ? 'due' : 'all',

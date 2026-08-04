@@ -9,8 +9,6 @@ import { Badge } from '@/components/ui/Badge'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { confirmSalesOrder, createInvoiceFromSalesOrder, deliverSalesOrder, getSalesOrder, sendSalesOrderEmail } from '@/api/services/sales-orders.service'
 import { getPartner, listPartners, type PartnerSummary } from '@/api/services/partners.service'
-import { useSettingsStore as useStudioSettingsStore } from '@/app/core/storage/settingsStore'
-import { useTemplateStore } from '@/app/core/storage/templateStore'
 import { toast } from '@/lib/toastStore'
 import { useAppDateFormatter } from '@/lib/dateFormat'
 import { getSalesOrderCustomerContactText, getSalesOrderCustomerDisplayName } from '@/lib/salesOrderPresentation'
@@ -28,9 +26,6 @@ export function SalesOrderDetailPage() {
   const [emailTo, setEmailTo] = useState('')
   const [emailSubject, setEmailSubject] = useState('')
   const [emailMessage, setEmailMessage] = useState('')
-  const [printMenuOpen, setPrintMenuOpen] = useState(false)
-  const studioSettings = useStudioSettingsStore((s) => s.settings)
-  const templates = useTemplateStore((s) => s.templates)
 
   const query = useQuery<SalesOrder>({
     queryKey: ['salesOrder', id],
@@ -81,30 +76,6 @@ export function SalesOrderDetailPage() {
       setSelectedContactId(partner.id)
     }
   }, [partnerDetailQuery.data, emailTo])
-
-  useEffect(() => {
-    if (!printMenuOpen) return
-    try {
-      void (useStudioSettingsStore as typeof useStudioSettingsStore & { persist?: { rehydrate?: () => Promise<void> | void } }).persist?.rehydrate?.()
-    } catch {
-      // ignore
-    }
-  }, [printMenuOpen])
-
-  const defaultQuotationTemplateId =
-    studioSettings.defaultTemplateIdByDocType?.quotation || 'quotation_default_v1'
-
-  const quotationTemplates = useMemo(
-    () =>
-      (templates || [])
-        .filter((tpl) => tpl.docType === 'quotation')
-        .sort((a, b) => {
-          if (a.id === defaultQuotationTemplateId) return -1
-          if (b.id === defaultQuotationTemplateId) return 1
-          return a.name.localeCompare(b.name, 'th')
-        }),
-    [templates, defaultQuotationTemplateId],
-  )
 
   const sendEmailMutation = useMutation({
     mutationFn: async () =>
@@ -254,58 +225,16 @@ export function SalesOrderDetailPage() {
         subtitle={query.data?.number || (query.data ? `เอกสาร #${query.data.id}` : 'กำลังโหลดข้อมูล...')}
         breadcrumb="รายรับ · ใบเสนอราคา · รายละเอียด"
         actions={
-          <div className="d-flex gap-2">
-            <div className="position-relative">
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={!query.data}
-                onClick={() => setPrintMenuOpen((current) => !current)}
-                aria-expanded={printMenuOpen}
-                aria-haspopup="menu"
-              >
-                พิมพ์
-              </Button>
-              {printMenuOpen ? (
-                <div
-                  className="position-absolute end-0 mt-2 p-2 border rounded-3 bg-white shadow"
-                  style={{ minWidth: 280, zIndex: 20 }}
-                  role="menu"
-                >
-                  <div className="px-2 py-1 text-muted small">Default company paper format</div>
-                  <Button
-                    variant="ghost"
-                    className="w-100 justify-content-start"
-                    onClick={() => {
-                      setPrintMenuOpen(false)
-                      navigate(`/sales/orders/${id}/print-preview`)
-                    }}
-                  >
-                    เปิด Preview มาตรฐาน
-                  </Button>
-                  <div className="my-2 border-top" />
-                  <div className="px-2 py-1 text-muted small">Reports Studio templates</div>
-                  {quotationTemplates.length ? (
-                    quotationTemplates.map((tpl) => (
-                      <Button
-                        key={tpl.id}
-                        variant="ghost"
-                        className="w-100 justify-content-start"
-                        onClick={() => {
-                          setPrintMenuOpen(false)
-                          navigate(`/reports-studio/preview/${tpl.id}?recordId=${encodeURIComponent(String(id))}`)
-                        }}
-                      >
-                        {tpl.name}
-                        {tpl.id === defaultQuotationTemplateId ? ' (Default)' : ''}
-                      </Button>
-                    ))
-                  ) : (
-                    <div className="px-2 py-1 text-muted small">ไม่พบ template สำหรับ quotation</div>
-                  )}
-                </div>
-              ) : null}
-            </div>
+          <div className="d-flex flex-wrap align-items-center gap-2 rounded-pill border bg-white shadow-sm px-2 py-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={!query.data}
+              onClick={() => navigate(`/sales/orders/${id}/print-preview`)}
+            >
+              <i className="bi bi-printer me-1" />
+              พิมพ์
+            </Button>
             {query.data?.orderType === 'quotation' && ['draft', 'sent'].includes(query.data.status) ? (
               <Button
                 size="sm"
@@ -313,6 +242,7 @@ export function SalesOrderDetailPage() {
                 isLoading={confirmMutation.isPending}
                 disabled={!query.data}
               >
+                <i className="bi bi-check2-circle me-1" />
                 Confirm → Sale Order
               </Button>
             ) : null}
@@ -323,16 +253,20 @@ export function SalesOrderDetailPage() {
                 isLoading={createInvoiceMutation.isPending}
                 disabled={!query.data}
               >
+                <i className="bi bi-receipt me-1" />
                 Confirm → Invoice
               </Button>
             ) : null}
             <Button size="sm" variant="ghost" disabled={!query.data} onClick={() => setEmailModalOpen(true)}>
+              <i className="bi bi-envelope me-1" />
               Send → Email
             </Button>
             <Button size="sm" variant="ghost" onClick={() => navigate('/sales/orders')}>
+              <i className="bi bi-arrow-left me-1" />
               กลับไปรายการ
             </Button>
             <Button size="sm" variant="secondary" onClick={() => navigate(`/sales/orders/${id}/edit`)} disabled={!query.data}>
+              <i className="bi bi-pencil-square me-1" />
               แก้ไข
             </Button>
           </div>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData, type QueryFunctionContext } from '@tanstack/react-query'
 import { Modal, Spinner } from 'react-bootstrap'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -22,7 +22,8 @@ export function SalesOrdersListPage() {
   const queryClient = useQueryClient()
   const formatDate = useAppDateFormatter()
   const scanSlipEnabled = useSettingsStore((state) => state.settings.scanSlipEnabled)
-  const searchParams = useMemo(() => new URLSearchParams(window.location.search), [])
+  const location = useLocation()
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search])
   const typeParam = searchParams.get('type')
   const forcedOrderType = typeParam === 'sale' ? 'sale' : typeParam === 'quotation' ? 'quotation' : undefined
   const [tab, setTab] = useState<StatusTab>('all')

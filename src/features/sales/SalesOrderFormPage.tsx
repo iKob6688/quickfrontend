@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData, type QueryFunctionContext } from '@tanstack/react-query'
 import { Alert, Modal, Spinner } from 'react-bootstrap'
 import { Button } from '@/components/ui/Button'
@@ -13,12 +13,9 @@ import { extractFieldErrors, type FieldErrors } from '@/lib/formErrors'
 import { loadRecentNotes, pushRecentNote } from '@/lib/formDrafts'
 import {
   clearSalesOrderDraft,
-  loadSalesOrderDraft,
   loadSalesOrderPreferences,
-  saveSalesOrderDraft,
   saveSalesOrderPreferences,
   sanitizeSalesOrderAttachments,
-  type SalesOrderDraftPayload,
   type SalesOrderDraftPreferences,
   type SalesOrderAttachmentDraft,
 } from '@/lib/salesOrderDrafts'
@@ -48,7 +45,6 @@ import {
 } from '@/features/customers/ThaiAddressSelectors'
 import { resolveThaiAddress } from '@/api/services/thai-address.service'
 import { normalizeVatNumber, sanitizeVatNumber, thaiVatValidationMessage } from '@/lib/vat'
-import { useAppDateTimeFormatter } from '@/lib/dateFormat'
 import { calculateSalesOrderTotals } from '@/lib/salesOrderTotals'
 import {
   getSalesOrderCustomerContactText,
@@ -197,37 +193,6 @@ function createBlankFormState(
   }
 }
 
-function normalizeDraftState(
-  draft: SalesOrderDraftPayload,
-  preferences: SalesOrderDraftPreferences,
-  initialOrderType: SalesOrderType,
-): SalesOrderFormState {
-  const base = createBlankFormState(preferences, initialOrderType)
-  return {
-    ...base,
-    partnerId: typeof draft.partnerId === 'number' ? draft.partnerId : draft.partnerId ?? null,
-    orderDate: draft.orderDate || base.orderDate,
-    validityDate: draft.validityDate || base.validityDate,
-    currency: draft.currency || base.currency,
-    orderType: draft.orderType || base.orderType,
-    paymentTermText: draft.paymentTermText || base.paymentTermText,
-    customerNameText: draft.customerNameText || base.customerNameText,
-    customerAddressText: draft.customerAddressText || base.customerAddressText,
-    customerPhoneText: draft.customerPhoneText || base.customerPhoneText,
-    customerEmailText: draft.customerEmailText || base.customerEmailText,
-    customerTaxIdText: draft.customerTaxIdText || base.customerTaxIdText,
-    customerBranchText: draft.customerBranchText || base.customerBranchText,
-    internalNotes: draft.internalNotes || '',
-    notes: draft.notes || '',
-    vatEnabled: typeof draft.vatEnabled === 'boolean' ? draft.vatEnabled : base.vatEnabled,
-    vatRate: typeof draft.vatRate === 'number' ? draft.vatRate : base.vatRate,
-    withholdingTaxEnabled:
-      typeof draft.withholdingTaxEnabled === 'boolean' ? draft.withholdingTaxEnabled : base.withholdingTaxEnabled,
-    withholdingTaxRate: typeof draft.withholdingTaxRate === 'number' ? draft.withholdingTaxRate : base.withholdingTaxRate,
-    lines: (draft.lines || []).map((line) => normalizeSalesLine(line)),
-  }
-}
-
 function normalizeOrderToFormState(
   order: Awaited<ReturnType<typeof getSalesOrder>>,
   preferences: SalesOrderDraftPreferences,
@@ -257,29 +222,6 @@ function normalizeOrderToFormState(
     withholdingTaxRate: typeof order.withholdingTaxRate === 'number' ? order.withholdingTaxRate : base.withholdingTaxRate,
     lines: order.lines.map((line) => normalizeSalesLine(line)),
   }
-}
-
-function hasMeaningfulSalesOrderDraft(data: SalesOrderFormState, attachmentCount: number) {
-  return Boolean(
-    (data.partnerId && data.partnerId > 0) ||
-      data.lines.length > 0 ||
-      data.notes.trim() ||
-      data.internalNotes.trim() ||
-      data.customerNameText.trim() ||
-      data.customerAddressText.trim() ||
-      data.customerPhoneText.trim() ||
-      data.customerEmailText.trim() ||
-      data.customerTaxIdText.trim() ||
-      data.customerBranchText.trim() ||
-      data.paymentTermText.trim() ||
-      data.validityDate !== localDateInputValue(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)) ||
-      data.orderDate !== localDateInputValue() ||
-      data.currency.trim().toUpperCase() !== 'THB' ||
-      attachmentCount > 0 ||
-      data.orderType !== 'quotation' ||
-      !data.vatEnabled ||
-      data.withholdingTaxEnabled,
-  )
 }
 
 function escapeHtml(value: string) {
@@ -534,13 +476,13 @@ function buildSalesOrderPrintPayload(params: {
 
 export function SalesOrderFormPage() {
   const { id } = useParams<{ id: string }>()
+  const location = useLocation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const formatDateTime = useAppDateTimeFormatter()
 
   const isEdit = !!id
   const orderId = id ? Number.parseInt(id, 10) : null
-  const searchParams = useMemo(() => new URLSearchParams(window.location.search), [])
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search])
   const partnerIdRaw = searchParams.get('partnerId')
   const partnerIdPrefill = partnerIdRaw ? Number(partnerIdRaw) : null
   const orderTypeParam = searchParams.get('orderType')
@@ -587,17 +529,11 @@ export function SalesOrderFormPage() {
   })
   const debouncedPartnerSearch = useDebouncedValue(partnerSearch, 250)
   const partnerLimit = 20
-  const skipNextDraftSaveRef = useRef(false)
   const lastResolvedQuickPartnerZipRef = useRef<string>('')
 
   const [fieldErrors, setFieldErrors] = useState<FieldErrors | null>(null)
   const [recentNotes, setRecentNotes] = useState<string[]>([])
   const [recentInternalNotes, setRecentInternalNotes] = useState<string[]>([])
-  const [draftPendingRestore, setDraftPendingRestore] = useState<SalesOrderFormState | null>(null)
-  const [draftPendingRestoreAttachments, setDraftPendingRestoreAttachments] = useState<SalesOrderAttachmentDraft[]>([])
-  const [draftUpdatedAt, setDraftUpdatedAt] = useState<string | null>(null)
-  const [draftGateResolved, setDraftGateResolved] = useState(false)
-  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
   const [attachmentPickerKey, setAttachmentPickerKey] = useState(0)
   const [attachmentItems, setAttachmentItems] = useState<SalesOrderAttachmentDraft[]>([])
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -661,50 +597,10 @@ export function SalesOrderFormPage() {
   }, [])
 
   useEffect(() => {
-    if (isEdit) {
-      setDraftGateResolved(true)
-      setDraftPendingRestore(null)
-      setDraftPendingRestoreAttachments([])
-      return
-    }
-    const draft = loadSalesOrderDraft(SALES_ORDER_DRAFT_KEY)
-    if (draft?.data) {
-      setDraftPendingRestore(normalizeDraftState(draft.data, initialPreferences, initialOrderType))
-      setDraftPendingRestoreAttachments(
-        sanitizeSalesOrderAttachments(draft.data.attachments || []).map((attachment) => ({
-          ...attachment,
-        })),
-      )
-      setDraftUpdatedAt(draft.updatedAt || null)
-    } else {
-      setDraftPendingRestore(null)
-      setDraftPendingRestoreAttachments([])
-      setDraftUpdatedAt(null)
-    }
-    setDraftGateResolved(true)
-  }, [isEdit, initialPreferences, initialOrderType])
-
-  useEffect(() => {
-    if (isEdit || draftPendingRestore) return
-    if (!draftGateResolved) return
-    if (skipNextDraftSaveRef.current) {
-      skipNextDraftSaveRef.current = false
-      return
-    }
-    if (!hasMeaningfulSalesOrderDraft(formData, attachmentItems.length)) {
+    if (!isEdit) {
       clearSalesOrderDraft(SALES_ORDER_DRAFT_KEY)
-      setDraftSavedAt(null)
-      return
     }
-    const timer = window.setTimeout(() => {
-      saveSalesOrderDraft(SALES_ORDER_DRAFT_KEY, {
-        ...formData,
-        attachments: sanitizeSalesOrderAttachments(attachmentItems),
-      })
-      setDraftSavedAt(new Date().toISOString())
-    }, 700)
-    return () => window.clearTimeout(timer)
-  }, [isEdit, draftGateResolved, draftPendingRestore, formData, attachmentItems])
+  }, [isEdit])
 
   useEffect(() => {
     if (!isEdit) return
@@ -1026,7 +922,6 @@ export function SalesOrderFormPage() {
 
   const persistSavedOrderState = (savedOrder: Awaited<ReturnType<typeof createSalesOrder>>) => {
     clearSalesOrderDraft(SALES_ORDER_DRAFT_KEY)
-    setDraftSavedAt(null)
     if (formData.notes.trim()) {
       pushRecentNote(SALES_ORDER_RECENT_NOTES_KEY, formData.notes)
       setRecentNotes(loadRecentNotes(SALES_ORDER_RECENT_NOTES_KEY))
@@ -1220,6 +1115,11 @@ export function SalesOrderFormPage() {
     }
   }
 
+  useDocumentKeyboardShortcuts({
+    onSave: () => document.querySelector<HTMLFormElement>('#sales-order-form')?.requestSubmit(),
+    onPrint: () => openPreviewWindow(),
+  })
+
   async function resolveQuickPartnerThaiAddress() {
     if (quickPartner.countryId !== thailandId) return
     const resolved = await resolveThaiAddress({
@@ -1331,16 +1231,11 @@ export function SalesOrderFormPage() {
   const canEmailOrShare = isEdit && !!orderId
   const statusLabel = formatSalesOrderStatus(isEdit ? existingOrder?.status : 'draft')
 
-  useDocumentKeyboardShortcuts({
-    onSave: () => document.querySelector<HTMLFormElement>('#sales-order-form')?.requestSubmit(),
-    onPrint: () => openPreviewWindow(),
-  })
-
   return (
     <>
     <DocumentPageLayout
       title={isEdit ? 'แก้ไขใบเสนอราคา' : 'สร้างใบเสนอราคา'}
-      subtitle={`${documentNumber} · ${statusLabel} · ${formData.lines.length} รายการ${!isEdit && draftSavedAt ? ` · autosaved ${formatDateTime(draftSavedAt)}` : ''}`}
+      subtitle={`${documentNumber} · ${statusLabel} · ${formData.lines.length} รายการ`}
       breadcrumb="รายรับ · ใบเสนอราคา"
       actions={
         <div className="d-flex flex-wrap align-items-center justify-content-end gap-2">
@@ -1387,48 +1282,6 @@ export function SalesOrderFormPage() {
       }
     >
     <form id="sales-order-form" onSubmit={handleSubmit} className="qf-so-page">
-
-      {!isEdit && draftPendingRestore ? (
-        <Alert variant="warning" className="small qf-so-banner">
-          <div className="fw-semibold mb-1">พบ draft ที่บันทึกไว้</div>
-          <div className="mb-2">เวลา: {formatDateTime(draftUpdatedAt, 'ไม่ทราบเวลา')}</div>
-          <div className="d-flex gap-2 flex-wrap">
-            <Button
-              size="sm"
-              type="button"
-              onClick={() => {
-                clearSalesOrderDraft(SALES_ORDER_DRAFT_KEY)
-                setFormData(draftPendingRestore)
-                setAttachmentItems(draftPendingRestoreAttachments.map((attachment) => toAttachmentDraft(attachment)))
-                setDraftPendingRestore(null)
-                setDraftPendingRestoreAttachments([])
-                setDraftUpdatedAt(null)
-                setDraftSavedAt(null)
-                toast.info('กู้ draft สำเร็จ')
-              }}
-            >
-              กู้ draft
-            </Button>
-            <Button
-              size="sm"
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                skipNextDraftSaveRef.current = true
-                clearSalesOrderDraft(SALES_ORDER_DRAFT_KEY)
-                setDraftPendingRestore(null)
-                setDraftPendingRestoreAttachments([])
-                setDraftUpdatedAt(null)
-                setDraftSavedAt(null)
-                setAttachmentItems([])
-                toast.success('ลบ draft แล้ว')
-              }}
-            >
-              ลบ draft
-            </Button>
-          </div>
-        </Alert>
-      ) : null}
 
       <div className="qf-so-grid">
         <div className="qf-so-main">

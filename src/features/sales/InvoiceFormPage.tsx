@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useLocation, useParams, useNavigate } from 'react-router-dom'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData, type QueryFunctionContext } from '@tanstack/react-query'
 import { getInvoice, createInvoice, updateInvoice, type InvoicePayload } from '@/api/services/invoices.service'
 import { Button } from '@/components/ui/Button'
@@ -48,11 +48,12 @@ function hasMeaningfulInvoiceDraft(data: InvoicePayload) {
 export function InvoiceFormPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const queryClient = useQueryClient()
   const isEdit = !!id
   const formatDateTime = useAppDateTimeFormatter()
   const invoiceId = id ? Number.parseInt(id, 10) : null
-  const searchParams = useMemo(() => new URLSearchParams(window.location.search), [])
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search])
   const customerIdFromQuery = searchParams.get('customerId')
   const partnerIdFromQuery = searchParams.get('partnerId')
   const customerIdPrefill = customerIdFromQuery
