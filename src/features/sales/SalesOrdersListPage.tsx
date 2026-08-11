@@ -157,7 +157,7 @@ export function SalesOrdersListPage() {
         toast.info(
           'บางรายการลบไม่สำเร็จ',
           result.failedIds.length === result.total
-            ? 'ระบบ backend ยังไม่รองรับการลบใบเสนอราคา/คำสั่งขาย'
+            ? 'ไม่สามารถลบใน Odoo backend ได้ กรุณาตรวจสอบสิทธิ์หรือสถานะเอกสาร'
             : `ลบไม่สำเร็จ ${result.failedIds.length} รายการ`,
         )
       }

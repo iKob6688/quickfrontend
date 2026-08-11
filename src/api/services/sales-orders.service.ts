@@ -540,6 +540,26 @@ function isLegacyFallbackEligible(err: unknown): boolean {
   return /unknown|unexpected|invalid field|field .* does not exist|display_type|internal_notes|customer_.*text|attachment/i.test(message)
 }
 
+async function unlinkSalesOrderViaOdoo(id: number) {
+  const response = await apiClient.post(
+    '/web/dataset/call_kw/sale.order/unlink',
+    makeRpc({
+      model: 'sale.order',
+      method: 'unlink',
+      args: [[id]],
+      kwargs: {},
+    }),
+    { baseURL: '' },
+  )
+
+  const data = unwrapResponse<unknown>(response)
+  if (typeof data === 'boolean') return data
+  if (data && typeof data === 'object' && 'deleted' in data) {
+    return (data as { deleted?: boolean }).deleted !== false
+  }
+  return Boolean(data)
+}
+
 function mapInvoiceLineToSalesOrderLine(line: InvoiceLine): SalesOrderLine {
   const quantity = toNumber(line.quantity)
   const unitPrice = toNumber(line.unitPrice)
@@ -738,6 +758,8 @@ export async function deleteSalesOrder(id: number) {
     return false
   }
 
+  let apiDeleteError: unknown = null
+
   try {
     const response = await apiClient.delete(`${basePath}/${id}`)
     if (response.status === 204 || response.data == null || response.data === '') {
@@ -749,36 +771,20 @@ export async function deleteSalesOrder(id: number) {
     }
     return true
   } catch (err) {
-    const status = extractHttpStatus(err)
-    if (status === 404 || status === 405 || status === 501) {
-      try {
-        const response = await apiClient.post(
-          '/web/dataset/call_kw/sale.order/unlink',
-          makeRpc({
-            model: 'sale.order',
-            method: 'unlink',
-            args: [[id]],
-            kwargs: {},
-          }),
-          { baseURL: '' },
-        )
-        const data = unwrapResponse<unknown>(response)
-        if (typeof data === 'boolean') {
-          return data
-        }
-        if (data && typeof data === 'object' && 'deleted' in data) {
-          return (data as { deleted?: boolean }).deleted !== false
-        }
-        return Boolean(data)
-      } catch (webErr) {
-        const webStatus = extractHttpStatus(webErr)
-        if (webStatus === 401 || webStatus === 403) {
-          throw new Error('ไม่สามารถลบเอกสารได้ เพราะยังไม่ได้เข้าสู่ระบบ Odoo session หรือไม่มีสิทธิ์ลบ')
-        }
-        throw new Error('ไม่สามารถลบใบเสนอราคา/คำสั่งขายได้ กรุณาตรวจสอบสิทธิ์หรือ backend route สำหรับการลบ')
-      }
+    apiDeleteError = err
+  }
+
+  try {
+    return await unlinkSalesOrderViaOdoo(id)
+  } catch (webErr) {
+    const webStatus = extractHttpStatus(webErr)
+    const apiStatus = extractHttpStatus(apiDeleteError)
+
+    if (webStatus === 401 || webStatus === 403 || apiStatus === 401 || apiStatus === 403) {
+      throw new Error('ไม่สามารถลบเอกสารได้ เพราะยังไม่ได้เข้าสู่ระบบ Odoo session หรือไม่มีสิทธิ์ลบ')
     }
-    throw err
+
+    throw new Error('ไม่สามารถลบใบเสนอราคา/คำสั่งขายใน Odoo backend ได้')
   }
 }
 
