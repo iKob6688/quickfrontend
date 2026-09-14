@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { useAuthStore } from '@/features/auth/store'
 import { hasScope } from '@/lib/scopes'
+import { hasFeature, type FeatureKey } from '@/lib/features'
 import { isAdminUser } from '@/lib/adminAccess'
 import { ConfigBanner } from '@/components/system/ConfigBanner'
 import { AvatarAssistant } from '@/features/assistant/AvatarAssistant'
@@ -18,6 +19,7 @@ type NavItem = {
   path: string
   label: string
   scope?: string
+  feature?: FeatureKey
   icon: string
   mobileLabel?: string
   showOnMobile?: boolean
@@ -29,7 +31,17 @@ type SidebarItem = {
   icon: string
   active: boolean
   scope?: string
-  children?: Array<Pick<NavItem, 'path' | 'label' | 'scope'>>
+  feature?: FeatureKey
+  children?: Array<Pick<NavItem, 'path' | 'label' | 'scope' | 'feature'>>
+}
+
+type SearchCommand = {
+  label: string
+  path: string
+  icon: string
+  shortcut: string
+  scope?: string
+  feature?: FeatureKey
 }
 
 export function AppLayout() {
@@ -86,6 +98,7 @@ export function AppLayout() {
       : []),
     { path: '/accounting/reports', label: 'รายงานบัญชี', scope: 'accounting_reports', icon: 'bi-graph-up-arrow' },
     { path: '/accounting/etax', label: 'เอกสาร e-Tax', scope: 'etax', icon: 'bi-receipt-cutoff' },
+    { path: '/audit', label: 'Audit Workspace', feature: 'audit', icon: 'bi-clipboard2-check' },
     { path: '/customers', label: 'รายชื่อติดต่อ', scope: 'contacts', icon: 'bi-people' },
     { path: '/products', label: 'สินค้า/บริการ', scope: 'products', icon: 'bi-box-seam' },
     { path: '/excel-import', label: 'นำเข้า Excel', scope: 'excel', icon: 'bi-file-earmark-spreadsheet' },
@@ -98,8 +111,9 @@ export function AppLayout() {
       ? [{ path: '/settings/sales-document-numbering', label: 'ตั้งค่าเลขเอกสารขาย', scope: 'invoice', icon: 'bi-123' }]
       : []),
   ]
-  const mobileNavItems = navItems.filter((item) => item.showOnMobile)
-  const mobileMoreNavItems = navItems.filter((item) => !item.showOnMobile)
+  const visibleNavItems = navItems.filter((item) => !item.feature || hasFeature(item.feature))
+  const mobileNavItems = visibleNavItems.filter((item) => item.showOnMobile)
+  const mobileMoreNavItems = visibleNavItems.filter((item) => !item.showOnMobile)
   const isMobileMoreActive = mobileMoreNavItems.some((item) => location.pathname.startsWith(item.path))
 
   const canSwitchCompany = Boolean(user && user.companies && user.companies.length > 1)
@@ -165,6 +179,7 @@ export function AppLayout() {
       ],
     },
     { path: '/accounting/reports', label: 'รายงาน', icon: 'bi-bar-chart-line', active: isPathActive('/accounting/reports'), scope: 'accounting_reports' },
+    { path: '/audit', label: 'Audit', icon: 'bi-clipboard2-check', active: isPathActive('/audit'), feature: 'audit' },
     { path: '/customers', label: 'ผู้ติดต่อ', icon: 'bi-person-rolodex', active: isPathActive('/customers'), scope: 'contacts' },
     { path: '/products', label: 'สินค้า', icon: 'bi-box-seam', active: isPathActive('/products'), scope: 'products' },
     {
@@ -176,7 +191,7 @@ export function AppLayout() {
     },
   ]
 
-  const searchCommands = useMemo(
+  const searchCommands = useMemo<SearchCommand[]>(
     () => [
       { label: 'สร้างใบแจ้งหนี้', path: '/sales/invoices/new', icon: 'bi-receipt', shortcut: 'INV', scope: 'invoice' },
       { label: 'บันทึกรายจ่าย', path: '/expenses/new', icon: 'bi-cash-stack', shortcut: 'EXP', scope: 'expense' },
@@ -197,7 +212,7 @@ export function AppLayout() {
   )
 
   const filteredCommands = searchCommands.filter((cmd) => {
-    const allowed = !cmd.scope || hasScope(cmd.scope)
+    const allowed = cmd.feature ? hasFeature(cmd.feature) : !cmd.scope || hasScope(cmd.scope)
     const q = searchQuery.trim().toLowerCase()
     return allowed && (!q || cmd.label.toLowerCase().includes(q) || cmd.shortcut.toLowerCase().includes(q))
   })
@@ -244,9 +259,9 @@ export function AppLayout() {
     }
   }
 
-  const navigateWithScope = (item: Pick<NavItem, 'path' | 'label' | 'scope'>) => {
+  const navigateWithScope = (item: Pick<NavItem, 'path' | 'label' | 'scope' | 'feature'>) => {
     setIsMobileMenuOpen(false)
-    if (item.scope && !hasScope(item.scope)) {
+    if ((item.feature && !hasFeature(item.feature)) || (item.scope && !hasScope(item.scope))) {
       console.warn(`[AppLayout] Navigation opened for "${item.label}" although scope "${item.scope}" is not currently advertised by runtime scopes`)
     }
     navigate(item.path)
@@ -425,8 +440,8 @@ export function AppLayout() {
 
       <div className="qf-layout-container flex-grow-1">
         <aside className="qf-sidebar d-none d-sm-flex" aria-label="แถบเมนูหลัก">
-          {sidebarItems.map((item) => {
-            const allowed = !item.scope || hasScope(item.scope)
+          {sidebarItems.filter((item) => !item.feature || hasFeature(item.feature)).map((item) => {
+            const allowed = item.feature ? hasFeature(item.feature) : !item.scope || hasScope(item.scope)
             return (
               <div key={item.path} className={`qf-sidebar-group d-flex flex-column gap-1 ${item.active ? 'is-active-group' : ''}`}>
                 <button
@@ -444,7 +459,7 @@ export function AppLayout() {
                 {item.children ? (
                   <div className="qf-sidebar-submenu">
                     {item.children.map((child) => {
-                      const childAllowed = !child.scope || hasScope(child.scope)
+                      const childAllowed = child.feature ? hasFeature(child.feature) : !child.scope || hasScope(child.scope)
                       const childActive = location.pathname.startsWith(child.path)
                       return (
                         <button
@@ -483,7 +498,7 @@ export function AppLayout() {
         >
           <div className="qf-mobile-nav__inner container-fluid">
             {mobileNavItems.map((item) => {
-              const allowed = !item.scope || hasScope(item.scope)
+              const allowed = item.feature ? hasFeature(item.feature) : !item.scope || hasScope(item.scope)
               const active = location.pathname.startsWith(item.path)
               return (
                 <button
@@ -528,7 +543,7 @@ export function AppLayout() {
             </div>
             <div className="qf-mobile-more__grid">
               {mobileMoreNavItems.map((item) => {
-                const allowed = !item.scope || hasScope(item.scope)
+                const allowed = item.feature ? hasFeature(item.feature) : !item.scope || hasScope(item.scope)
                 const active = location.pathname.startsWith(item.path)
                 return (
                   <button

@@ -64,6 +64,8 @@ import { setUnauthorizedHandler } from '@/api/client'
 import { useAuthStore } from '@/features/auth/store'
 import { ErrorBoundary } from '@/components/system/ErrorBoundary'
 import { ToastHost } from '@/components/system/ToastHost'
+import { FeatureRoute } from '@/components/system/FeatureRoute'
+import { AuditDashboardPage, AuditEngagementCreatePage, AuditEngagementPage, AuditEngagementsPage, AuditWorkspaceSectionPage } from '@/features/audit/AuditPages'
 
 // Reports Studio (integrated as part of the same ERPTH shell)
 import { StudioBootstrap } from '@/app/StudioBootstrap'
@@ -167,6 +169,25 @@ function AppRoutes() {
           <Route path="/agent/quotation" element={<AgentQuotationCreatePage />} />
           <Route path="/agent/contact" element={<AgentContactCreatePage />} />
           <Route path="/agent/invoice" element={<AgentInvoiceCreatePage />} />
+
+          <Route element={<FeatureRoute feature="audit" />}>
+            <Route path="/audit" element={<AuditDashboardPage />} />
+            <Route path="/audit/engagements" element={<AuditEngagementsPage />} />
+            <Route path="/audit/engagements/new" element={<AuditEngagementCreatePage />} />
+            <Route path="/audit/engagements/:engagementId" element={<AuditEngagementPage />} />
+            <Route path="/audit/engagements/:engagementId/trial-balance" element={<AuditWorkspaceSectionPage title="Trial Balance" />} />
+            <Route path="/audit/engagements/:engagementId/leadsheets" element={<AuditWorkspaceSectionPage title="Leadsheets" />} />
+            <Route path="/audit/engagements/:engagementId/working-papers" element={<AuditWorkspaceSectionPage title="Working Papers" />} />
+            <Route path="/audit/engagements/:engagementId/adjustments" element={<AuditWorkspaceSectionPage title="Audit Adjustments" />} />
+            <Route path="/audit/engagements/:engagementId/review-notes" element={<AuditWorkspaceSectionPage title="Review Notes" />} />
+            <Route path="/audit/engagements/:engagementId/files" element={<AuditWorkspaceSectionPage title="Audit Files" />} />
+            <Route element={<FeatureRoute feature="audit.sampling" />}>
+              <Route path="/audit/engagements/:engagementId/sampling" element={<AuditWorkspaceSectionPage title="Audit Sampling" />} />
+            </Route>
+            <Route element={<FeatureRoute feature="audit.admin" />}>
+              <Route path="/audit/admin" element={<AuditWorkspaceSectionPage title="Audit Administration" />} />
+            </Route>
+          </Route>
 
           {/* Reports Studio routes inside the same ERPTH shell */}
           <Route element={<StudioBootstrap />}>

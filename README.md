@@ -3,6 +3,85 @@
 Quickfront18 is a React 18 + Vite + TypeScript frontend for Thai SME accounting on top of Odoo 18 Community.  
 It talks to a middleware backend over JSON APIs, supports offline-first usage, and integrates with LINE LIFF.
 
+**Current frontend version:** `0.1.0`
+
+## Technical Overview
+
+```text
+Browser (React + TypeScript + Vite)
+  -> same-origin /api proxy
+  -> ERPTH/Odoo JSON-RPC controllers (/th/v1/*)
+  -> Odoo ORM, ACLs, record rules, company context, and audit trail
+```
+
+- **UI:** React, React Router, Bootstrap-based shared components, and scoped application CSS.
+- **Server state:** TanStack Query. Query data is scoped to the current authenticated company session and the application reloads after company switching to avoid stale cross-company views.
+- **Transport:** Axios via `src/api/client.ts`; authenticated calls include the bearer token and active instance/company header. Odoo JSON-RPC and normal API envelopes are normalized by `src/api/response.ts`.
+- **Authorization:** Odoo remains authoritative. Frontend navigation scopes improve UX only; backend ACLs, record rules, workflow validation, and company isolation must enforce every operation.
+- **Feature packages:** Commercial modules use `src/lib/features.ts`. Audit is fail-closed and requires the active backend profile to advertise `audit`; optional capabilities are `audit_ai`, `audit_sampling`, `audit_roll_forward`, `audit_export`, and `audit_admin`.
+- **Audit data:** The browser never creates financial truth, audit evidence, TB snapshots, or mock engagement data. Audit reads/writes only through `/th/v1/audit/*`; a missing endpoint produces a clear Thai unavailable message.
+
+### Audit Backend Contract
+
+The current frontend foundation requires Odoo to advertise `allowed_scopes` from login or `/auth/me` and to expose the following JSON-RPC endpoints before Audit workflows can be released:
+
+- `POST /th/v1/audit/engagements` for list/search and create.
+- `POST /th/v1/audit/engagements/:id` for engagement detail.
+- Dedicated endpoints for immutable trial-balance snapshots, leadsheets, working papers, sampling, adjustments, review notes, files, and permitted workflow commands.
+
+Responses may use camelCase or snake_case for engagement fields; the frontend normalizes both forms. Backend responses must still apply company context, ACLs, record rules, and workflow transition validation. The browser must never be treated as an authorization boundary.
+
+## Release And Deployment
+
+### Pre-release verification
+
+Run these commands from the repository root:
+
+```bash
+npm install
+npm run build
+npm run lint
+git diff --check
+```
+
+`npm run build` validates the environment, runs TypeScript project builds, then produces `dist/`. Do not deploy if any command above fails. Vite may warn about the existing large PDF chunk; this is a bundle-size optimization item, not a build failure.
+
+### Production deployment
+
+Use a clean checkout of the approved commit on the application host. The deployment user should have only the minimal permissions required to update the frontend output and reload nginx.
+
+```bash
+cd /opt/quickfrontend
+git pull --ff-only origin main
+npm ci
+npm run build
+sudo rsync -av --delete /opt/quickfrontend/dist/ /var/www/qacc/
+sudo chown -R www-data:www-data /var/www/qacc
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+Post-deploy smoke checks:
+
+1. Open the login page and authenticate against the intended Odoo database.
+2. Confirm company switching refreshes the visible company and permitted menus.
+3. Confirm a user without `audit` cannot see Audit navigation and `/audit` shows the safe entitlement state.
+4. Confirm a user with `audit` can load real engagement data; missing backend routes must show an unavailable message, never demo data.
+5. Confirm existing Accounting and quotation flows still load and no browser console/API errors appear.
+
+### Required runtime configuration
+
+Keep secrets outside git. Typical environment values are:
+
+```env
+VITE_API_BASE_URL=/api
+VITE_PROXY_TARGET=https://your-odoo-host.example
+VITE_ODOO_DB=your_database
+VITE_API_KEY=provided_by_backend
+```
+
+Nginx must serve the built SPA, fall back application routes to `index.html`, and proxy `/api` (and required `/web` session routes) to the intended Odoo/middleware service. Ensure proxy timeouts are compatible with report generation but do not expose Odoo debug output to browser users.
+
 ## Local Development Setup
 
 ### Quick Start
@@ -401,6 +480,16 @@ The assistant is now split into three roles:
 - **OpenAI**: conversational planning, intent understanding, structured command generation, and natural-language replies
 - **OpenClaw**: backend execution gateway only
 - **Odoo**: source of truth, ACL / record-rule enforcement, workflow validation, and audit trail
+
+## Audit Workspace Entitlement
+
+Audit Workspace is a commercially gated frontend module. Its availability is supplied at runtime by Odoo through `allowed_scopes`; React does not use company IDs, hostnames, or build-time flags to grant access. The Audit navigation and all `/audit/*` routes are fail-closed unless the active company profile advertises `audit`.
+
+- Baseline scope: `audit`
+- Optional scopes: `audit_ai`, `audit_sampling`, `audit_roll_forward`, `audit_export`, `audit_admin`
+- Company switching refreshes the backend profile and reloads the workspace, so stale Audit data is not retained across companies.
+- Audit pages use `/th/v1/audit/*` JSON-RPC endpoints only. They never create mock evidence, trial balances, engagements, or accounting conclusions in browser storage.
+- The current frontend foundation expects the backend to expose the Audit endpoint contract. If an endpoint is absent, users receive a Thai backend-unavailable message instead of fabricated data.
 
 The React UI is the only chat surface. It sends safe page context to the backend orchestrator and never talks to OpenClaw directly.
 
