@@ -62,9 +62,12 @@ function toBackendParams(params: ReportBaseParams) {
 
 async function postWithProdFallback<T>(path: string, payload: Record<string, unknown>) {
   const rpcPayload = makeRpc(payload)
+  const canonicalReportKey = path.match(/^\/th\/v1\/accounting\/reports\/([^/]+)$/)?.[1]?.replaceAll('-', '_')
   const candidates: Array<{ url: string; baseURL?: string }> = [
+    ...(canonicalReportKey ? [{ url: `/th/v1/accounting-reports/${canonicalReportKey}` }] : []),
     { url: path },
     { url: `/api${path}`, baseURL: '' },
+    ...(canonicalReportKey ? [{ url: `/api/th/v1/accounting-reports/${canonicalReportKey}`, baseURL: '' }] : []),
     { url: `/web/adt${path}`, baseURL: '' },
     { url: path, baseURL: '' },
   ]
@@ -318,8 +321,9 @@ function openBlobInNewTab(blob: Blob) {
 
 export async function getVatReport(params: VatReportParams) {
   return postWithProdFallback<GenericReportResponse>(
-    '/th/v1/tax-reports/vat',
+    '/th/v1/accounting-reports/tax_report',
     {
+      report_type: 'vat',
       ...(params.companyId !== undefined ? { company_id: params.companyId } : {}),
       ...(params.taxId !== undefined && params.taxId !== null ? { tax_id: params.taxId } : {}),
       tax_type: params.taxType,
@@ -333,8 +337,9 @@ export async function getVatReport(params: VatReportParams) {
 
 export async function getWhtReport(params: WhtReportParams) {
   return postWithProdFallback<GenericReportResponse>(
-    '/th/v1/tax-reports/wht',
+    '/th/v1/accounting-reports/tax_report',
     {
+      report_type: 'wht',
       ...(params.companyId !== undefined ? { company_id: params.companyId } : {}),
       wht_type: params.whtType,
       date_from: params.dateFrom,

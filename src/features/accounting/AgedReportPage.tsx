@@ -17,6 +17,15 @@ type Entry = Record<string, unknown> & {
   drilldownUrl?: string
 }
 
+const AGING_BUCKETS = [
+  { label: 'Current / Not Due', keys: ['current', 'notDue', 'not_due', 'period0', 'bucket0', 'diff0'] },
+  { label: '1-30', keys: ['1_30', 'period1', 'bucket1', 'diff1'] },
+  { label: '31-60', keys: ['31_60', 'period2', 'bucket2', 'diff2'] },
+  { label: '61-90', keys: ['61_90', 'period3', 'bucket3', 'diff3'] },
+  { label: '91-120', keys: ['91_120', 'period4', 'bucket4', 'diff4'] },
+  { label: '>120', keys: ['over_120', 'over120', 'period5', 'bucket5', 'diff5'] },
+]
+
 function asNumber(v: unknown) {
   if (typeof v === 'number') return Number.isFinite(v) ? v : 0
   if (typeof v === 'string') {
@@ -24,6 +33,17 @@ function asNumber(v: unknown) {
     return Number.isFinite(n) ? n : 0
   }
   return 0
+}
+
+function bucketTotal(entries: Entry[], keys: string[]) {
+  return entries.reduce((sum, entry) => {
+    const key = keys.find((candidate) => Object.prototype.hasOwnProperty.call(entry, candidate))
+    return sum + (key ? asNumber(entry[key]) : 0)
+  }, 0)
+}
+
+function formatMoney(value: number) {
+  return value.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 export function AgedReportPage(props: { mode: Mode }) {
@@ -102,11 +122,17 @@ export function AgedReportPage(props: { mode: Mode }) {
         const total = asNumber((first as any).total || (first as any).amount || 0)
         return (
           <span className="font-monospace">
-            {total ? total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : `${r.buckets.length} รายการ`}
+            {total ? formatMoney(total) : `${r.buckets.length} รายการ`}
           </span>
         )
       },
     },
+    ...AGING_BUCKETS.map<Column<{ partner: string; partnerId?: number; buckets: Entry[] }>>((bucket) => ({
+      key: bucket.label,
+      header: bucket.label,
+      className: 'text-end',
+      cell: (r) => <span className="font-monospace">{formatMoney(bucketTotal(r.buckets, bucket.keys))}</span>,
+    })),
     {
       key: 'actions',
       header: '',
@@ -179,6 +205,13 @@ export function AgedReportPage(props: { mode: Mode }) {
             รีเฟรช
           </Button>
         </div>
+        <div className="d-flex gap-2 flex-wrap mt-3" aria-label="Aging bucket labels">
+          {AGING_BUCKETS.map((bucket) => (
+            <span key={bucket.label} className="badge text-bg-light border">
+              {bucket.label}
+            </span>
+          ))}
+        </div>
       </Card>
 
       {q.isError ? (
@@ -191,4 +224,3 @@ export function AgedReportPage(props: { mode: Mode }) {
     </div>
   )
 }
-

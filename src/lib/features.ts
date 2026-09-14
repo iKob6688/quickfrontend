@@ -13,9 +13,7 @@ export type FeatureKey =
 
 const FEATURE_SCOPES: Record<FeatureKey, readonly string[]> = {
   accounting_reports: ['accounting_reports'],
-  // The legacy audit scopes remain accepted during the package migration.  The
-  // server profile is still the only authority for both names.
-  working_papers: ['working_papers', 'working.papers', 'audit'],
+  working_papers: ['working_papers'],
   'working_papers.sampling': ['working_papers_sampling', 'working_papers.sampling', 'audit_sampling', 'audit.sampling'],
   audit: ['audit'],
   'audit.ai': ['audit_ai', 'audit.ai'],
@@ -30,15 +28,15 @@ export function hasFeature(feature: FeatureKey): boolean {
   if (!isScopesConfigured()) return false
   const allowed = new Set(getAllowedScopes().map((scope) => scope.trim().toLowerCase()))
   const enabled = FEATURE_SCOPES[feature].some((scope) => allowed.has(scope))
-  // A Work File links to canonical accounting reports. Do not present a package
-  // combination that cannot open those report links; the backend still decides
+  // A Work File links to canonical accounting reports. Do not present a Feature
+  // Access combination that cannot open those report links; the backend still decides
   // every read/action request independently.
   if (feature === 'working_papers') return enabled && FEATURE_SCOPES.accounting_reports.some((scope) => allowed.has(scope))
   return enabled
 }
 
 export function featureUnavailableMessage(feature: FeatureKey): string {
-  if (feature === 'accounting_reports') return 'ฟีเจอร์ Accounting Reports ไม่ได้รวมอยู่ในแพ็กเกจหรือสิทธิ์ของบริษัทปัจจุบัน'
-  if (feature === 'working_papers') return 'ฟีเจอร์ Working Papers ไม่ได้รวมอยู่ในแพ็กเกจหรือสิทธิ์ของบริษัทปัจจุบัน'
+  if (feature === 'accounting_reports') return 'Feature Access สำหรับ Accounting Reports ยังไม่ได้เปิดให้ผู้ใช้หรือบริษัทปัจจุบัน'
+  if (feature === 'working_papers') return 'Feature Access สำหรับ Working Papers ยังไม่ได้เปิดให้ผู้ใช้หรือบริษัทปัจจุบัน'
   return 'สิทธิ์ของคุณยังไม่ครอบคลุมความสามารถนี้'
 }

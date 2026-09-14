@@ -1,6 +1,4 @@
 const SCOPE_ALIAS: Record<string, string[]> = {
-  reports: ['accounting_reports'],
-  accounting_reports: ['reports'],
   purchases: ['purchase'],
   purchase: ['purchases'],
   expenses: ['expense'],
