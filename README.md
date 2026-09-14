@@ -18,10 +18,23 @@ Browser (React + TypeScript + Vite)
 - **Server state:** TanStack Query. Query data is scoped to the current authenticated company session and the application reloads after company switching to avoid stale cross-company views.
 - **Transport:** Axios via `src/api/client.ts`; authenticated calls include the bearer token and active instance/company header. Odoo JSON-RPC and normal API envelopes are normalized by `src/api/response.ts`.
 - **Authorization:** Odoo remains authoritative. Frontend navigation scopes improve UX only; backend ACLs, record rules, workflow validation, and company isolation must enforce every operation.
-- **Feature packages:** Commercial modules use `src/lib/features.ts`. Audit is fail-closed and requires the active backend profile to advertise `audit`; optional capabilities are `audit_ai`, `audit_sampling`, `audit_roll_forward`, `audit_export`, and `audit_admin`.
+- **Feature packages:** Commercial modules use `src/lib/features.ts` and fail closed from backend-advertised `allowed_scopes`. Canonical package keys are `accounting_reports` and `working_papers`; the legacy `audit` scope remains a migration alias for Working Papers.
+- **Working Papers:** `src/api/services/working-papers.service.ts` is a thin JSON-RPC adapter for canonical Odoo read models and actions. React does not calculate trial balances, leadsheets, adjustments, sign-offs, or permissions.
 - **Audit data:** The browser never creates financial truth, audit evidence, TB snapshots, or mock engagement data. Audit reads/writes only through `/th/v1/audit/*`; a missing endpoint produces a clear Thai unavailable message.
 
 ### Audit Backend Contract
+
+### Working Papers frontend contract
+
+Working Papers is available at `/working-papers`, with Work Files at
+`/working-papers/files/:workFileId` and individual workpapers at
+`/working-papers/files/:workFileId/workpapers/:workpaperId`. The adapter uses
+the authenticated active-company `/th/v1/working-papers/*` API for lists,
+details, lazy-loaded sections, and permitted workflow actions. It consumes
+backend action capabilities such as `can_edit`, `can_prepare`, `can_review`,
+`can_complete`, `can_reopen`, and `can_roll_forward`; absent capabilities never
+grant an action. Company switching reloads after Odoo updates company context,
+clearing query state before new-company content appears.
 
 The current frontend foundation requires Odoo to advertise `allowed_scopes` from login or `/auth/me` and to expose the following JSON-RPC endpoints before Audit workflows can be released:
 

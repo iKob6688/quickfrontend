@@ -96,9 +96,9 @@ export function AppLayout() {
     ...(scanSlipEnabled
       ? [{ path: '/accounting/pending-reconcile', label: 'Pending Reconcile', scope: 'accounting_reports', icon: 'bi-cash-coin' }]
       : []),
-    { path: '/accounting/reports', label: 'รายงานบัญชี', scope: 'accounting_reports', icon: 'bi-graph-up-arrow' },
+    { path: '/accounting/reports', label: 'รายงานบัญชี', feature: 'accounting_reports', icon: 'bi-graph-up-arrow' },
+    { path: '/working-papers', label: 'กระดาษทำการ', feature: 'working_papers', icon: 'bi-journal-richtext' },
     { path: '/accounting/etax', label: 'เอกสาร e-Tax', scope: 'etax', icon: 'bi-receipt-cutoff' },
-    { path: '/audit', label: 'Audit Workspace', feature: 'audit', icon: 'bi-clipboard2-check' },
     { path: '/customers', label: 'รายชื่อติดต่อ', scope: 'contacts', icon: 'bi-people' },
     { path: '/products', label: 'สินค้า/บริการ', scope: 'products', icon: 'bi-box-seam' },
     { path: '/excel-import', label: 'นำเข้า Excel', scope: 'excel', icon: 'bi-file-earmark-spreadsheet' },
@@ -178,8 +178,8 @@ export function AppLayout() {
         { path: '/accounting/etax', label: 'เอกสาร e-Tax', scope: 'etax' },
       ],
     },
-    { path: '/accounting/reports', label: 'รายงาน', icon: 'bi-bar-chart-line', active: isPathActive('/accounting/reports'), scope: 'accounting_reports' },
-    { path: '/audit', label: 'Audit', icon: 'bi-clipboard2-check', active: isPathActive('/audit'), feature: 'audit' },
+    { path: '/accounting/reports', label: 'รายงาน', icon: 'bi-bar-chart-line', active: isPathActive('/accounting/reports'), feature: 'accounting_reports' },
+    { path: '/working-papers', label: 'Working Papers', icon: 'bi-journal-richtext', active: isPathActive('/working-papers'), feature: 'working_papers' },
     { path: '/customers', label: 'ผู้ติดต่อ', icon: 'bi-person-rolodex', active: isPathActive('/customers'), scope: 'contacts' },
     { path: '/products', label: 'สินค้า', icon: 'bi-box-seam', active: isPathActive('/products'), scope: 'products' },
     {
@@ -197,7 +197,8 @@ export function AppLayout() {
       { label: 'บันทึกรายจ่าย', path: '/expenses/new', icon: 'bi-cash-stack', shortcut: 'EXP', scope: 'expense' },
       { label: 'สร้างใบเสนอราคา', path: '/sales/orders/new', icon: 'bi-file-earmark-text', shortcut: 'QT', scope: 'invoice' },
       { label: 'ไปหน้าแดชบอร์ด', path: '/dashboard', icon: 'bi-grid-1x2', shortcut: 'DB' },
-      { label: 'รายงานกำไรขาดทุน', path: '/accounting/reports/profit-loss', icon: 'bi-graph-up-arrow', shortcut: 'PL', scope: 'accounting_reports' },
+      { label: 'รายงานกำไรขาดทุน', path: '/accounting/reports/profit-loss', icon: 'bi-graph-up-arrow', shortcut: 'PL', feature: 'accounting_reports' },
+      { label: 'Working Papers', path: '/working-papers', icon: 'bi-journal-richtext', shortcut: 'WP', feature: 'working_papers' },
       ...(scanSlipEnabled
         ? [
             { label: 'Scan Slip / Upload Payment Slip', path: '/accounting/pending-reconcile?source=assistant&upload=1', icon: 'bi-upc-scan', shortcut: 'SLIP', scope: 'accounting_reports' },

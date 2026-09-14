@@ -66,6 +66,7 @@ import { ErrorBoundary } from '@/components/system/ErrorBoundary'
 import { ToastHost } from '@/components/system/ToastHost'
 import { FeatureRoute } from '@/components/system/FeatureRoute'
 import { AuditDashboardPage, AuditEngagementCreatePage, AuditEngagementPage, AuditEngagementsPage, AuditWorkspaceSectionPage } from '@/features/audit/AuditPages'
+import { WorkFilePage, WorkFilesPage, WorkingPapersHomePage, WorkpaperPage } from '@/features/working-papers/WorkingPapersPages'
 
 // Reports Studio (integrated as part of the same ERPTH shell)
 import { StudioBootstrap } from '@/app/StudioBootstrap'
@@ -135,26 +136,28 @@ function AppRoutes() {
           <Route path="/expenses/:id" element={<ExpenseDetailPage />} />
           <Route path="/accounting/document-review" element={<DocumentReviewInboxPage />} />
           <Route path="/accounting/pending-reconcile" element={<PendingReconcilePage />} />
-          <Route path="/accounting/reports" element={<AccountingReportsPage />} />
-          <Route path="/accounting/reports/profit-loss" element={<ProfitLossReportPage />} />
-          <Route path="/accounting/reports/balance-sheet" element={<BalanceSheetReportPage />} />
-          <Route path="/accounting/reports/general-ledger" element={<GeneralLedgerReportPage />} />
-          <Route path="/accounting/reports/trial-balance" element={<TrialBalanceReportPage />} />
-          <Route path="/accounting/reports/partner-ledger" element={<PartnerLedgerReportPage />} />
-          <Route path="/accounting/reports/partner-ledger/partner/:partnerId" element={<PartnerLedgerPartnerDrilldownPage />} />
-          <Route path="/accounting/reports/aged-receivables" element={<AgedReportPage mode="receivables" />} />
-          <Route path="/accounting/reports/aged-payables" element={<AgedReportPage mode="payables" />} />
-          <Route path="/accounting/reports/cash-book" element={<BookReportPage mode="cash" />} />
-          <Route path="/accounting/reports/bank-book" element={<BookReportPage mode="bank" />} />
-          <Route path="/accounting/reports/vat" element={<VatReportPage />} />
-          <Route path="/accounting/reports/wht" element={<WhtReportPage />} />
-          <Route path="/accounting/reports/official-thai-forms" element={<OfficialThaiReportsPage />} />
+          <Route element={<FeatureRoute feature="accounting_reports" />}>
+            <Route path="/accounting/reports" element={<AccountingReportsPage />} />
+            <Route path="/accounting/reports/profit-loss" element={<ProfitLossReportPage />} />
+            <Route path="/accounting/reports/balance-sheet" element={<BalanceSheetReportPage />} />
+            <Route path="/accounting/reports/general-ledger" element={<GeneralLedgerReportPage />} />
+            <Route path="/accounting/reports/trial-balance" element={<TrialBalanceReportPage />} />
+            <Route path="/accounting/reports/partner-ledger" element={<PartnerLedgerReportPage />} />
+            <Route path="/accounting/reports/partner-ledger/partner/:partnerId" element={<PartnerLedgerPartnerDrilldownPage />} />
+            <Route path="/accounting/reports/aged-receivables" element={<AgedReportPage mode="receivables" />} />
+            <Route path="/accounting/reports/aged-payables" element={<AgedReportPage mode="payables" />} />
+            <Route path="/accounting/reports/cash-book" element={<BookReportPage mode="cash" />} />
+            <Route path="/accounting/reports/bank-book" element={<BookReportPage mode="bank" />} />
+            <Route path="/accounting/reports/vat" element={<VatReportPage />} />
+            <Route path="/accounting/reports/wht" element={<WhtReportPage />} />
+            <Route path="/accounting/reports/official-thai-forms" element={<OfficialThaiReportsPage />} />
+            <Route path="/accounting/reports/general-ledger/account/:accountId" element={<GeneralLedgerAccountDrilldownPage />} />
+            <Route path="/accounting/reports/move-lines/:moveLineId" element={<MoveLineDetailPage />} />
+          </Route>
           <Route path="/accounting/rd-efiling" element={<RdEfilingSubmissionsPage />} />
           <Route path="/accounting/tax-settings" element={<VatSettingsAdminPage />} />
           <Route path="/accounting/etax" element={<EtaxDashboardPage />} />
           <Route path="/accounting/etax-settings" element={<EtaxSettingsPage />} />
-          <Route path="/accounting/reports/general-ledger/account/:accountId" element={<GeneralLedgerAccountDrilldownPage />} />
-          <Route path="/accounting/reports/move-lines/:moveLineId" element={<MoveLineDetailPage />} />
           <Route path="/accounting/admin" element={<AccountingAdminPage />} />
           {/* Backward-compatible alias */}
           <Route path="/accounting/overview" element={<Navigate to="/accounting/reports" replace />} />
@@ -187,6 +190,12 @@ function AppRoutes() {
             <Route element={<FeatureRoute feature="audit.admin" />}>
               <Route path="/audit/admin" element={<AuditWorkspaceSectionPage title="Audit Administration" />} />
             </Route>
+          </Route>
+          <Route element={<FeatureRoute feature="working_papers" />}>
+            <Route path="/working-papers" element={<WorkingPapersHomePage />} />
+            <Route path="/working-papers/files" element={<WorkFilesPage />} />
+            <Route path="/working-papers/files/:workFileId" element={<WorkFilePage />} />
+            <Route path="/working-papers/files/:workFileId/workpapers/:workpaperId" element={<WorkpaperPage />} />
           </Route>
 
           {/* Reports Studio routes inside the same ERPTH shell */}
