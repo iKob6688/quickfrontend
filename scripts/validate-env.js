@@ -14,15 +14,14 @@ import { dirname, join } from 'path'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const rootDir = join(__dirname, '..')
-const envPath = join(rootDir, '.env')
 
-function loadEnv() {
+function readEnvFile(filePath) {
   const env = {}
-  if (!existsSync(envPath)) {
+  if (!existsSync(filePath)) {
     return env
   }
   
-  const content = readFileSync(envPath, 'utf-8')
+  const content = readFileSync(filePath, 'utf-8')
   const lines = content.split('\n')
   
   for (const line of lines) {
@@ -36,6 +35,16 @@ function loadEnv() {
   }
   
   return env
+}
+
+function loadEnv(isProduction = false) {
+  return {
+    ...readEnvFile(join(rootDir, '.env')),
+    ...(isProduction ? readEnvFile(join(rootDir, '.env.production')) : {}),
+    ...Object.fromEntries(
+      Object.entries(process.env).filter(([key]) => key.startsWith('VITE_')),
+    ),
+  }
 }
 
 function validateEnv(env, isProduction = false) {
@@ -77,7 +86,7 @@ function main() {
   
   console.log(`🔍 Validating environment (${isProduction ? 'Production' : 'Development'})...\n`)
   
-  const env = loadEnv()
+  const env = loadEnv(isProduction)
   const { errors, warnings } = validateEnv(env, isProduction)
   
   if (warnings.length > 0) {

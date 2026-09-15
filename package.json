@@ -7,7 +7,7 @@
     "dev": "vite",
     "dev:lan": "vite --host 0.0.0.0 --port 5173",
     "sync:th-address": "node scripts/sync-th-address.mjs",
-    "build": "npm run validate-env && tsc -b && vite build",
+    "build": "npm run validate-env:prod && tsc -b && vite build",
     "build:dev": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
