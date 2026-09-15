@@ -176,7 +176,9 @@ function AppRoutes() {
           <Route element={<FeatureRoute feature="audit" />}>
             <Route path="/audit" element={<AuditDashboardPage />} />
             <Route path="/audit/engagements" element={<AuditEngagementsPage />} />
-            <Route path="/audit/engagements/new" element={<AuditEngagementCreatePage />} />
+            <Route element={<FeatureRoute feature="audit.create" />}>
+              <Route path="/audit/engagements/new" element={<AuditEngagementCreatePage />} />
+            </Route>
             <Route path="/audit/engagements/:engagementId" element={<AuditEngagementPage />} />
             <Route path="/audit/engagements/:engagementId/trial-balance" element={<AuditWorkspaceSectionPage title="Trial Balance" />} />
             <Route path="/audit/engagements/:engagementId/leadsheets" element={<AuditWorkspaceSectionPage title="Leadsheets" />} />

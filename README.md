@@ -509,7 +509,7 @@ The assistant is now split into three roles:
 
 Audit Workspace is a commercially gated frontend module. Its availability is supplied at runtime by Odoo through `allowed_scopes`; React does not use company IDs, hostnames, or build-time flags to grant access. The Audit navigation and all `/audit/*` routes are fail-closed unless the active company profile advertises `audit`.
 
-- Baseline scope: `audit`
+- Baseline scope: `audit` (public package name), `audit_workspace` (Audit Workspace API), or `working_papers` (current Work Files API)
 - Optional scopes: `audit_ai`, `audit_sampling`, `audit_roll_forward`, `audit_export`, `audit_admin`
 - Company switching refreshes the backend profile and reloads the workspace, so stale Audit data is not retained across companies.
 - Audit pages use `/th/v1/audit/*` JSON-RPC endpoints only. They never create mock evidence, trial balances, engagements, or accounting conclusions in browser storage.

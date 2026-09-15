@@ -5,6 +5,7 @@ export type FeatureKey =
   | 'working_papers'
   | 'working_papers.sampling'
   | 'audit'
+  | 'audit.create'
   | 'audit.ai'
   | 'audit.sampling'
   | 'audit.rollForward'
@@ -15,7 +16,12 @@ const FEATURE_SCOPES: Record<FeatureKey, readonly string[]> = {
   accounting_reports: ['accounting_reports'],
   working_papers: ['working_papers'],
   'working_papers.sampling': ['working_papers_sampling', 'working_papers.sampling', 'audit_sampling', 'audit.sampling'],
-  audit: ['audit'],
+  // `audit_workspace` is the currently deployed Odoo API scope. `audit` is
+  // retained as the public package name for future backend compatibility.
+  audit: ['audit', 'audit_workspace', 'working_papers'],
+  // Engagement creation is exposed by the Audit Workspace controller, while
+  // the Working Papers controller intentionally provides read/workflow APIs.
+  'audit.create': ['audit_workspace'],
   'audit.ai': ['audit_ai', 'audit.ai'],
   'audit.sampling': ['audit_sampling', 'audit.sampling'],
   'audit.rollForward': ['audit_roll_forward', 'audit.roll_forward'],
