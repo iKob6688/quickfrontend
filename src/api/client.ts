@@ -19,7 +19,7 @@ export const apiClient = axios.create({
   timeout: Number.isFinite(requestTimeoutMs) && requestTimeoutMs > 0 ? requestTimeoutMs : 45000,
 })
 
-export type UnauthorizedHandler = () => void
+export type UnauthorizedHandler = () => void | Promise<void>
 
 let unauthorizedHandler: UnauthorizedHandler | null = null
 
@@ -44,10 +44,22 @@ function isUnauthorizedEnvelope(raw: unknown): boolean {
   return false
 }
 
+function isSessionValidationRequest(url: unknown): boolean {
+  return typeof url === 'string' && /\/auth\/me(?:[/?]|$)/.test(url)
+}
+
+let isHandlingUnauthorized = false
+
 function handleUnauthorized() {
+  // Several page queries start together. Only one of them may clear the
+  // session and notify the app, otherwise each failed query also sends logout.
+  if (isHandlingUnauthorized) return
+  isHandlingUnauthorized = true
   clearAuthStorage()
   clearInstanceId()
-  if (unauthorizedHandler) unauthorizedHandler()
+  void Promise.resolve(unauthorizedHandler?.()).finally(() => {
+    isHandlingUnauthorized = false
+  })
 }
 
 apiClient.interceptors.request.use((config) => {
@@ -93,7 +105,10 @@ apiClient.interceptors.response.use(
   (response) => {
     // Odoo type="json" may respond 200 with ApiEnvelope Unauthorized.
     if (isUnauthorizedEnvelope(response.data)) {
-      if (getAccessToken() !== WEB_SESSION_TOKEN) {
+      // Most Odoo JSON routes report application errors with HTTP 200. Do not
+      // turn one failed background widget into a forced logout. `/auth/me` is
+      // the explicit session-health check, so it remains authoritative.
+      if (getAccessToken() !== WEB_SESSION_TOKEN && isSessionValidationRequest(response.config.url)) {
         handleUnauthorized()
       }
       return Promise.reject(new Error('Unauthorized'))

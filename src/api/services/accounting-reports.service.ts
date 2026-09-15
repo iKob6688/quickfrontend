@@ -1,5 +1,5 @@
 import { apiClient } from '@/api/client'
-import { unwrapResponse } from '@/api/response'
+import { toApiError, unwrapResponse } from '@/api/response'
 import { makeRpc } from '@/api/services/rpc'
 
 export type TargetMove = 'posted' | 'draft'
@@ -64,20 +64,31 @@ async function postWithProdFallback<T>(path: string, payload: Record<string, unk
   const rpcPayload = makeRpc(payload)
   const canonicalReportKey = path.match(/^\/th\/v1\/accounting\/reports\/([^/]+)$/)?.[1]?.replaceAll('-', '_')
   const candidates: Array<{ url: string; baseURL?: string }> = [
-    ...(canonicalReportKey ? [{ url: `/th/v1/accounting-reports/${canonicalReportKey}` }] : []),
     { url: path },
-    { url: `/api${path}`, baseURL: '' },
-    ...(canonicalReportKey ? [{ url: `/api/th/v1/accounting-reports/${canonicalReportKey}`, baseURL: '' }] : []),
-    { url: `/web/adt${path}`, baseURL: '' },
+    // Older servers used this alternate report namespace.
+    ...(canonicalReportKey ? [{ url: `/th/v1/accounting-reports/${canonicalReportKey}` }] : []),
+    // Only use the root-relative legacy URL when the configured `/api` base
+    // itself is unavailable. Prefixing `/api` again creates `/api/api/...`.
     { url: path, baseURL: '' },
   ]
   let lastError: unknown = null
   for (const candidate of candidates) {
     try {
-      const response = await apiClient.post(candidate.url, rpcPayload, candidate.baseURL ? { baseURL: candidate.baseURL } : undefined)
+      const response = await apiClient.post(
+        candidate.url,
+        rpcPayload,
+        candidate.baseURL !== undefined ? { baseURL: candidate.baseURL } : undefined,
+      )
       return unwrapResponse<T>(response)
     } catch (err) {
       lastError = err
+      const status = toApiError(err).status
+      // Alternate routes are only for deployments with a different proxy
+      // topology. Retrying application/auth errors makes the page slower and
+      // can flood the server with misleading 405 responses.
+      if (status !== 404 && status !== 405 && status !== 502 && status !== 503 && status !== 504) {
+        throw err
+      }
     }
   }
   throw lastError instanceof Error ? lastError : new Error('Accounting report request failed')
